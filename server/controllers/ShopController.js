@@ -149,3 +149,22 @@ export const DeleteCategory = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+export const GetCategories = async (req,res)=>{
+  try{
+    const [row] = await pool.query('SELECT * FROM categories');
+    return res.status(200).json(row);
+  }catch(error){
+    console.error("Error fetching categories:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}
+export const GetProducts = async (req,res)=>{
+  try{
+    const [row] = await pool.query('SELECT * FROM products');
+    return res.status(200).json(row);
+  }catch(error){
+    console.error("Error fetching products:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}

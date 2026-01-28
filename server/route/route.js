@@ -1,8 +1,10 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder,UpdateProduct,DeleteProduct,DeleteCategory } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder,UpdateProduct,DeleteProduct,DeleteCategory, GetCategories, GetProducts } from '../controllers/ShopController.js';
 
 const router = express.Router()
 
+router.get('/get-categories',GetCategories)
+router.get('/get-products',GetProducts)
 router.post('/add-category',AddCategory)
 router.post('/add-product',AddProduct)
 router.post('/add-order',AddOrder)
