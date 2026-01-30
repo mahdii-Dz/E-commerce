@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 import { Roboto } from "next/font/google";
+import Context from "./context/Context";
 
 const RobotoSans = Roboto({
   variable: "--font-Roboto-sans",
@@ -19,10 +20,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${RobotoSans.variable}  antialiased bg-background w-full h-dvh `}
+        className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto pb-20`}
       >
-        <NavBar/>
-        {children}
+        <Context>
+          <NavBar />
+          {children}
+        </Context>
       </body>
     </html>
   );

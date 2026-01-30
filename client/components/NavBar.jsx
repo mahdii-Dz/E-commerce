@@ -1,7 +1,11 @@
+'use client'
+import { GlobalContext } from '@/app/context/Context'
 import { Search, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
+import { useContext } from 'react'
 
 function NavBar() {
+    const {Cart} = useContext(GlobalContext)
 
     return (
         <nav className='w-full h-22 px-20 fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white flex items-center justify-between'>
@@ -15,7 +19,7 @@ function NavBar() {
             <Link href="/cart" className='relative cursor-pointer'>
                 <ShoppingCart />
                 <div className='w-fit py px-1 rounded-full bg-primary text-white text-xs flex items-center justify-center text-center absolute -top-1 -right-1.5'>
-                    0
+                    {Cart.length}
                 </div>
             </Link>
         </nav>

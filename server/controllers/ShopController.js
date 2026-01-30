@@ -134,15 +134,32 @@ export const AddOrder = async (req, res) => {
 export const UpdateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, stock, discount_percentage } = req.body;
-    const [row] = await pool.query(
-      "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ? WHERE id = ?",
-      [name, description, price, stock, discount_percentage, id],
-    );
-    if (row.affectedRows === 1) {
-      return res.status(201).json({ message: "Product updated successfully" });
+    const { name, description, price, stock, discount_percentage, image_url } =
+      req.body;
+    if (image_url) {
+      const [row] = await pool.query(
+        "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, image_url = ? WHERE id = ?",
+        [name, description, price, stock, discount_percentage, image_url, id],
+      );
+      if (row.affectedRows === 1) {
+        return res
+          .status(201)
+          .json({ message: "Product updated successfully" });
+      } else {
+        return res.status(400).json({ error: "Failed to update Product" });
+      }
     } else {
-      return res.status(400).json({ error: "Failed to update Product" });
+      const [row] = await pool.query(
+        "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ? WHERE id = ?",
+        [name, description, price, stock, discount_percentage, id],
+      );
+      if (row.affectedRows === 1) {
+        return res
+          .status(201)
+          .json({ message: "Product updated successfully" });
+      } else {
+        return res.status(400).json({ error: "Failed to update Product" });
+      }
     }
   } catch (error) {
     console.error("Error updating Product:", error);
