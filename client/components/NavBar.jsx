@@ -1,10 +1,10 @@
 import { Search, ShoppingCart } from 'lucide-react'
 import Link from 'next/link'
-import React from 'react'
 
 function NavBar() {
+
     return (
-        <nav className='w-full h-22 px-20 fixed left-0 top-0 border-b-2 border-b-stroke bg-white flex items-center justify-between'>
+        <nav className='w-full h-22 px-20 fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white flex items-center justify-between'>
             <div className='logo'>
                 <h1 className='text-4xl font-bold'>LOGO</h1>
             </div>

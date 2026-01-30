@@ -40,23 +40,52 @@ export const AddCategory = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 export const AddProduct = async (req, res) => {
+  const connection = await pool.getConnection();
   try {
-    const { name, description, price, stock } = req.body;
-    const [row] = await pool.query(
-      "INSERT INTO products (name,description,price,stock) VALUES (?,?,?,?)",
+    await connection.beginTransaction();
+
+    const { name, description, price, stock, categoryIds } = req.body;
+
+    // Validate input
+    if (!name || !price || !Array.isArray(categoryIds)) {
+      await connection.rollback();
+      return res.status(400).json({ error: "Invalid input" });
+    }
+
+    // 1. Insert product
+    const [productResult] = await connection.query(
+      `INSERT INTO products (name, description, price, stock) 
+       VALUES (?, ?, ?, ?)`,
       [name, description, price, stock],
     );
-    if (row.affectedRows === 1) {
-      return res.status(201).json({ message: "Product added successfully" });
-    } else {
-      return res.status(400).json({ error: "Failed to add product" });
+    const productId = productResult.insertId;
+
+    // 2. Insert category links (only if categories provided)
+    if (categoryIds.length > 0) {
+      // Insert into junction table
+      const categoryLinks = categoryIds.map((catId) => [productId, catId]);
+      await connection.query(
+        "INSERT INTO product_categories (product_id, category_id) VALUES ?",
+        [categoryLinks],
+      );
     }
+
+    await connection.commit();
+    return res.status(201).json({
+      message: "Product created successfully",
+      productId,
+    });
   } catch (error) {
-    console.error("Error adding Product:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    await connection.rollback();
+    console.error("Error creating product:", error);
+    return res.status(500).json({ error: "Failed to create product" });
+  } finally {
+    connection.release();
   }
 };
+
 export const AddOrder = async (req, res) => {
   let connection;
   try {
@@ -105,10 +134,10 @@ export const AddOrder = async (req, res) => {
 export const UpdateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, stock } = req.body;
+    const { name, description, price, stock, discount_percentage } = req.body;
     const [row] = await pool.query(
-      "UPDATE products SET name = ?, description = ?, price = ?, stock = ? WHERE id = ?",
-      [name, description, price, stock, id],
+      "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ? WHERE id = ?",
+      [name, description, price, stock, discount_percentage, id],
     );
     if (row.affectedRows === 1) {
       return res.status(201).json({ message: "Product updated successfully" });
@@ -150,21 +179,72 @@ export const DeleteCategory = async (req, res) => {
   }
 };
 
-export const GetCategories = async (req,res)=>{
-  try{
-    const [row] = await pool.query('SELECT * FROM categories');
+export const GetCategories = async (req, res) => {
+  try {
+    const [row] = await pool.query("SELECT * FROM categories");
     return res.status(200).json(row);
-  }catch(error){
+  } catch (error) {
     console.error("Error fetching categories:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
-}
-export const GetProducts = async (req,res)=>{
-  try{
-    const [row] = await pool.query('SELECT * FROM products');
-    return res.status(200).json(row);
-  }catch(error){
+};
+export const GetProducts = async (req, res) => {
+  try {
+    // Query to get products with their categories
+    const [rows] = await pool.query(`
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.discount_percentage,
+        p.price,
+        p.stock,
+        p.image_url,
+        p.is_active,
+        p.created_at,
+        c.id AS category_id,
+        c.name AS category_name
+      FROM products p
+      LEFT JOIN product_categories pc ON p.id = pc.product_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      ORDER BY p.id
+    `);
+
+    // Group categories under each product
+    const productsMap = new Map();
+
+    for (const row of rows) {
+      const productId = row.id;
+
+      if (!productsMap.has(productId)) {
+        productsMap.set(productId, {
+          id: row.id,
+          name: row.name,
+          discount_percentage: row.discount_percentage,
+          description: row.description,
+          price: row.price,
+          stock: row.stock,
+          image_url: row.image_url,
+          is_active: row.is_active,
+          created_at: row.created_at,
+          categories: [],
+        });
+      }
+
+      // Add category if it exists (handles products with no categories)
+      if (row.category_id) {
+        productsMap.get(productId).categories.push({
+          id: row.category_id,
+          name: row.category_name,
+        });
+      }
+    }
+
+    const products = Array.from(productsMap.values());
+
+    return res.status(200).json(products);
+  } catch (error) {
     console.error("Error fetching products:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
-}
+};

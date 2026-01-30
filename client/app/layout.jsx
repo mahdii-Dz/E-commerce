@@ -19,7 +19,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${RobotoSans.variable}  antialiased mx-20 bg-background w-full h-dvh`}
+        className={`${RobotoSans.variable}  antialiased bg-background w-full h-dvh `}
       >
         <NavBar/>
         {children}
