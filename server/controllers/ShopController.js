@@ -46,7 +46,7 @@ export const AddProduct = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    const { name, description, price, stock, categoryIds } = req.body;
+    const { name, description, price, stock, categoryIds,type } = req.body;
 
     // Validate input
     if (!name || !price || !Array.isArray(categoryIds)) {
@@ -56,8 +56,8 @@ export const AddProduct = async (req, res) => {
 
     // 1. Insert product
     const [productResult] = await connection.query(
-      `INSERT INTO products (name, description, price, stock) 
-       VALUES (?, ?, ?, ?)`,
+      `INSERT INTO products (name, description, price, stock,type) 
+       VALUES (?, ?, ?, ?,?)`,
       [name, description, price, stock],
     );
     const productId = productResult.insertId;
@@ -134,12 +134,12 @@ export const AddOrder = async (req, res) => {
 export const UpdateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, stock, discount_percentage, image_url } =
+    const { name, description, price, stock, discount_percentage, image_url, type } =
       req.body;
     if (image_url) {
       const [row] = await pool.query(
-        "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, image_url = ? WHERE id = ?",
-        [name, description, price, stock, discount_percentage, image_url, id],
+        "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, image_url = ? , type = ? WHERE id = ?",
+        [name, description, price, stock, discount_percentage, image_url, type, id],
       );
       if (row.affectedRows === 1) {
         return res
@@ -150,8 +150,8 @@ export const UpdateProduct = async (req, res) => {
       }
     } else {
       const [row] = await pool.query(
-        "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ? WHERE id = ?",
-        [name, description, price, stock, discount_percentage, id],
+        "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, type = ? WHERE id = ?",
+        [name, description, price, stock, discount_percentage, type, id],
       );
       if (row.affectedRows === 1) {
         return res
@@ -219,6 +219,7 @@ export const GetProducts = async (req, res) => {
         p.image_url,
         p.is_active,
         p.created_at,
+        p.type,
         c.id AS category_id,
         c.name AS category_name
       FROM products p
@@ -244,6 +245,7 @@ export const GetProducts = async (req, res) => {
           image_url: row.image_url,
           is_active: row.is_active,
           created_at: row.created_at,
+          type: row.type,
           categories: [],
         });
       }
