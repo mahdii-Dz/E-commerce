@@ -9,9 +9,9 @@ function NavBar() {
 
     return (
         <nav className='w-full h-22 px-20 fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white flex items-center justify-between'>
-            <div className='logo'>
+            <Link href="/" className='logo cursor-pointer'>
                 <h1 className='text-4xl font-bold'>LOGO</h1>
-            </div>
+            </Link>
             <div className='search flex justify-between items-center rounded-2xl border border-stroke pr-4 w-2/4'>
                 <input type="search" placeholder='Search Products...' className='h-12.5 p-4 outline-none w-full ' />
                 <Search />

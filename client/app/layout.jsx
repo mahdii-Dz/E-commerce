@@ -20,7 +20,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto pb-20`}
+        className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto`}
       >
         <Context>
           <NavBar />
