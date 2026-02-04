@@ -46,7 +46,8 @@ export const AddProduct = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    const { name, description, price, stock, categoryIds,type } = req.body;
+    const { name, description, price, stock, categoryIds, type, image_url } =
+      req.body;
 
     // Validate input
     if (!name || !price || !Array.isArray(categoryIds)) {
@@ -56,9 +57,9 @@ export const AddProduct = async (req, res) => {
 
     // 1. Insert product
     const [productResult] = await connection.query(
-      `INSERT INTO products (name, description, price, stock,type) 
-       VALUES (?, ?, ?, ?,?)`,
-      [name, description, price, stock],
+      `INSERT INTO products (name, description, price, stock,type,image_url) 
+       VALUES (?, ?, ?, ?,?,?)`,
+      [name, description, price, stock, type, image_url],
     );
     const productId = productResult.insertId;
 
@@ -134,12 +135,28 @@ export const AddOrder = async (req, res) => {
 export const UpdateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, price, stock, discount_percentage, image_url, type } =
-      req.body;
+    const {
+      name,
+      description,
+      price,
+      stock,
+      discount_percentage,
+      image_url,
+      type,
+    } = req.body;
     if (image_url) {
       const [row] = await pool.query(
         "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, image_url = ? , type = ? WHERE id = ?",
-        [name, description, price, stock, discount_percentage, image_url, type, id],
+        [
+          name,
+          description,
+          price,
+          stock,
+          discount_percentage,
+          image_url,
+          type,
+          id,
+        ],
       );
       if (row.affectedRows === 1) {
         return res
