@@ -284,3 +284,18 @@ export const GetProducts = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+export const GetProductById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [row] = await pool.query("SELECT * FROM products WHERE id = ?", [id]);
+    if (row.length > 0) {
+      return res.status(200).json(row[0]);
+    } else {
+      return res.status(404).json({ error: "Product not found" });
+    }
+  } catch (error) {
+    console.error("Error updating Product:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
