@@ -1,7 +1,7 @@
 'use client'
 
 import { GlobalContext } from "@/app/context/Context";
-import { ShoppingCart } from "lucide-react";
+import { Link, ShoppingCart } from "lucide-react";
 import { useContext } from "react";
 
 function RenderProducts({ Products, Class }) {
@@ -32,7 +32,9 @@ function RenderProducts({ Products, Class }) {
                                             }
                                         </div>
                                         <div className='w-full h-48 border-b border-stroke cursor-pointer overflow-hidden '>
-                                            <img src={product.image_url} alt={product.name} className="w-full h-full object-contain hover:scale-110 transition-transform duration-300" loading='lazy' />
+                                            <a href={`/product/${product.id}`} >
+                                                <img src={product.image_url} alt={product.name} className="w-full h-full object-contain hover:scale-110 transition-transform duration-300" loading='lazy' />
+                                            </a>
                                         </div>
                                         <div className="py-4 px-3 flex flex-col gap-2.5">
                                             <div>

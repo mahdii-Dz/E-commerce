@@ -131,7 +131,7 @@ export default function ProductFilterPage({ params, searchParams }) {
 
 
     return (
-        <div className="p-6 mt-24 px-20 w-full h-auto">
+        <div className="mt-30 px-20 w-full h-auto">
             <Breadcrumb />
             <div className='flex justify-between items-center'>
                 <div>
