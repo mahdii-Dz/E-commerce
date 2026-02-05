@@ -30,7 +30,7 @@ function Main() {
             <ArrowRight size={16} />
           </Link>
         </div>
-        <RenderProducts Products={Promotions} Class={'mt-8'} />
+        <RenderProducts Products={Promotions.slice(0, 3)} Class={'mt-8'} />
         {/* Newest Products */}
       </section>
       <section className='mt-10'>
@@ -41,7 +41,17 @@ function Main() {
             <ArrowRight size={16} />
           </Link>
         </div>
-        <RenderProducts Products={NewestProducts} Class={'mt-8'} />
+        <RenderProducts Products={NewestProducts.slice(0, 3)} Class={'mt-8'} />
+      </section>
+      <section className='mt-10'>
+        <div className='flex justify-between items-center'>
+          <h1 className='text-2xl font-semibold'>All Products</h1>
+          <Link href="/products/All" className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit'>
+            View All
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+        <RenderProducts Products={Products.slice(0, 12)} Class={'mt-8'} />
       </section>
     </main>
   )

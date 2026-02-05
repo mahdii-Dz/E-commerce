@@ -18,21 +18,20 @@ function RenderProducts({ Products, Class }) {
         <>
             {
                 loading ? (
-                    <div className='mt-8 w-full flex items-center justify-center' > Loading...</div>
+                    <div className='w-full flex items-center justify-center' > Loading...</div>
                 ) :
-                    <div className={`w-full flex items-start flex-wrap justify-start gap-8 ${Class}`}>
+                    <div className={`w-full grid grid-cols-3 gap-6 ${Class}`}>
                         {
                             Products.length > 0 ?
                                 Products.map((product) => (
-                                    <div key={product.id} className="w-2/7 h-110 bg-white rounded-xl border relative border-stroke overflow-hidden ">
+                                    <div key={product.id} className="w-full h-110 bg-white rounded-xl border relative border-stroke overflow-hidden ">
                                         <div className='discount bg-primary absolute top-2 right-2 px-0.5 rounded-full'>
-                                            <p className='text-white text-xs px-2 py-1'>
-                                                -{
-                                                    product.discount_percentage > 0 &&
-                                                    product.discount_percentage
-                                                }%</p>
+                                            {
+                                                product.discount_percentage > 0 && <p className='text-white text-xs px-2 py-1'>-{product.discount_percentage}%</p>
+
+                                            }
                                         </div>
-                                        <div className='w-full h-48 border-b border-stroke cursor-pointer'>
+                                        <div className='w-full h-48 border-b border-stroke cursor-pointer overflow-hidden '>
                                             <img src={product.image_url} alt={product.name} className="w-full h-full object-contain hover:scale-110 transition-transform duration-300" loading='lazy' />
                                         </div>
                                         <div className="py-4 px-3 flex flex-col gap-2.5">
@@ -43,25 +42,20 @@ function RenderProducts({ Products, Class }) {
                                                 <h2 className="text font-semibold mt-1">{product.name}</h2>
                                                 <p className='text-sm line-clamp-2 text-secondary'>{product.description}</p>
                                             </div>
-                                            <p className="text-gray-600 text-lg">
-                                                {
-                                                    product.discount_percentage > 0 ?
-                                                        (
-                                                            <>
-                                                                <span className=' line-through text-secondary'>
-                                                                    {product.price}DA
-                                                                </span> | &nbsp;
-                                                                <span className='text-primary font-semibold'>
-                                                                    {product.price - (product.price * product.discount_percentage / 100)}DA
-                                                                </span>
-                                                            </>
-
-                                                        )
-                                                        : (
-                                                            <>${product.price}</>
-                                                        )
-                                                }
-                                            </p>
+                                            {
+                                                product.discount_percentage > 0 ? (
+                                                    <p className="text-gray-600 text-lg">
+                                                        <span className=' line-through text-secondary'>
+                                                            {product.price}DA
+                                                        </span> | &nbsp;
+                                                        <span className='text-primary font-semibold'>
+                                                            {product.price - (product.price * product.discount_percentage / 100)}DA
+                                                        </span>
+                                                    </p>
+                                                ) : <p className="text-red-400 text-lg font-semibold">
+                                                    {product.price}DA
+                                                </p>
+                                            }
                                             <p className='text-sm'>
                                                 In Stock: <span className='font-semibold text-[#38A9FA]'>{product.stock}</span>
                                             </p>

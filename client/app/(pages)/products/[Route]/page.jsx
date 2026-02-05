@@ -11,11 +11,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 
-export default function ProductFilterPage({ params,searchParams }) {
+export default function ProductFilterPage({ params, searchParams }) {
     const { Products, } = useContext(GlobalContext)
     const [filteredProducts, setFilteredProducts] = useState([])
+    const [visibleProducts, setVisibleProducts] = useState([]);
     const [filter, setFilter] = useState({
         category: 'AllCategories',
         price: 'AllPrices',
@@ -24,26 +25,24 @@ export default function ProductFilterPage({ params,searchParams }) {
     })
     const [routerFilter, setRouterFilter] = useState('All Products')
     const [categories, setCategories] = useState([])
-    const [currentPage, setCurrentPage] = useState([])
-    const Product_per_page = 12;
-    const TotalPages = Math.ceil(filteredProducts.length / Product_per_page);
-    const startIndex = (currentPage - 1) * Product_per_page;
-    const paginatedData = filteredProducts.slice(startIndex, startIndex + Product_per_page);
 
-    // useEffect(() => {
-    //     setCurrentPage(1);
-    // }, [filter]);
+    // Pagination state
+    const productsPerPage = 12;
+    const [loadedPages, setLoadedPages] = useState(1);
+    // Ref for the sentinel (trigger element at bottom)
+    const sentinelRef = useRef(null);
+
 
     useEffect(() => {
         async function fetchFilter() {
             const { Route } = await params
-            const {category} = await searchParams
-            if (category){
-                setFilter({...filter,category:category})
+            const { category } = await searchParams
+            if (category) {
+                setFilter({ ...filter, category: category })
             }
             setRouterFilter(Route)
-            if(Route === 'Promotions'){
-                setFilter({...filter,type:'Promotions'})
+            if (Route === 'Promotions') {
+                setFilter({ ...filter, type: 'Promotions' })
             }
             if (Route === 'BestDeal') {
                 setFilter({ ...filter, price: '0-2500' })
@@ -76,7 +75,7 @@ export default function ProductFilterPage({ params,searchParams }) {
                     return finalPrice >= min && finalPrice <= max;
                 })
             }
-            if(filter.type !== 'AllTypes'){
+            if (filter.type !== 'AllTypes') {
                 updatedProducts = updatedProducts.filter((product) => product.type === filter.type || product.discount_percentage > 0)
             }
             if (filter.sort === 'Newest') {
@@ -87,26 +86,70 @@ export default function ProductFilterPage({ params,searchParams }) {
                 updatedProducts = sortedProducts;
             }
             setFilteredProducts(updatedProducts);
+            setVisibleProducts(updatedProducts.slice(0, productsPerPage));
+            setLoadedPages(1);
         }
         applyFilters();
     }, [filter, Products]);
+
+    const loadMoreProducts = () => {
+        const nextPage = loadedPages + 1;
+        const newVisibleCount = nextPage * productsPerPage;
+        const newVisible = filteredProducts.slice(0, newVisibleCount);
+        setVisibleProducts(newVisible);
+        setLoadedPages(nextPage);
+    };
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && visibleProducts.length < filteredProducts.length) {
+                    loadMoreProducts();
+                }
+            },
+            { threshold: 1.0 } // Trigger when 100% of sentinel is visible
+        );
+
+        if (sentinelRef.current) {
+            observer.observe(sentinelRef.current);
+        }
+
+        return () => {
+            if (sentinelRef.current) {
+                observer.unobserve(sentinelRef.current);
+            }
+        };
+    }, [visibleProducts.length, filteredProducts.length]);
+
+    function ResetFilter() {
+        setFilter({
+            ...filter,
+            category: 'AllCategories',
+            price: 'AllPrices',
+            sort: 'Newest',
+        })
+    }
 
 
     return (
         <div className="p-6 mt-24 px-20 w-full h-auto">
             <Breadcrumb />
-            <div>
-                <h1 className="mt-6 text-2xl font-bold">{routerFilter} Products</h1>
-                <p className='text-secondary mt-1'>
-                    {
-                        filteredProducts.length === 0 ? 'No products found' :
-                            filteredProducts.length < 12 ? `Showing ${filteredProducts.length} of ${filteredProducts.length} product` :
-                                `Showing ${(startIndex + 1) * 12} of {filteredProducts.length} product`
-                    }
-                </p>
+            <div className='flex justify-between items-center'>
+                <div>
+                    <h1 className="mt-6 text-2xl font-bold">{routerFilter} Products</h1>
+                    <p className='text-secondary mt-1'>
+                        {
+                            filteredProducts.length === 0
+                                ? 'No products found'
+                                : `Showing ${visibleProducts.length} of ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`
+                        }
+                    </p>
+                </div>
+                <button onClick={() => ResetFilter()} className='px-9 py-2 rounded-lg cursor-pointer border-[1.5px] border-primary hover:bg-primary hover:text-white'>
+                    Reset all filters
+                </button>
             </div>
             <div className='w-full h-auto flex mt-6 gap-6'>
-                <aside className='bg-white border border-stroke w-1/5 rounded-xl p-6 flex flex-col justify-between items-start h-fit'>
+                <aside className='bg-white border border-stroke w-1/4 rounded-xl p-6 flex flex-col justify-between items-start h-fit'>
                     <div className='w-full'>
                         <h2 className='text-lg font-semibold'>Filters</h2>
                         <div className='w-full mt-4'>
@@ -160,8 +203,28 @@ export default function ProductFilterPage({ params,searchParams }) {
 
                     </div>
                 </aside>
-                <RenderProducts Products={filteredProducts} />
+                <div className='w-3/4'>
+                    <RenderProducts Products={visibleProducts} />
+
+                    {/* 🕵️ Sentinel element for infinite scroll */}
+                    {visibleProducts.length < filteredProducts.length && (
+                        <div
+                            ref={sentinelRef}
+                            className="h-10 w-full flex items-center justify-center"
+                        >
+                            <span className="text-gray-500">Loading...</span>
+                        </div>
+                    )}
+                </div>
             </div>
+                {
+                    (visibleProducts.length === filteredProducts.length && filteredProducts.length !== 0) && (
+                        <div className='w-full flex items-center justify-center mt-8 text-secondary'>
+                            <p className='text-center'>You&apos;ve seen it all! No more products to show.<br />
+                            Showing all {visibleProducts.length} products</p>
+                        </div>
+                    )
+                }
             <Footer />
         </div>
     );

@@ -15,7 +15,7 @@ export default function Breadcrumb() {
 
       // Special handling for the "product" segment
       let finalHref = href;
-      if (path === 'products') {
+      if (path === 'products' || path === 'product') {
         finalHref = '/products/All'; 
       }
 
