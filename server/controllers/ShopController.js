@@ -46,8 +46,16 @@ export const AddProduct = async (req, res) => {
   try {
     await connection.beginTransaction();
 
-    const { name, description, price, stock, categoryIds, type, image_url } =
-      req.body;
+    const {
+      name,
+      description,
+      price,
+      stock,
+      categoryIds,
+      type,
+      images,
+      thumbnail,
+    } = req.body;
 
     // Validate input
     if (!name || !price || !Array.isArray(categoryIds)) {
@@ -57,9 +65,17 @@ export const AddProduct = async (req, res) => {
 
     // 1. Insert product
     const [productResult] = await connection.query(
-      `INSERT INTO products (name, description, price, stock,type,image_url) 
-       VALUES (?, ?, ?, ?,?,?)`,
-      [name, description, price, stock, type, image_url],
+      `INSERT INTO products (name, description, price, stock,type,images,thumbnail) 
+       VALUES (?, ?, ?, ?,?,?,?)`,
+      [
+        name,
+        description,
+        price,
+        stock,
+        type,
+        JSON.stringify(images),
+        thumbnail,
+      ],
     );
     const productId = productResult.insertId;
 
@@ -141,42 +157,28 @@ export const UpdateProduct = async (req, res) => {
       price,
       stock,
       discount_percentage,
-      image_url,
+      images,
+      thumbnail,
       type,
     } = req.body;
-    if (image_url) {
-      const [row] = await pool.query(
-        "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, image_url = ? , type = ? WHERE id = ?",
-        [
-          name,
-          description,
-          price,
-          stock,
-          discount_percentage,
-          image_url,
-          type,
-          id,
-        ],
-      );
-      if (row.affectedRows === 1) {
-        return res
-          .status(201)
-          .json({ message: "Product updated successfully" });
-      } else {
-        return res.status(400).json({ error: "Failed to update Product" });
-      }
+    const [row] = await pool.query(
+      "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, images = ?, thumbnail = ? , type = ? WHERE id = ?",
+      [
+        name,
+        description,
+        price,
+        stock,
+        discount_percentage,
+        JSON.stringify(images),
+        thumbnail,
+        type,
+        id,
+      ],
+    );
+    if (row.affectedRows === 1) {
+      return res.status(201).json({ message: "Product updated successfully" });
     } else {
-      const [row] = await pool.query(
-        "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, type = ? WHERE id = ?",
-        [name, description, price, stock, discount_percentage, type, id],
-      );
-      if (row.affectedRows === 1) {
-        return res
-          .status(201)
-          .json({ message: "Product updated successfully" });
-      } else {
-        return res.status(400).json({ error: "Failed to update Product" });
-      }
+      return res.status(400).json({ error: "Failed to update Product" });
     }
   } catch (error) {
     console.error("Error updating Product:", error);
@@ -222,6 +224,8 @@ export const GetCategories = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+//! need to update this later
 export const GetProducts = async (req, res) => {
   try {
     // Query to get products with their categories
@@ -288,14 +292,68 @@ export const GetProducts = async (req, res) => {
 export const GetProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    const [row] = await pool.query("SELECT * FROM products WHERE id = ?", [id]);
-    if (row.length > 0) {
-      return res.status(200).json(row[0]);
-    } else {
-      return res.status(404).json({ error: "Product not found" });
+    // Query to get products with their categories
+    const [rows] = await pool.query(`
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.discount_percentage,
+        p.price,
+        p.stock,
+        p.image_url,
+        p.thumbnail,
+        p.images,
+        p.is_active,
+        p.created_at,
+        p.type,
+        c.id AS category_id,
+        c.name AS category_name
+      FROM products p
+      LEFT JOIN product_categories pc ON p.id = pc.product_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      WHERE p.id = ?
+    `,[id]);
+
+    // Group categories under each product
+    const productMap = new Map();
+
+    for (const row of rows) {
+      const productId = row.id;
+
+      if (!productMap.has(productId)) {
+        productMap.set(productId, {
+          id: row.id,
+          name: row.name,
+          discount_percentage: row.discount_percentage,
+          description: row.description,
+          price: row.price,
+          stock: row.stock,
+          image_url: row.image_url,
+          thumbnail: row.thumbnail,
+          images: row.images,
+          is_active: row.is_active,
+          created_at: row.created_at,
+          type: row.type,
+          categories: [],
+        });
+      }
+
+      // Add category if it exists (handles products with no categories)
+      if (row.category_id) {
+        productMap.get(productId).categories.push({
+          id: row.category_id,
+          name: row.category_name,
+        });
+      }
     }
+
+    const [product] = Array.from(productMap.values());
+
+    return res.status(200).json(product);
   } catch (error) {
-    console.error("Error updating Product:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error fetching product:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
+  
 };
