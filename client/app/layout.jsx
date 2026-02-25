@@ -1,8 +1,8 @@
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import NavBar from "@/components/NavBar";
 import { Roboto } from "next/font/google";
 import Context from "./context/Context";
+import Providers from "./providers";
+
 
 const RobotoSans = Roboto({
   variable: "--font-Roboto-sans",
@@ -22,10 +22,11 @@ export default function RootLayout({ children }) {
       <body
         className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto`}
       >
-        <Context>
-          <NavBar />
-          {children}
-        </Context>
+        <Providers>
+          <Context>
+            {children}
+          </Context>
+        </Providers>
       </body>
     </html>
   );

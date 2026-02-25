@@ -7,7 +7,7 @@ import RenderProducts from './RenderProducts'
 
 function Main() {
   const { Products, Promotions } = useContext(GlobalContext)
-  const NewestProducts = Products.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4)
+  const NewestProducts = Products && Products.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4)
 
 
 
@@ -30,7 +30,7 @@ function Main() {
             <ArrowRight size={16} />
           </Link>
         </div>
-        <RenderProducts Products={Promotions.slice(0, 3)} Class={'mt-8'} />
+        <RenderProducts Products={Promotions && Promotions.slice(0, 3)} Class={'mt-8'} />
         {/* Newest Products */}
       </section>
       <section className='mt-10'>
@@ -41,7 +41,7 @@ function Main() {
             <ArrowRight size={16} />
           </Link>
         </div>
-        <RenderProducts Products={NewestProducts.slice(0, 3)} Class={'mt-8'} />
+        <RenderProducts Products={ NewestProducts && NewestProducts.slice(0, 3)} Class={'mt-8'} />
       </section>
       <section className='mt-10'>
         <div className='flex justify-between items-center'>
@@ -51,7 +51,7 @@ function Main() {
             <ArrowRight size={16} />
           </Link>
         </div>
-        <RenderProducts Products={Products.slice(0, 12)} Class={'mt-8'} />
+        <RenderProducts Products={Products && Products.slice(0, 12)} Class={'mt-8'} />
       </section>
     </main>
   )

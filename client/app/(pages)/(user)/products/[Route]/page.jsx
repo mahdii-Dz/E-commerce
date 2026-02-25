@@ -2,6 +2,7 @@
 import { GlobalContext } from '@/app/context/Context';
 import Breadcrumb from '@/components/Breadcrumb';
 import Footer from '@/components/Footer';
+import Loader from '@/components/Loader';
 import RenderProducts from '@/components/RenderProducts';
 import {
     Select,
@@ -11,9 +12,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { useFetchAllProducts } from '@/components/useFetchAllProducts';
 import { useContext, useEffect, useRef, useState } from 'react';
 
 export default function ProductFilterPage({ params, searchParams }) {
+    const { data: categories, isLoading: loading, error } = useFetchAllProducts('http://localhost:5000/api/shop/get-categories')
     const { Products, } = useContext(GlobalContext)
     const [filteredProducts, setFilteredProducts] = useState([])
     const [visibleProducts, setVisibleProducts] = useState([]);
@@ -24,7 +27,6 @@ export default function ProductFilterPage({ params, searchParams }) {
         type: 'AllTypes'
     })
     const [routerFilter, setRouterFilter] = useState('All Products')
-    const [categories, setCategories] = useState([])
 
     // Pagination state
     const productsPerPage = 12;
@@ -47,9 +49,6 @@ export default function ProductFilterPage({ params, searchParams }) {
             if (Route === 'BestDeal') {
                 setFilter({ ...filter, price: '0-2500' })
             }
-            const data = await fetch('http://localhost:5000/api/shop/get-categories');
-            const categories = await data.json();
-            setCategories(categories);
         }
         fetchFilter()
     }, [params])
@@ -131,7 +130,7 @@ export default function ProductFilterPage({ params, searchParams }) {
 
 
     return (
-        <div className="mt-30 px-20 w-full h-auto">
+        <div className="pt-30 px-20 w-full h-auto">
             <Breadcrumb />
             <div className='flex justify-between items-center'>
                 <div>
@@ -162,7 +161,7 @@ export default function ProductFilterPage({ params, searchParams }) {
                                     <SelectGroup>
                                         <SelectItem value='AllCategories'>All Categories</SelectItem>
                                         {
-                                            categories.map((cat) => (
+                                            categories && categories.map((cat) => (
                                                 <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                                             ))
                                         }
@@ -212,7 +211,7 @@ export default function ProductFilterPage({ params, searchParams }) {
                             ref={sentinelRef}
                             className="h-10 w-full flex items-center justify-center"
                         >
-                            <span className="text-gray-500">Loading...</span>
+                            <Loader/>
                         </div>
                     )}
                 </div>

@@ -1,30 +1,57 @@
 'use client'
 
 import { GlobalContext } from "@/app/context/Context";
-import { Link, ShoppingCart } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
+import Link from "next/link";
 import { useContext } from "react";
 
-function RenderProducts({ Products, Class }) {
+function RenderProducts({ Products, Class, isCart = false }) {
     const { Cart, setCart, loading } = useContext(GlobalContext)
 
     function handleAddToCart(product) {
-        setCart(prevCart => [...prevCart, product]);
+        setCart(prevCart => {
+            const newCart = [...prevCart, product];
+            // Save the updated cart to localStorage
+            localStorage.setItem('Cart', JSON.stringify(newCart));
+            return newCart;
+        });
     }
     function handleRemoveFromCart(productId) {
-        setCart(prevCart => prevCart.filter(item => item.id !== productId));
+        setCart(prevCart => {
+            const newCart = prevCart.filter(item => item.id !== productId);
+            localStorage.setItem('Cart', JSON.stringify(newCart));
+            return newCart;
+        });
     }
-
     return (
         <>
             {
-                loading ? (
-                    <div className='w-full flex items-center justify-center' > Loading...</div>
-                ) :
+                loading ?
                     <div className={`w-full grid grid-cols-3 gap-6 ${Class}`}>
                         {
-                            Products.length > 0 ?
+                            Array.from({ length: Class?.includes('grid-cols-4') ? 4 : 3 }).map((_, index) => (
+                                <div
+                                    key={index}
+                                    className="flex flex-col bg-neutral-200 w-full h-108.25 animate-pulse rounded-xl p-4 gap-4"
+                                >
+                                    <div className="bg-neutral-300/50 w-full h-32 animate-pulse rounded-md"></div>
+                                    <div className="flex flex-col gap-2">
+                                        <div className="bg-neutral-300/50 w-full h-4 animate-pulse rounded-md"></div>
+                                        <div className="bg-neutral-300/50 w-4/5 h-4 animate-pulse rounded-md"></div>
+                                        <div className="bg-neutral-300/50 w-full h-4 animate-pulse rounded-md"></div>
+                                        <div className="bg-neutral-300/50 w-2/4 h-4 animate-pulse rounded-md"></div>
+                                    </div>
+                                </div>
+                            ))
+                        }
+                    </div>
+
+                    :
+                    <div className={`w-full grid grid-cols-3 gap-6 ${Class}`}>
+                        {
+                            Products && Products.length > 0 ?
                                 Products.map((product) => (
-                                    <div key={product.id} className="w-full h-110 bg-white rounded-xl border relative border-stroke overflow-hidden ">
+                                    <div key={product.id} className="w-full h-auto bg-white rounded-xl border relative border-stroke overflow-hidden ">
                                         <div className='discount bg-primary absolute top-2 right-2 px-0.5 rounded-full'>
                                             {
                                                 product.discount_percentage > 0 && <p className='text-white text-xs px-2 py-1'>-{product.discount_percentage}%</p>
@@ -62,23 +89,33 @@ function RenderProducts({ Products, Class }) {
                                                 In Stock: <span className='font-semibold text-[#38A9FA]'>{product.stock}</span>
                                             </p>
                                             {
-                                                Cart.find(item => item.id === product.id) ? (
-                                                    <button onClick={() => handleRemoveFromCart(product.id)} className='border flex items-center gap-2 font-medium cursor-pointer border-stroke px-4 py-2 rounded-full bg-white w-fit'>
-                                                        <ShoppingCart size={18} />
-                                                        Remove From Cart
-                                                    </button>
-                                                ) : (
-                                                    <button onClick={() => handleAddToCart(product)} className='border flex items-center gap-2 font-medium cursor-pointer border-stroke px-4 py-2 rounded-full bg-white w-fit'>
-                                                        <ShoppingCart size={18} />
-                                                        Add To Cart
-                                                    </button>
-                                                )
+                                                isCart ? (
+                                                    <div className="w-full flex items-center gap-3">
+                                                        <button onClick={() => handleRemoveFromCart(product.id)} className='border flex items-center gap-2 font-medium cursor-pointer border-stroke px-4 py-2 rounded-full bg-white w-fit'>
+                                                            Remove
+                                                        </button>
+                                                        <Link href={`/product/${product.id}`} className="w-full flex items-center justify-center gap-2 font-medium cursor-pointer text-white py-2 rounded-full bg-primary">
+                                                            Buy Now
+                                                        </Link>
+                                                    </div>
+                                                ) :
+                                                    Cart.find(item => item.id === product.id) ? (
+                                                        <button onClick={() => handleRemoveFromCart(product.id)} className='border flex items-center gap-2 font-medium cursor-pointer border-stroke px-4 py-2 rounded-full bg-white w-fit'>
+                                                            <ShoppingCart size={18} />
+                                                            Remove From Cart
+                                                        </button>
+                                                    ) : (
+                                                        <button onClick={() => handleAddToCart(product)} className='border flex items-center gap-2 font-medium cursor-pointer border-stroke px-4 py-2 rounded-full bg-white w-fit'>
+                                                            <ShoppingCart size={18} />
+                                                            Add To Cart
+                                                        </button>
+                                                    )
                                             }
                                         </div>
                                     </div>
                                 ))
                                 :
-                                <p className='text-center w-full'>No products available.</p>
+                                <div className={`w-full flex items-center justify-center ${Class == 'grid-cols-4!' ? 'col-span-4' : 'col-span-3'}`}>No products available.</div>
                         }
                     </div>
             }
@@ -86,5 +123,4 @@ function RenderProducts({ Products, Class }) {
 
     )
 }
-
 export default RenderProducts

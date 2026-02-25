@@ -1,42 +1,29 @@
 'use client'
-import { usePathname } from 'next/navigation'
-import { createContext, useEffect, useMemo, useState } from 'react'
+import { useFetchAllProducts } from '@/components/useFetchAllProducts'
+import { createContext, useMemo, useState } from 'react'
 
 export const GlobalContext = createContext(null)
 function Context({ children }) {
-    const [Products, setProducts] = useState([])
-    const [Cart, setCart] = useState([])
-    const [loading, setLoading] = useState(false)
-    const pathname = usePathname()
-
-
-    const Promotions = useMemo(() => {
-        return Products.filter(product => product.discount_percentage > 0)
-    }, [Products])
-
-
-    const shouldFetchAllProducts = !pathname?.startsWith('/product/');
-
-    useEffect(() => {
-        if (!shouldFetchAllProducts) return;
-        async function fetchData() {
-            try {
-                setLoading(true)
-                const response = await fetch('http://localhost:5000/api/shop/get-products')
-                const data = await response.json()
-                setProducts(data)
-
-            } catch (error) {
-                console.error('Error fetching data:', error)
-            } finally {
-                setLoading(false)
-            }
+    const { data: Products, isLoading: loading, error } = useFetchAllProducts('http://localhost:5000/api/shop/get-products')
+    const [Cart, setCart] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('Cart');
+            return saved ? JSON.parse(saved) : [];
         }
-        fetchData()
-    }, [setProducts, shouldFetchAllProducts])
+        return [];
+    });
+
+    console.log(Products);
+    
+    const Promotions = useMemo(() => {
+        if (!Products) return [];
+        return Products.filter(product => product.discount_percentage > 0);
+    }, [Products]);
+
+
 
     return (
-        <GlobalContext.Provider value={{ Products, setProducts, Promotions, Cart, setCart, loading, }}>
+        <GlobalContext.Provider value={{ Products, Promotions, Cart, setCart, loading, error }}>
             {children}
         </GlobalContext.Provider>
     )

@@ -118,10 +118,11 @@ export const AddOrder = async (req, res) => {
       product_id,
       quantity,
       price_per_unit,
+      delivery_Price
     } = req.body;
     const [order_info_row] = await connection.query(
-      "INSERT INTO order_info (first_name,last_name,phone,wilaya,baladiya,delivery_type) VALUES (?,?,?,?,?,?)",
-      [first_name, last_name, phone, wilaya, baladiya, delivery_type],
+      "INSERT INTO order_info (first_name,last_name,phone,wilaya,baladiya,delivery_type,delivery_Price) VALUES (?,?,?,?,?,?,?)",
+      [first_name, last_name, phone, wilaya, baladiya, delivery_type,delivery_Price],
     );
     const [Order_item_row] = await connection.query(
       "INSERT INTO order_items (order_id,product_id,quantity,price_per_unit) VALUES (?,?,?,?)",
@@ -225,7 +226,6 @@ export const GetCategories = async (req, res) => {
   }
 };
 
-//! need to update this later
 export const GetProducts = async (req, res) => {
   try {
     // Query to get products with their categories
@@ -239,6 +239,8 @@ export const GetProducts = async (req, res) => {
         p.stock,
         p.image_url,
         p.is_active,
+        p.images,
+        p.thumbnail,
         p.created_at,
         p.type,
         c.id AS category_id,
@@ -264,6 +266,8 @@ export const GetProducts = async (req, res) => {
           price: row.price,
           stock: row.stock,
           image_url: row.image_url,
+          images: row.images,
+          thumbnail: row.thumbnail,
           is_active: row.is_active,
           created_at: row.created_at,
           type: row.type,
@@ -293,7 +297,8 @@ export const GetProductById = async (req, res) => {
   try {
     const { id } = req.params;
     // Query to get products with their categories
-    const [rows] = await pool.query(`
+    const [rows] = await pool.query(
+      `
       SELECT 
         p.id,
         p.name,
@@ -313,7 +318,9 @@ export const GetProductById = async (req, res) => {
       LEFT JOIN product_categories pc ON p.id = pc.product_id
       LEFT JOIN categories c ON pc.category_id = c.id
       WHERE p.id = ?
-    `,[id]);
+    `,
+      [id],
+    );
 
     // Group categories under each product
     const productMap = new Map();
@@ -355,5 +362,95 @@ export const GetProductById = async (req, res) => {
     console.error("Error fetching product:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
-  
+};
+
+export const GetProductsByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    // Query to get products with their categories
+    const [rows] = await pool.query(
+      `
+      SELECT 
+        p.id,
+        p.name,
+        p.description,
+        p.discount_percentage,
+        p.price,
+        p.stock,
+        p.image_url,
+        p.thumbnail,
+        p.images,
+        p.is_active,
+        p.created_at,
+        p.type,
+        c.id AS category_id,
+        c.name AS category_name
+        FROM products p
+        INNER JOIN product_categories pc ON p.id = pc.product_id
+        INNER JOIN categories c ON pc.category_id = c.id
+        WHERE c.id = ?
+        LIMIT 4
+    `,
+      [categoryId],
+    );
+    // Group categories under each product
+    const productMap = new Map();
+
+    for (const row of rows) {
+      const productId = row.id;
+
+      if (!productMap.has(productId)) {
+        productMap.set(productId, {
+          id: row.id,
+          name: row.name,
+          discount_percentage: row.discount_percentage,
+          description: row.description,
+          price: row.price,
+          stock: row.stock,
+          image_url: row.image_url,
+          thumbnail: row.thumbnail,
+          images: row.images,
+          is_active: row.is_active,
+          created_at: row.created_at,
+          type: row.type,
+          categories: [],
+        });
+      }
+
+      // Add category if it exists (handles products with no categories)
+      if (row.category_id) {
+        productMap.get(productId).categories.push({
+          id: row.category_id,
+          name: row.category_name,
+        });
+      }
+    }
+
+    const products = Array.from(productMap.values());
+
+    return res.status(200).json(products);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+export const GetDashboardStats = async (req, res) => {
+  try {
+    const [totalProductsRow] = await pool.query("SELECT COUNT(*) AS total_products FROM products");
+    const [totalOrdersRow] = await pool.query("SELECT COUNT(*) AS total_orders FROM order_info");
+    const [totalSoldProductsRow] = await pool.query(`SELECT SUM(oi.quantity) AS total_sold_products
+      FROM order_items oi
+      JOIN order_info o ON oi.order_id = o.id
+      WHERE o.status = 'completed'`);
+    const totalProducts = totalProductsRow[0].total_products;
+    const totalOrders = totalOrdersRow[0].total_orders;
+    const totalSoldProducts = totalSoldProductsRow[0].total_sold_products || 0;
+
+    return res.status(200).json({ totalProducts, totalOrders, totalSoldProducts });
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 };
