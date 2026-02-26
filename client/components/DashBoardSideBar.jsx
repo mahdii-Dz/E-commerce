@@ -22,7 +22,7 @@ export const DashBoardSideBar = () => {
   const [hoveredItem, setHoveredItem] = useState(null);
 
   return (
-    <aside className="w-1/5 h-screen bg-white border-r border-gray-200 flex flex-col p-6">
+    <aside className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col p-6 fixed top-0 left-0">
       {/* Logo */}
       <div className="text-4xl font-bold text-black mb-12 tracking-tight">
         LOGO

@@ -1,15 +1,16 @@
 'use client'
+import { ChartBarDefault } from '@/components/BarChart';
+import { ChartPieDonut } from '@/components/DonutChart';
 import { useFetchSingleProduct } from '@/components/useFetchSingleProduct'
 import React from 'react'
 
 function Dashboard() {
-  const { data:stats , isLoading, error } = useFetchSingleProduct('http://localhost:5000/api/shop/get-stats')
-  const { totalProducts, totalSoldProducts, totalOrders } = stats || {};
-  console.log(totalSoldProducts);
-  
-  
+  const { data: stats, isLoading: statsLoading, error: statsError } = useFetchSingleProduct('http://localhost:5000/api/shop/get-stats')
+  const { totalProducts, totalSoldProducts, totalOrders , dailyTotals, CategoryStats } = stats || {};
+
+
   return (
-    <main className='w-full pt-6 px-9 flex flex-col gap-6'>
+    <main className='w-full pt-6 px-9 flex flex-col gap-6 pb-16 ml-64'>
       <h1 className='text-3xl font-bold'>Dashboard</h1>
       <div className='flex items-center gap-9'>
         <div className='bg-white border-2 w-1/6 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
@@ -42,6 +43,10 @@ function Dashboard() {
             )
           }
         </div>
+      </div>
+      <ChartBarDefault chartData={dailyTotals} isLoading={statsLoading} error={statsError} />
+      <div className='flex'>
+        <ChartPieDonut chartData={CategoryStats} isLoading={statsLoading} error={statsError} />
       </div>
     </main>
   )

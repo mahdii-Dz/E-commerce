@@ -118,11 +118,19 @@ export const AddOrder = async (req, res) => {
       product_id,
       quantity,
       price_per_unit,
-      delivery_Price
+      delivery_Price,
     } = req.body;
     const [order_info_row] = await connection.query(
       "INSERT INTO order_info (first_name,last_name,phone,wilaya,baladiya,delivery_type,delivery_Price) VALUES (?,?,?,?,?,?,?)",
-      [first_name, last_name, phone, wilaya, baladiya, delivery_type,delivery_Price],
+      [
+        first_name,
+        last_name,
+        phone,
+        wilaya,
+        baladiya,
+        delivery_type,
+        delivery_Price,
+      ],
     );
     const [Order_item_row] = await connection.query(
       "INSERT INTO order_items (order_id,product_id,quantity,price_per_unit) VALUES (?,?,?,?)",
@@ -435,20 +443,50 @@ export const GetProductsByCategory = async (req, res) => {
   }
 };
 
-
 export const GetDashboardStats = async (req, res) => {
   try {
-    const [totalProductsRow] = await pool.query("SELECT COUNT(*) AS total_products FROM products");
-    const [totalOrdersRow] = await pool.query("SELECT COUNT(*) AS total_orders FROM order_info");
-    const [totalSoldProductsRow] = await pool.query(`SELECT SUM(oi.quantity) AS total_sold_products
+    const [totalProductsRow] = await pool.query(
+      "SELECT COUNT(*) AS total_products FROM products",
+    );
+    const [totalOrdersRow] = await pool.query(
+      "SELECT COUNT(*) AS total_orders FROM order_info",
+    );
+    const [totalSoldProductsRow] =
+      await pool.query(`SELECT SUM(oi.quantity) AS total_sold_products
       FROM order_items oi
       JOIN order_info o ON oi.order_id = o.id
       WHERE o.status = 'completed'`);
+    const [BarChart] = await pool.query(`
+      SELECT created_at , quantity
+      FROM order_info
+      JOIN order_items ON order_info.id = order_items.order_id
+      WHERE MONTH(created_at) = MONTH(CURRENT_DATE())
+      `);
+    const [CategoryStats] = await pool.query(`
+      SELECT 
+        pc.category_id,
+        c.name as category_name,  -- if you have categories table
+        SUM(oi.quantity) as total_quantity_sold
+      FROM order_items oi
+      JOIN product_categories pc ON oi.product_id = pc.product_id
+      LEFT JOIN categories c ON pc.category_id = c.id  -- optional for name
+      GROUP BY pc.category_id, c.name`);
+
+    // Group by day
+    const dailyTotals = Object.entries(
+      BarChart.reduce((acc, order) => {
+        const day = new Date(order.created_at).toISOString().split("T")[0];
+        acc[day] = (acc[day] || 0) + order.quantity;
+        return acc;
+      }, {}),
+    ).map(([day, total]) => ({ day, total }));
     const totalProducts = totalProductsRow[0].total_products;
     const totalOrders = totalOrdersRow[0].total_orders;
     const totalSoldProducts = totalSoldProductsRow[0].total_sold_products || 0;
 
-    return res.status(200).json({ totalProducts, totalOrders, totalSoldProducts });
+    return res
+      .status(200)
+      .json({ totalProducts, totalOrders, totalSoldProducts, dailyTotals,CategoryStats });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     return res.status(500).json({ error: "Internal Server Error" });

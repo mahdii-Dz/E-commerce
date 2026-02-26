@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 
 export const useFetchSingleProduct = (url, options = {}) => {
     const fetcher = async () => {
-        await new Promise(resolve => setTimeout(resolve, 2500));
         try {
             const response = await fetch(url);
 
