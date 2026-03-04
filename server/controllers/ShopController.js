@@ -460,7 +460,7 @@ export const GetDashboardStats = async (req, res) => {
       SELECT created_at , quantity
       FROM order_info
       JOIN order_items ON order_info.id = order_items.order_id
-      WHERE MONTH(created_at) = MONTH(CURRENT_DATE())
+      WHERE order_info.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
       `);
     const [CategoryStats] = await pool.query(`
       SELECT 
@@ -471,6 +471,13 @@ export const GetDashboardStats = async (req, res) => {
       JOIN product_categories pc ON oi.product_id = pc.product_id
       LEFT JOIN categories c ON pc.category_id = c.id  -- optional for name
       GROUP BY pc.category_id, c.name`);
+    const [wilayaStats] = await pool.query(`
+      SELECT wilaya, COUNT(*) AS totalOrders
+      FROM order_info
+      GROUP BY wilaya
+      ORDER BY totalOrders DESC
+      limit 10;
+    `);
 
     // Group by day
     const dailyTotals = Object.entries(
@@ -484,9 +491,14 @@ export const GetDashboardStats = async (req, res) => {
     const totalOrders = totalOrdersRow[0].total_orders;
     const totalSoldProducts = totalSoldProductsRow[0].total_sold_products || 0;
 
-    return res
-      .status(200)
-      .json({ totalProducts, totalOrders, totalSoldProducts, dailyTotals,CategoryStats });
+    return res.status(200).json({
+      totalProducts,
+      totalOrders,
+      totalSoldProducts,
+      dailyTotals,
+      CategoryStats,
+      wilayaStats,
+    });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
     return res.status(500).json({ error: "Internal Server Error" });
