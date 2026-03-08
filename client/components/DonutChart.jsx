@@ -15,6 +15,7 @@ import {
     ChartContainer,
     ChartTooltip,
 } from "@/components/ui/chart";
+import Loader from "./Loader";
 
 const COLOR_PALETTE = [
     "#FA3145", "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6",
@@ -59,7 +60,7 @@ export function ChartPieDonut({
         return validData.sort((a, b) => b[dataKey] - a[dataKey]);
     }, [chartData, dataKey, nameKey]);
 
-    const chartConfig = useMemo(() => {
+    const chartConfig = () => {
         const config = { [dataKey]: { label: "Total" } };
         processedData.forEach((item) => {
             config[item[nameKey]] = {
@@ -68,18 +69,18 @@ export function ChartPieDonut({
             };
         });
         return config;
-    }, [processedData, dataKey]);
+    }
 
     // Loading state
     if (isLoading) {
         return (
-            <Card className="flex flex-col h-100 w-full">
+            <Card className="flex flex-col h-75 w-full">
                 <CardHeader className="items-center pb-0">
                     <CardTitle>{title}</CardTitle>
                     <CardDescription>{description}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+                    <Loader />
                 </CardContent>
             </Card>
         );
@@ -88,7 +89,7 @@ export function ChartPieDonut({
     // Error state
     if (error) {
         return (
-            <Card className="flex flex-col h-100 w-full">
+            <Card className="flex flex-col h-75 w-full">
                 <CardHeader className="items-center pb-0">
                     <CardTitle>{title}</CardTitle>
                     <CardDescription>{description}</CardDescription>
@@ -103,7 +104,7 @@ export function ChartPieDonut({
     // Empty or invalid data state
     if (processedData.length === 0) {
         return (
-            <Card className="flex flex-col h-100 w-full">
+            <Card className="flex flex-col h-75 w-full">
                 <CardHeader className="items-center pb-0">
                     <CardTitle>{title}</CardTitle>
                     <CardDescription>{description}</CardDescription>
@@ -117,7 +118,7 @@ export function ChartPieDonut({
     }
 
     return (
-        <Card className="flex flex-col h-75 w-1/2 gap-0!">
+        <Card className="flex flex-col h-75 w-full gap-0!">
             <CardHeader className="items-center pb-0">
                 <CardTitle>{title}</CardTitle>
                 <CardDescription>{description}</CardDescription>

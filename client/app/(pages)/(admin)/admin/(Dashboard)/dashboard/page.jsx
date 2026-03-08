@@ -1,12 +1,15 @@
 'use client'
 import { ChartBarDefault } from '@/components/BarChart';
 import { ChartPieDonut } from '@/components/DonutChart';
+import OrdersPerWilaya from '@/components/OrdersPerWilaya';
 import { useFetchSingleProduct } from '@/components/useFetchSingleProduct'
 import React from 'react'
 
 function Dashboard() {
   const { data: stats, isLoading: statsLoading, error: statsError } = useFetchSingleProduct('http://localhost:5000/api/shop/get-stats')
-  const { totalProducts, totalSoldProducts, totalOrders , dailyTotals, CategoryStats } = stats || {};
+  const { totalProducts, totalSoldProducts, totalOrders, dailyTotals, CategoryStats, wilayaStats } = stats || {};
+  console.log(stats);
+  
 
 
   return (
@@ -45,8 +48,9 @@ function Dashboard() {
         </div>
       </div>
       <ChartBarDefault chartData={dailyTotals} isLoading={statsLoading} error={statsError} />
-      <div className='flex'>
+      <div className='flex w-full gap-6'>
         <ChartPieDonut chartData={CategoryStats} isLoading={statsLoading} error={statsError} />
+        <OrdersPerWilaya data={wilayaStats} isLoading={statsLoading} error={statsError} />
       </div>
     </main>
   )

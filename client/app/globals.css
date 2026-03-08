@@ -5,6 +5,7 @@
 *, *::before, *::after ,html,body{
     scroll-behavior: smooth;
 }
+
 @theme{
     --color-primary: #FA3145;
     --color-secondary: #646464;

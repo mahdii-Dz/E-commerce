@@ -51,7 +51,7 @@ function RenderProducts({ Products, Class, isCart = false }) {
                         {
                             Products && Products.length > 0 ?
                                 Products.map((product) => (
-                                    <div key={product.id} className="w-full h-auto bg-white rounded-xl border relative border-stroke overflow-hidden ">
+                                    <div key={product.id} className="w-full h-auto bg-white rounded-xl border relative border-stroke overflow-hidden">
                                         <div className='discount bg-primary absolute top-2 right-2 px-0.5 rounded-full'>
                                             {
                                                 product.discount_percentage > 0 && <p className='text-white text-xs px-2 py-1'>-{product.discount_percentage}%</p>
@@ -60,7 +60,7 @@ function RenderProducts({ Products, Class, isCart = false }) {
                                         </div>
                                         <div className='w-full h-48 border-b border-stroke cursor-pointer overflow-hidden '>
                                             <a href={`/product/${product.id}`} >
-                                                <img src={product.image_url} alt={product.name} className="w-full h-full object-contain hover:scale-110 transition-transform duration-300" loading='lazy' />
+                                                <img src={product.image_url || product.thumbnail} alt={product.name} className="w-full h-full object-contain hover:scale-110 transition-transform duration-300" loading='lazy' />
                                             </a>
                                         </div>
                                         <div className="py-4 px-3 flex flex-col gap-2.5">

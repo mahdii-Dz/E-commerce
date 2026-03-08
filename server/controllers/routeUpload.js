@@ -12,13 +12,25 @@ CloudinaryRouter.post("/upload", upload.single("image"), function (req, res) {
         message: "Error",
       });
     }
-
+    const resonseData = {
+      url: result.secure_url,
+      public_id: result.public_id,
+    };
     res.status(200).json({
       success: true,
       message: "Uploaded!",
-      data: result,
+      data: resonseData,
     });
   });
+});
+
+CloudinaryRouter.delete("/delete/:publicId", async (req, res) => {
+  try {
+    const result = await cloudinary.uploader.destroy(req.params.publicId);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 export default CloudinaryRouter;

@@ -24,28 +24,33 @@ const chartConfig = {
 };
 
 function fillMissingDays(data, daysToShow = 30) {
-    if (!data || data.length === 0) return [];
+  // Get date range - use today as end date if no data
+  const lastDate = data && data.length > 0 
+    ? new Date([...data].sort((a, b) => new Date(a.day) - new Date(b.day))[data.length - 1].day)
+    : new Date(); // Use today if no data
+  
+  const startDate = new Date(lastDate);
+  startDate.setDate(startDate.getDate() - daysToShow + 1);
 
-    const sorted = [...data].sort((a, b) => new Date(a.day) - new Date(b.day));
-    const lastDate = new Date(sorted[sorted.length - 1].day);
-    const startDate = new Date(lastDate);
-    startDate.setDate(startDate.getDate() - daysToShow + 1);
+  // Create map of existing data (empty if no data)
+  const dataMap = new Map(
+    (data || []).map(d => [d.day, d.total])
+  );
 
-    const dataMap = new Map(sorted.map(d => [d.day, d.total]));
+  // Generate all days
+  const result = [];
+  for (let i = 0; i < daysToShow; i++) {
+    const current = new Date(startDate);
+    current.setDate(startDate.getDate() + i);
+    const dayStr = current.toISOString().split('T')[0];
+    
+    result.push({
+      day: dayStr,
+      total: dataMap.get(dayStr) || 0
+    });
+  }
 
-    const result = [];
-    for (let i = 0; i < daysToShow; i++) {
-        const current = new Date(startDate);
-        current.setDate(startDate.getDate() + i);
-        const dayStr = current.toISOString().split('T')[0];
-        
-        result.push({
-            day: dayStr,
-            total: dataMap.get(dayStr) || 0
-        });
-    }
-
-    return result;
+  return result;
 }
 
 export function ChartBarDefault({ chartData, isLoading, error, daysToShow = 30 }) {

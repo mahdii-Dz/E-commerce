@@ -1,29 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { usePathname } from 'next/navigation';
 
+// Add routes here to disable fetching
+const DISABLED_ROUTES = ['/admin/dashboard', '/product/','/admin/add-product','/admin/edit-product'];
+
 export const useFetchAllProducts = (url, options = {}) => {
   const pathname = usePathname();
-  const shouldFetch = !pathname?.startsWith('/product/') && pathname !== '/admin/dashboard';
   
-
-  const fetcher = async () => {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `Failed to fetch: ${response.status}`);
-    }
-
-    const text = await response.text();
-    return text ? JSON.parse(text) : [];
-  };
+  const isDisabled = DISABLED_ROUTES.some(route => 
+    pathname?.startsWith(route) || pathname === route
+  );
 
   return useQuery({
-    queryKey: ['api', url],
-    queryFn: fetcher,
-    enabled: shouldFetch, 
+    queryKey: ['products', url],
+    queryFn: async () => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Fetch failed');
+      return res.json();
+    },
+    enabled: !isDisabled,
     staleTime: 5 * 60 * 1000,
-    retry: 2,
     ...options,
   });
 };

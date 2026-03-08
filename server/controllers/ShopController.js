@@ -54,6 +54,7 @@ export const AddProduct = async (req, res) => {
       categoryIds,
       type,
       images,
+      discount_percentage,
       thumbnail,
     } = req.body;
 
@@ -65,8 +66,8 @@ export const AddProduct = async (req, res) => {
 
     // 1. Insert product
     const [productResult] = await connection.query(
-      `INSERT INTO products (name, description, price, stock,type,images,thumbnail) 
-       VALUES (?, ?, ?, ?,?,?,?)`,
+      `INSERT INTO products (name, description, price, stock,type,images,thumbnail,discount_percentage) 
+       VALUES (?, ?, ?, ?,?,?,?,?)`,
       [
         name,
         description,
@@ -75,6 +76,7 @@ export const AddProduct = async (req, res) => {
         type,
         JSON.stringify(images),
         thumbnail,
+        discount_percentage
       ],
     );
     const productId = productResult.insertId;
@@ -158,7 +160,11 @@ export const AddOrder = async (req, res) => {
 };
 
 export const UpdateProduct = async (req, res) => {
+  const connection = await pool.getConnection();
+  
   try {
+    await connection.beginTransaction();
+    
     const { id } = req.params;
     const {
       name,
@@ -169,9 +175,21 @@ export const UpdateProduct = async (req, res) => {
       images,
       thumbnail,
       type,
+      categoryIds, // Array of category IDs
     } = req.body;
-    const [row] = await pool.query(
-      "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, discount_percentage = ?, images = ?, thumbnail = ? , type = ? WHERE id = ?",
+
+    // Update product details
+    const [row] = await connection.query(
+      `UPDATE products 
+       SET name = ?, 
+           description = ?, 
+           price = ?, 
+           stock = ?, 
+           discount_percentage = ?, 
+           images = ?, 
+           thumbnail = ?, 
+           type = ? 
+       WHERE id = ?`,
       [
         name,
         description,
@@ -184,14 +202,43 @@ export const UpdateProduct = async (req, res) => {
         id,
       ],
     );
-    if (row.affectedRows === 1) {
-      return res.status(201).json({ message: "Product updated successfully" });
-    } else {
-      return res.status(400).json({ error: "Failed to update Product" });
+
+    if (row.affectedRows === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: "Product not found" });
     }
+
+    // Handle categories update if categoryIds provided
+    if (categoryIds && Array.isArray(categoryIds)) {
+      // Remove existing category relationships
+      await connection.query(
+        "DELETE FROM product_categories WHERE product_id = ?",
+        [id]
+      );
+
+      // Insert new category relationships
+      if (categoryIds.length > 0) {
+        const categoryValues = categoryIds.map(catId => [id, catId]);
+        await connection.query(
+          "INSERT INTO product_categories (product_id, category_id) VALUES ?",
+          [categoryValues]
+        );
+      }
+    }
+
+    await connection.commit();
+    
+    return res.status(200).json({ 
+      success: true,
+      message: "Product updated successfully" 
+    });
+
   } catch (error) {
+    await connection.rollback();
     console.error("Error updating Product:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+    connection.release();
   }
 };
 export const DeleteProduct = async (req, res) => {
