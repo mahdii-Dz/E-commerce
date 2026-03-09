@@ -562,18 +562,53 @@ export const GetOrders = async (req, res) => {
         o.delivery_type,
         o.delivery_Price,
         oi.quantity,
-        oi.price_per_unit AS price,
-        (oi.quantity * oi.price_per_unit) AS fullPrice,
+        ROUND(oi.price_per_unit) AS price,
+        ROUND((oi.quantity * oi.price_per_unit)) AS fullPrice,
         p.name AS product_name
       FROM
         order_info o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN products p ON oi.product_id = p.id
+      WHERE o.status = 'pending'
     `);
 
     return res.status(200).json(orders);
   } catch (error) {
     console.error("Error fetching orders:", error);
     return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+export const AcceptOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [row] = await pool.query(
+      "UPDATE order_info SET status = 'accepted' WHERE id = ?",
+      [id],
+    );
+    if (row.affectedRows === 1) {
+      return res.status(200).json({ message: "Order accepted successfully" });
+    } else {
+      return res.status(400).json({ error: "Failed to accept order" });
+    }
+  } catch (error) {
+    console.error("Error accepting order:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+export const RejectOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [row] = await pool.query(
+      "UPDATE order_info SET status = 'rejected' WHERE id = ?",
+      [id],
+    );
+    if (row.affectedRows === 1) {
+      return res.status(200).json({ message: "Order rejected successfully" });
+    } else {
+      return res.status(400).json({ error: "Failed to reject order" });
+    }
+  } catch (error) {
+    console.error("Error rejecting order:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
