@@ -76,7 +76,7 @@ export const AddProduct = async (req, res) => {
         type,
         JSON.stringify(images),
         thumbnail,
-        discount_percentage
+        discount_percentage,
       ],
     );
     const productId = productResult.insertId;
@@ -161,10 +161,10 @@ export const AddOrder = async (req, res) => {
 
 export const UpdateProduct = async (req, res) => {
   const connection = await pool.getConnection();
-  
+
   try {
     await connection.beginTransaction();
-    
+
     const { id } = req.params;
     const {
       name,
@@ -213,26 +213,25 @@ export const UpdateProduct = async (req, res) => {
       // Remove existing category relationships
       await connection.query(
         "DELETE FROM product_categories WHERE product_id = ?",
-        [id]
+        [id],
       );
 
       // Insert new category relationships
       if (categoryIds.length > 0) {
-        const categoryValues = categoryIds.map(catId => [id, catId]);
+        const categoryValues = categoryIds.map((catId) => [id, catId]);
         await connection.query(
           "INSERT INTO product_categories (product_id, category_id) VALUES ?",
-          [categoryValues]
+          [categoryValues],
         );
       }
     }
 
     await connection.commit();
-    
-    return res.status(200).json({ 
-      success: true,
-      message: "Product updated successfully" 
-    });
 
+    return res.status(200).json({
+      success: true,
+      message: "Product updated successfully",
+    });
   } catch (error) {
     await connection.rollback();
     console.error("Error updating Product:", error);
@@ -548,6 +547,33 @@ export const GetDashboardStats = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const GetOrders = async (req, res) => {
+  try {
+    const [orders] = await pool.query(`
+      SELECT
+        o.id AS order_id,
+        CONCAT(o.first_name, ' ', o.last_name) AS fullname,
+        o.phone,
+        CONCAT(o.baladiya, ',', o.wilaya) AS address,
+        o.delivery_type,
+        o.delivery_Price,
+        oi.quantity,
+        oi.price_per_unit AS price,
+        (oi.quantity * oi.price_per_unit) AS fullPrice,
+        p.name AS product_name
+      FROM
+        order_info o
+        JOIN order_items oi ON o.id = oi.order_id
+        JOIN products p ON oi.product_id = p.id
+    `);
+
+    return res.status(200).json(orders);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
