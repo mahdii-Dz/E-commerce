@@ -1,11 +1,12 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder,UpdateProduct,DeleteProduct,DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder,UpdateProduct,DeleteProduct,DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, getBanners, updateBanners } from '../controllers/ShopController.js';
 
 const router = express.Router()
 //GEt
 router.get('/get-categories',GetCategories)
 router.get('/get-products',GetProducts)
 router.get('/get-orders',GetOrders)
+router.get('/get-banners',getBanners)
     //by id or category
     router.get('/get-product/:id',GetProductById)
     router.get('/get-products/category/:categoryId',GetProductsByCategory)
@@ -19,6 +20,7 @@ router.post('/add-order',AddOrder)
 router.put('/update-product/:id',UpdateProduct)
 router.put('/accept-order/:id',AcceptOrder)
 router.put('/reject-order/:id',RejectOrder)
+router.put('/update-banners',updateBanners)
 //DELETE
 router.delete('/delete-product/:id',DeleteProduct)
 router.delete('/delete-category/:id',DeleteCategory)

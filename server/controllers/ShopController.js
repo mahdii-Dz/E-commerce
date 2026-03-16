@@ -56,6 +56,7 @@ export const AddProduct = async (req, res) => {
       images,
       discount_percentage,
       thumbnail,
+      colors,
     } = req.body;
 
     // Validate input
@@ -66,8 +67,8 @@ export const AddProduct = async (req, res) => {
 
     // 1. Insert product
     const [productResult] = await connection.query(
-      `INSERT INTO products (name, description, price, stock,type,images,thumbnail,discount_percentage) 
-       VALUES (?, ?, ?, ?,?,?,?,?)`,
+      `INSERT INTO products (name, description, price, stock,type,images,thumbnail,discount_percentage,colors) 
+       VALUES (?, ?, ?, ?,?,?,?,?,?)`,
       [
         name,
         description,
@@ -77,6 +78,7 @@ export const AddProduct = async (req, res) => {
         JSON.stringify(images),
         thumbnail,
         discount_percentage,
+        colors ? JSON.stringify(colors) : null,
       ],
     );
     const productId = productResult.insertId;
@@ -121,9 +123,11 @@ export const AddOrder = async (req, res) => {
       quantity,
       price_per_unit,
       delivery_Price,
+      color_name,
+      color_hex,
     } = req.body;
     const [order_info_row] = await connection.query(
-      "INSERT INTO order_info (first_name,last_name,phone,wilaya,baladiya,delivery_type,delivery_Price) VALUES (?,?,?,?,?,?,?)",
+      "INSERT INTO order_info (first_name,last_name,phone,wilaya,baladiya,delivery_type,delivery_Price,color_name,color_hex) VALUES (?,?,?,?,?,?,?,?,?)",
       [
         first_name,
         last_name,
@@ -132,6 +136,8 @@ export const AddOrder = async (req, res) => {
         baladiya,
         delivery_type,
         delivery_Price,
+        color_name,
+        color_hex,
       ],
     );
     const [Order_item_row] = await connection.query(
@@ -175,9 +181,11 @@ export const UpdateProduct = async (req, res) => {
       images,
       thumbnail,
       type,
-      categoryIds, // Array of category IDs
+      categoryIds,
+      colors,
     } = req.body;
-
+    console.log(colors);
+    
     // Update product details
     const [row] = await connection.query(
       `UPDATE products 
@@ -188,7 +196,8 @@ export const UpdateProduct = async (req, res) => {
            discount_percentage = ?, 
            images = ?, 
            thumbnail = ?, 
-           type = ? 
+           type = ? ,
+           colors = ?
        WHERE id = ?`,
       [
         name,
@@ -199,6 +208,7 @@ export const UpdateProduct = async (req, res) => {
         JSON.stringify(images),
         thumbnail,
         type,
+        JSON.stringify(colors),
         id,
       ],
     );
@@ -366,6 +376,7 @@ export const GetProductById = async (req, res) => {
         p.is_active,
         p.created_at,
         p.type,
+        p.colors,
         c.id AS category_id,
         c.name AS category_name
       FROM products p
@@ -396,6 +407,7 @@ export const GetProductById = async (req, res) => {
           is_active: row.is_active,
           created_at: row.created_at,
           type: row.type,
+          colors: row.colors,
           categories: [],
         });
       }
@@ -562,6 +574,8 @@ export const GetOrders = async (req, res) => {
         o.delivery_type,
         o.delivery_Price,
         oi.quantity,
+        o.color_name,
+        o.color_hex,
         ROUND(oi.price_per_unit) AS price,
         ROUND((oi.quantity * oi.price_per_unit)) AS fullPrice,
         p.name AS product_name
@@ -611,4 +625,114 @@ export const RejectOrder = async (req, res) => {
     console.error("Error rejecting order:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
+};
+
+// Get all banners
+export const getBanners = async (req, res) => {
+    try {
+        const [banners] = await pool.query(
+            'SELECT * FROM banners ORDER BY position ASC'
+        );
+
+        return res.status(200).json({
+            success: true,
+            banners: banners || []
+        });
+    } catch (error) {
+        console.error('Error fetching banners:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to fetch banners'
+        });
+    }
+};
+
+export const updateBanners = async (req, res) => {
+    const connection = await pool.getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        const { banners } = req.body;
+
+        if (!banners || !Array.isArray(banners)) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: 'Banners array is required'
+            });
+        }
+
+        // Validate each banner
+        for (const banner of banners) {
+            if (banner.position === undefined || banner.position === null || !banner.url) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: 'Each banner must have position and url'
+                });
+            }
+        }
+
+        // Method 1: Using INSERT ... ON DUPLICATE KEY UPDATE (requires UNIQUE on position)
+        // This creates new records or updates existing ones
+        for (const banner of banners) {
+            await connection.query(
+                `INSERT INTO banners (position, url, public_id) 
+                 VALUES (?, ?, ?) 
+                 ON DUPLICATE KEY UPDATE 
+                 url = VALUES(url),
+                 public_id = VALUES(public_id)`,
+                [banner.position, banner.url, banner.publicId || null]
+            );
+        }
+
+        await connection.commit();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Banners saved successfully',
+            banners: banners
+        });
+    } catch (error) {
+        await connection.rollback();
+        console.error('Error updating banners:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to update banners'
+        });
+    } finally {
+        connection.release();
+    }
+};
+
+
+// Delete a banner
+export const deleteBanner = async (req, res) => {
+    try {
+        const { position } = req.params;
+
+        const [result] = await pool.query(
+            'DELETE FROM banners WHERE position = ?',
+            [position]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Banner not found'
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Banner deleted successfully'
+        });
+    } catch (error) {
+        console.error('Error deleting banner:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to delete banner'
+        });
+    }
 };
