@@ -14,7 +14,7 @@ const menuItemsData = [
   { icon: LayoutGrid, label: "Dashboard", href: "/admin/dashboard" },
   { icon: Package, label: "All Products", href: "/admin/all-products" },
   { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
-  { icon: ImageIcon, label: "Banner", href: "/admin/banner" }
+  { icon: ImageIcon, label: "Extra", href: "/admin/extra" }
 ];
 
 export const DashBoardSideBar = () => {

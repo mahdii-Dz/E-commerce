@@ -17,6 +17,7 @@ function ProductPage({ params }) {
     const category_id = product?.categories[0]?.id
     const { data: relatedProducts, isLoading: loading2, error: error2 } = useFetchSingleProduct(`http://localhost:5000/api/shop/get-products/category/${category_id}`);
     
+    
     const [currentImage, setCurrentImage] = useState('')
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [quantity, setQuantity] = useState(1)
@@ -179,7 +180,7 @@ function ProductPage({ params }) {
                             Buy Now
                         </a>
 
-                        <CheckOut productPrice={PriceWithDiscount} Quantity={quantity} setQuantity={setQuantity} productId={product.id} />
+                        <CheckOut productPrice={PriceWithDiscount} Quantity={quantity} setQuantity={setQuantity} productId={product.id} colors={product.colors} />
                     </div>
                 </section>
                 <section className='Related-Products w-full mb-16'>

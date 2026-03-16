@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useState, useRef } from "react";
 import { ArrowLeft, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -37,6 +36,10 @@ export default function AddProductPage() {
     type: "",
   });
   
+  // Colors state - array of objects { name: string, hex: string }
+  const [colors, setColors] = useState([]);
+  const [showColorModal, setShowColorModal] = useState(false);
+  const [colorForm, setColorForm] = useState({ name: "", hex: "#000000" });
   
   const [images, setImages] = useState([]);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
@@ -62,6 +65,34 @@ export default function AddProductPage() {
       ...prev,
       quantity: Math.max(0, (parseInt(prev.quantity) || 0) + delta)
     }));
+  };
+
+  // Color management functions
+  const openColorModal = () => {
+    setColorForm({ name: "", hex: "#000000" });
+    setShowColorModal(true);
+  };
+
+  const closeColorModal = () => {
+    setShowColorModal(false);
+    setColorForm({ name: "", hex: "#000000" });
+  };
+
+  const handleAddColor = () => {
+    if (!colorForm.name.trim()) {
+      showToast("Please enter a color name", "error");
+      return;
+    }
+    
+    // Remove # from hex if present for storage
+    const hexValue = colorForm.hex.replace("#", "");
+    
+    setColors(prev => [...prev, { name: colorForm.name.trim(), hex: hexValue }]);
+    closeColorModal();
+  };
+
+  const handleRemoveColor = (index) => {
+    setColors(prev => prev.filter((_, i) => i !== index));
   };
 
   const uploadImage = async (file, index) => {
@@ -181,8 +212,6 @@ export default function AddProductPage() {
       const selectedCategoryIds = categories
         ?.filter(cat => formData.category.includes(cat.name))
         .map(cat => cat.id);
-        console.log(selectedCategoryIds);
-        
 
       const response = await axios.post("http://localhost:5000/api/shop/add-product", {
         name: formData.title,
@@ -194,6 +223,7 @@ export default function AddProductPage() {
         discount_percentage: parseFloat(formData.discount) || 0,
         images: images.map(img => img.url),
         thumbnail: thumbnailUrl,
+        colors: colors, // Array of objects { name, hex }
       });
 
       showToast("Product added successfully!", "success");
@@ -220,6 +250,65 @@ export default function AddProductPage() {
         <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg transition-all duration-300 ${toast.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
           {toast.type === "success" ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
           <span className="font-medium">{toast.message}</span>
+        </div>
+      )}
+
+      {/* Color Add Modal */}
+      {showColorModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Add Color</h3>
+              <button 
+                onClick={closeColorModal}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Color Name *</label>
+                <input
+                  type="text"
+                  value={colorForm.name}
+                  onChange={(e) => setColorForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Midnight Black"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FA3145] text-gray-800"
+                  autoFocus
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={colorForm.hex}
+                    onChange={(e) => setColorForm(prev => ({ ...prev, hex: e.target.value }))}
+                    className="w-16 h-12 rounded-lg border border-gray-200 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-500 font-mono">{colorForm.hex}</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={closeColorModal}
+                  className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddColor}
+                  className="flex-1 px-4 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-xl transition-colors font-medium"
+                >
+                  Add Color
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -357,6 +446,58 @@ export default function AddProductPage() {
             </div>
           </div>
 
+          {/* Colors Section */}
+          <div className="flex flex-col gap-3 w-[671px]">
+            <label className="text-lg font-semibold text-black">Colors:</label>
+            <div className="flex flex-wrap gap-3">
+              {/* Existing colors */}
+              {colors.map((color, index) => (
+                <div
+                  key={index}
+                  className="relative group w-14 h-14 rounded-full border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-gray-400 transition-colors"
+                  style={{ backgroundColor: `#${color.hex}` }}
+                  title={`${color.name} (#${color.hex})`}
+                >
+                  {!isSubmitting && (
+                    <button
+                      onClick={() => handleRemoveColor(index)}
+                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={20} className="text-white" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              
+              {/* Add color button - circular with plus icon */}
+              <button
+                onClick={openColorModal}
+                disabled={isSubmitting}
+                className="w-14 h-14 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-[#FA3145] hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus size={24} className="text-gray-400 group-hover:text-[#FA3145]" />
+              </button>
+            </div>
+            
+            {/* Color names list */}
+            {colors.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {colors.map((color, index) => (
+                  <span 
+                    key={index} 
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700"
+                  >
+                    <span 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: `#${color.hex}` }}
+                    />
+                    {color.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col gap-3 w-[671px]">
             <label className="text-lg font-semibold text-black">Description:</label>
             <textarea
@@ -388,14 +529,14 @@ export default function AddProductPage() {
                 <ComboboxChips ref={categoryAnchor} className="w-full min-h-[56px] bg-white border border-gray-200 rounded-xl px-5 py-3 focus-within:ring-2 focus-within:ring-[#FA3145] disabled:bg-gray-100">
                   <ComboboxValue>
                     {(values) => (
-                      <React.Fragment>
+                      <>
                         {values.map((value) => (
                           <ComboboxChip key={value} className="bg-[#FA3145]/10 text-[#FA3145] border-[#FA3145]/20">
                             {value}
                           </ComboboxChip>
                         ))}
                         <ComboboxChipsInput placeholder="Select categories..." />
-                      </React.Fragment>
+                      </>
                     )}
                   </ComboboxValue>
                 </ComboboxChips>

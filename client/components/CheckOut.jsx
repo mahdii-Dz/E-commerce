@@ -10,7 +10,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { wilayaData } from '@/lib/wilayaData';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 
@@ -31,7 +31,7 @@ const submitOrder = async (orderData) => {
     return response.json();
 };
 
-export default function CheckOut({ productPrice, Quantity, setQuantity, productId }) {
+export default function CheckOut({ productPrice, Quantity, setQuantity, productId, colors = [] }) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -39,24 +39,35 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
         wilaya: 'Alger',
         baladiya: '',
         delivery: 'domicile',
+        selectedColor: null, 
     });
+    
     const [deliveryPrice, setDeliveryPrice] = useState(0);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const totalPrice = deliveryPrice + (productPrice * Quantity);
     const router = useRouter();
 
+    // Auto-select first color when colors array changes
+    useEffect(() => {
+        if (colors && colors.length > 0 && !formData.selectedColor) {
+            setFormData(prev => ({
+                ...prev,
+                selectedColor: colors[0]
+            }));
+        }
+    }, [colors]);
+
     // Get communes for selected wilaya name
     const communes = useMemo(() => {
-        // Find the code corresponding to the selected name
         const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
         return code ? wilayaData[code]?.municipalities || [] : [];
     }, [formData.wilaya]);
 
     // Auto-select first commune when wilaya changes
-    const handleWilayaChange = (value) => { // value is now the wilaya name
+    const handleWilayaChange = (value) => {
         const code = Object.keys(wilayaData).find(key => wilayaData[key].name === value);
-        if (!code) return; // Safety check
+        if (!code) return;
 
         const data = wilayaData[code];
         const newCommunes = data?.municipalities || [];
@@ -64,32 +75,30 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
 
         setFormData(prev => ({
             ...prev,
-            wilaya: value, // Store the name
+            wilaya: value,
             baladiya: newBaladiya,
-            delivery: prev.delivery, // keep current delivery type
+            delivery: prev.delivery,
         }));
     };
 
     // Update delivery price when wilaya name or delivery type changes
     useEffect(() => {
-        // Find the code corresponding to the selected name
         const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
-        if (!code) return; // Safety check if name is invalid
+        if (!code) return;
 
-        const wilayaInfo = wilayaData[code]; // Access using the found code
+        const wilayaInfo = wilayaData[code];
 
         if (wilayaInfo && typeof wilayaInfo.domicilePrice === 'number' && typeof wilayaInfo.stopDeskPrice === 'number') {
             const newPrice = formData.delivery === 'domicile'
                 ? wilayaInfo.domicilePrice
                 : wilayaInfo.stopDeskPrice;
 
-            // Only update if price actually changed
             if (newPrice !== deliveryPrice) {
                 setDeliveryPrice(newPrice);
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.wilaya, formData.delivery]); // Depend on name now
+    }, [formData.wilaya, formData.delivery]);
 
     const handleInputChange = (field, value) => {
         setFormData((prev) => ({
@@ -102,14 +111,15 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
         mutationFn: submitOrder,
         onSuccess: () => {
             setShowConfirmation(false);
-            setShowSuccess(true)
+            setShowSuccess(true);
             setQuantity(1);
         },
         onError: (error) => {
             alert('Order failed: ' + error.message);
-            setShowConfirmation(false); // or stay on confirmation
+            setShowConfirmation(false);
         },
     });
+
     const handleSubmit = (e) => {
         e.preventDefault();
         setShowConfirmation(true);
@@ -127,6 +137,8 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             delivery_Price: deliveryPrice,
             price_per_unit: productPrice,
             quantity: Quantity,
+            color_name: formData.selectedColor?.name,
+            color_hex: formData.selectedColor?.hex,
         };
         mutation.mutate(orderData);
     };
@@ -136,7 +148,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
     };
 
     const handleSuccessContinue = () => {
-        setTimeout(() => { setShowSuccess(false); }, [500])
+        setTimeout(() => { setShowSuccess(false); }, [500]);
         setQuantity(1);
         router.push('/');
     };
@@ -174,17 +186,33 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             <div className="flex flex-col w-full items-center justify-center gap-6 px-6 py-8 bg-white rounded-xl border-2 border-stroke">
                 <div className="text-center w-1/2">
                     <h2 className="text-xl font-bold text-gray-800 mb-4">Confirm Your Order</h2>
-                    <div className="bg-gray-50 p-4 rounded-lg mb-6 flex flex-col items-start">
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6 flex flex-col items-start w-full">
                         <p className="font-medium text-gray-700 mb-2">Details:</p>
                         <p className="text-gray-600">Name: {formData.firstName} {formData.lastName}</p>
                         <p className="text-gray-600">Phone: {formData.phoneNumber}</p>
                         <p className="text-gray-600">Wilaya: {formData.wilaya}</p>
                         <p className="text-gray-600">Baladiya: {formData.baladiya}</p>
                         <p className="text-gray-600">Delivery: {formData.delivery === 'domicile' ? 'Domicile' : 'Stop Desk'}</p>
-                        <p className="text-gray-600 mt-2">Product Price: {productPrice}DA</p>
+
+                        {/* Color confirmation with name and hex */}
+                        {formData.selectedColor && (
+                            <div className="flex items-center gap-3 mt-2 p-2 bg-white rounded-lg border border-gray-200">
+                                <div
+                                    className="w-8 h-8 rounded-full border border-gray-300 shadow-sm"
+                                    style={{ backgroundColor: `#${formData.selectedColor.hex}` }}
+                                />
+                                <div className="flex flex-col items-start ">
+                                    <span className="font-medium text-gray-800">{formData.selectedColor.name}</span>
+                                    <span className="text-xs text-gray-500">#{formData.selectedColor.hex}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="w-full border-t border-gray-200 my-3"></div>
+                        <p className="text-gray-600">Product Price: {productPrice}DA</p>
                         <p className="text-gray-600">Delivery Fee: {deliveryPrice}DA</p>
                         <p className="text-gray-600">Quantity: {Quantity}</p>
-                        <p className="text-xl font-bold mt-2">Total: {totalPrice}DA</p>
+                        <p className="text-xl font-bold mt-2 text-primary">Total: {totalPrice}DA</p>
                     </div>
                     <div className="flex gap-4 justify-center">
                         <button
@@ -261,23 +289,64 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                 />
             </div>
 
+            {/* Color Selection - Shows name and hex */}
+            {colors && colors.length > 0 && (
+                <div className="flex flex-col w-full">
+                    <label className="font-medium text-black text-base mb-3">
+                        Select Color *
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {colors.map((color) => (
+                            <button
+                                key={color.hex}
+                                type="button"
+                                onClick={() => handleInputChange('selectedColor', color)}
+                                className={`relative flex items-center cursor-pointer gap-3 p-3 rounded-xl border-2 transition-all ${formData.selectedColor?.hex === color.hex
+                                        ? 'border-primary bg-red-50'
+                                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                                    }`}
+                            >
+                                <div
+                                    className="w-10 h-10 rounded-full border border-gray-300 shadow-sm flex-shrink-0"
+                                    style={{ backgroundColor: `#${color.hex}` }}
+                                />
+                                <div className="flex flex-col items-start text-left">
+                                    <span className={`font-medium text-sm ${formData.selectedColor?.hex === color.hex ? 'text-primary' : 'text-gray-800'
+                                        }`}>
+                                        {color.name}
+                                    </span>
+                                    <span className="text-xs text-gray-500">#{color.hex}</span>
+                                </div>
+
+                                {/* Checkmark for selected */}
+                                {formData.selectedColor?.hex === color.hex && (
+                                    <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                                    </div>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Wilaya */}
             <div className="flex flex-col w-full">
                 <label htmlFor="wilaya" className="font-medium text-black text-base mb-2">
                     Wilaya *
                 </label>
                 <Select
-                    value={formData.wilaya} // Value is now the name
+                    value={formData.wilaya}
                     onValueChange={handleWilayaChange}
                 >
                     <SelectTrigger className="w-full h-11!">
-                        <SelectValue placeholder="Select wilaya" /> {/* Placeholder updated */}
+                        <SelectValue placeholder="Select wilaya" />
                     </SelectTrigger>
                     <SelectContent>
                         {orderedWilayas.map(([code, data]) => (
                             <SelectItem
-                                key={code} // Key remains the unique code
-                                value={data.name} // Value is the name
+                                key={code}
+                                value={data.name}
                             >
                                 {code} - {data.name}
                             </SelectItem>
@@ -302,7 +371,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                     <SelectContent>
                         {communes.map((commune, index) => (
                             <SelectItem
-                                key={`${formData.wilaya}-${index}`} // Key uses the name now
+                                key={`${formData.wilaya}-${index}`}
                                 value={commune}
                             >
                                 {commune}
@@ -330,6 +399,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                     </SelectContent>
                 </Select>
             </div>
+
             {/* Total Price */}
             <div className="w-full flex flex-col items-start gap-2">
                 <div className='w-full px-16 flex justify-between'>
@@ -349,10 +419,15 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                     <span className="font-medium text-primary text-xl">{totalPrice}DA</span>
                 </div>
             </div>
-            {/* Submit Button (Custom Tailwind) */}
+
+            {/* Submit Button */}
             <button
                 type="submit"
-                className="w-full cursor-pointer h-11 bg-primary text-white rounded-xl hover:opacity-90 transition-opacity font-medium text-sm"
+                disabled={colors.length > 0 && !formData.selectedColor}
+                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${colors.length > 0 && !formData.selectedColor
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-primary text-white hover:opacity-90 cursor-pointer'
+                    }`}
             >
                 Place Order
             </button>
