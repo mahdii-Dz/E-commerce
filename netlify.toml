@@ -5,4 +5,8 @@
   command = "npm run build"
 
 [[plugins]]
-  package = "@netlify/plugin-nextjs" # Official Netlify plugin for Next.js
+  package = "@netlify/plugin-nextjs" 
+
+[build.environment]
+  # Exclude node_modules from secrets scanning (false positives in binaries)
+  SECRETS_SCAN_OMIT_PATHS = "node_modules/**,.netlify/**,.next/**"
