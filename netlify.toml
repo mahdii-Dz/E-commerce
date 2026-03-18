@@ -1,0 +1,8 @@
+# vacagest/netlify.toml
+[build]
+  base = "Client"  
+  publish = ".next"
+  command = "npm run build"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs" # Official Netlify plugin for Next.js
