@@ -1,6 +1,6 @@
 # vacagest/netlify.toml
 [build]
-  base = "Client"  
+  base = "client"  
   publish = ".next"
   command = "npm run build"
 
