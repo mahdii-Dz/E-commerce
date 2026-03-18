@@ -2,6 +2,7 @@ import "./globals.css";
 import { Roboto } from "next/font/google";
 import Context from "./context/Context";
 import Providers from "./providers";
+import FacebookPixel from "@/components/FacebookPixel";
 
 
 const RobotoSans = Roboto({
@@ -27,6 +28,7 @@ export default function RootLayout({ children }) {
             {children}
           </Context>
         </Providers>
+        <FacebookPixel />
       </body>
     </html>
   );
