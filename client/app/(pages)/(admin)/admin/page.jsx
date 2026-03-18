@@ -35,7 +35,7 @@ function Toast({ message, type, onClose }) {
   }, [onClose]);
 
   const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-  
+
   return (
     <div className={`fixed top-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 animate-slide-in z-50`}>
       <div className="flex items-center gap-2">
@@ -60,7 +60,7 @@ export default function AdminPage() {
   const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
   const router = useRouter()
-  
+
   const { values, errors, isSubmitting, setIsSubmitting, setErrors, handleChange, resetForm } = useForm({
     password: ''
   });
@@ -88,7 +88,7 @@ export default function AdminPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (isLocked) {
       showToast('Please wait before trying again.', 'error');
       return;
@@ -101,28 +101,23 @@ export default function AdminPage() {
 
     setIsSubmitting(true);
 
-    const adminPassword = process.env.NEXT_PUBLIC_ADMIN_PASS;
-    
-    if (values.password === adminPassword) {
-      showToast('Access granted. Welcome to the admin dashboard!', 'success');
-      setAttempts(0);
-      await new Promise(resolve => setTimeout(resolve, 500));
+    const res = await fetch('/api/admin/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: values.password })
+    });
+
+    if (res.ok) {
       router.push('/admin/dashboard');
     } else {
       setAttempts(prev => prev + 1);
-      const remainingAttempts = MAX_ATTEMPTS - attempts - 1;
-      showToast(
-        remainingAttempts > 0 
-          ? `Access denied. ${remainingAttempts} attempts remaining.` 
-          : 'Access denied. Account locked.',
-        'error'
-      );
-      setErrors({ password: 'Incorrect password' });
+      showToast('Access denied', 'error');
     }
+
 
     setIsSubmitting(false);
   };
-  
+
   const togglePasswordVisibility = () => {
     setShowPassword(prev => !prev);
   };
@@ -137,10 +132,10 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
       {/* Toast Notification */}
       {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
 
@@ -158,13 +153,13 @@ export default function AdminPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div className="space-y-2">
-            <label 
-              htmlFor="admin-password" 
+            <label
+              htmlFor="admin-password"
               className="block text-sm font-medium text-gray-700"
             >
               Password
             </label>
-            
+
             <div className="relative">
               <input
                 id="admin-password"
@@ -178,8 +173,8 @@ export default function AdminPage() {
                 className={`
                   w-full px-4 py-3 rounded-xl border-2 bg-gray-50 
                   transition-all duration-200 outline-none
-                  ${errors.password 
-                    ? 'border-red-500 focus:border-red-500 bg-red-50' 
+                  ${errors.password
+                    ? 'border-red-500 focus:border-red-500 bg-red-50'
                     : 'border-gray-200 focus:border-blue-500 focus:bg-white'
                   }
                   ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}
@@ -190,7 +185,7 @@ export default function AdminPage() {
                 autoComplete="current-password"
                 autoFocus
               />
-              
+
               {/* Toggle Password Visibility */}
               <button
                 type="button"

@@ -16,15 +16,15 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-        <html lang="en">
-            <body
+        < >
+            <div
                 className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto`}
             >
                 <div className="w-full h-auto flex">
                     <DashBoardSideBar />
                     {children}
                 </div>
-            </body>
-        </html>
+            </div>
+        </>
     );
 }
