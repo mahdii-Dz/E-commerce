@@ -154,8 +154,20 @@ export default function ProductDashboard() {
 
   if (!Products || Products.length === 0) {
     return (
-      <div className="w-full flex items-center justify-center h-96">
+      <div className="w-full flex flex-col  justify-start h-full">
+        <header className="flex items-center justify-between mb-11">
+        <h1 className="text-3xl font-semibold text-black tracking-tight">
+          All Products
+        </h1>
+
+        <Link href="/admin/add-product" className="flex items-center gap-2.5 px-6 py-2.5 cursor-pointer bg-[#FA3145] hover:bg-[#e02a3b] text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:ring-offset-2">
+          <Plus size={20} />
+          <span>Add Product</span>
+        </Link>
+      </header>
+      <div className="flex w-full h-50 justify-center items-center">
         <p className="text-gray-500">No products available</p>
+      </div>
       </div>
     );
   }

@@ -13,9 +13,9 @@ import React, { useContext, useEffect, useRef, useState } from 'react'
 function ProductPage({ params }) {
     const { id } = React.use(params)
     const { Cart, setCart } = useContext(GlobalContext)
-    const { data: product, isLoading: loading, error } = useFetchSingleProduct(`http://localhost:5000/api/shop/get-product/${id}`);
+    const { data: product, isLoading: loading, error } = useFetchSingleProduct(`/api/shop/products/${id}`);
     const category_id = product?.categories[0]?.id
-    const { data: relatedProducts, isLoading: loading2, error: error2 } = useFetchSingleProduct(`http://localhost:5000/api/shop/get-products/category/${category_id}`);
+    const { data: relatedProducts, isLoading: loading2, error: error2 } = useFetchSingleProduct(`/api/shop/products/category/${category_id}`);
     
     
     const [currentImage, setCurrentImage] = useState('')

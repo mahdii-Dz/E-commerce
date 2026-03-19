@@ -43,7 +43,7 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:5000/api/shop/get-orders');
+        const response = await axios.get('/api/shop/orders');
         setOrders(response.data);
         setError(null);
       } catch (err) {
@@ -176,10 +176,10 @@ export default function OrdersPage() {
 
   const handleAccept = async (orderId) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/shop/accept-order/${orderId}`);
+      const response = await axios.put(`/api/shop/orders/accept/${orderId}`);
       showToast(`Order #${orderId} accepted successfully`, 'success');
       // Refresh orders after action
-      const refreshResponse = await axios.get('http://localhost:5000/api/shop/get-orders');
+      const refreshResponse = await axios.get('/api/shop/orders');
       setOrders(refreshResponse.data);
     } catch (error) {
       console.error('Error accepting order:', error);
@@ -189,10 +189,10 @@ export default function OrdersPage() {
 
   const handleReject = async (orderId) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/shop/reject-order/${orderId}`);
+      const response = await axios.put(`/api/shop/orders/reject/${orderId}`);
       showToast(`Order #${orderId} rejected successfully`, 'success');
       // Refresh orders after action
-      const refreshResponse = await axios.get('http://localhost:5000/api/shop/get-orders');
+      const refreshResponse = await axios.get('/api/shop/orders');
       setOrders(refreshResponse.data);
     } catch (error) {
       console.error('Error rejecting order:', error);

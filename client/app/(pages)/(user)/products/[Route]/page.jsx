@@ -16,7 +16,7 @@ import { useFetchAllProducts } from '@/components/useFetchAllProducts';
 import { useContext, useEffect, useRef, useState } from 'react';
 
 export default function ProductFilterPage({ params, searchParams }) {
-    const { data: categories, isLoading: loading, error } = useFetchAllProducts('http://localhost:5000/api/shop/get-categories')
+    const { data: categories, isLoading: loading, error } = useFetchAllProducts('/api/shop/categories')
     const { Products, } = useContext(GlobalContext)
     const [filteredProducts, setFilteredProducts] = useState([])
     const [visibleProducts, setVisibleProducts] = useState([]);

@@ -4,7 +4,7 @@ import { createContext, useMemo, useState } from 'react'
 
 export const GlobalContext = createContext(null)
 function Context({ children }) {
-    const { data: Products, isLoading: loading, error } = useFetchAllProducts('http://localhost:5000/api/shop/get-products')
+    const { data: Products, isLoading: loading, error } = useFetchAllProducts('/api/shop/products')
     const [Cart, setCart] = useState(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('Cart');

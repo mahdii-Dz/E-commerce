@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 
 const submitOrder = async (orderData) => {
-    const response = await fetch('http://localhost:5000/api/shop/add-order', {
+    const response = await fetch('/api/shop/orders', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

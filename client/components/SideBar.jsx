@@ -10,7 +10,7 @@ function SideBar() {
     useEffect(() => {
         async function fetchCategories() {
             try {
-                const res = await fetch('http://localhost:5000/api/shop/get-categories')
+                const res = await fetch('/api/shop/categories')
                 if (!res.ok) throw new Error('Failed to fetch')
 
                 const data = await res.json()

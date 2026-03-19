@@ -32,7 +32,7 @@ export default function BannerCategoriesPage() {
     data: categoriesData, 
     isLoading: categoriesLoading, 
     refetch: refetchCategories 
-  } = useFetchSingleProduct('http://localhost:5000/api/shop/get-categories');
+  } = useFetchSingleProduct('/api/shop/categories');
 
   // Categories state (local copy for editing)
   const [categories, setCategories] = useState([]);
@@ -72,7 +72,7 @@ export default function BannerCategoriesPage() {
     const fetchBanners = async () => {
       try {
         setIsLoadingBanners(true);
-        const response = await axios.get('http://localhost:5000/api/shop/get-banners');
+        const response = await axios.get('/api/shop/banners');
         const data = response.data;
         
         // Always ensure we have 2 banner slots, fill with DB data if available
@@ -125,7 +125,7 @@ export default function BannerCategoriesPage() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/cloudinary/upload",
+        "/api/cloudinary",
         formDataUpload,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -200,7 +200,7 @@ export default function BannerCategoriesPage() {
     // Then try to delete from Cloudinary if it was uploaded there
     if (publicId) {
       try {
-        await axios.delete(`http://localhost:5000/cloudinary/delete/${publicId}`);
+        await axios.delete(`/api/cloudinary/${publicId}`);
       } catch (error) {
         console.error("Delete from Cloudinary failed:", error);
       }
@@ -222,7 +222,7 @@ export default function BannerCategoriesPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post('http://localhost:5000/api/shop/add-category', {
+      const response = await axios.post('/api/shop/categories', {
         name: newCategoryName.trim()
       });
 
@@ -258,7 +258,9 @@ export default function BannerCategoriesPage() {
 
     if (category.isExisting && categoryId) {
       try {
-        await axios.delete(`http://localhost:5000/api/shop/delete-category/${categoryId}`);
+        console.log(categoryId);
+        
+        await axios.delete(`/api/shop/categories/${categoryId}`);
         showToast("Category deleted", "success");
         refetchCategories?.();
       } catch (error) {
@@ -294,7 +296,7 @@ export default function BannerCategoriesPage() {
         }))
         .filter(banner => banner.url);
 
-      await axios.put('http://localhost:5000/api/shop/update-banners', {
+      await axios.put('/api/shop/banners', {
         banners: bannerData
       });
 

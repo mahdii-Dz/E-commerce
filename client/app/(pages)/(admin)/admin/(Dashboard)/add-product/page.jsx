@@ -24,7 +24,7 @@ export default function AddProductPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
-  const { data: categories, isLoading: loading, error } = useFetchSingleProduct('http://localhost:5000/api/shop/get-categories');
+  const { data: categories, isLoading: loading, error } = useFetchSingleProduct('/api/shop/categories');
   
   const [formData, setFormData] = useState({
     title: "",
@@ -104,7 +104,7 @@ export default function AddProductPage() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/cloudinary/upload",
+        "/api/cloudinary",
         formDataUpload,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -179,7 +179,7 @@ export default function AddProductPage() {
     }
 
     try {
-      const res = await axios.delete(`http://localhost:5000/cloudinary/delete/${publicId}`);
+      const res = await axios.delete(`/api/cloudinary/${publicId}`);
       if (res.data.result === 'ok' || res.status === 200 || res.data.success) {
         setImages(prev => prev.filter((_, i) => i !== index));
       }
@@ -213,7 +213,7 @@ export default function AddProductPage() {
         ?.filter(cat => formData.category.includes(cat.name))
         .map(cat => cat.id);
 
-      const response = await axios.post("http://localhost:5000/api/shop/add-product", {
+      const response = await axios.post("/api/shop/products", {
         name: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),

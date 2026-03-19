@@ -31,7 +31,7 @@ export default function EditProductPage() {
   const [product, setProduct] = useState(null);
 
   // Fetch categories
-  const { data: categoriesData, isLoading: categoriesLoading, refetch: refetchCategories } = useFetchSingleProduct('http://localhost:5000/api/shop/get-categories');
+  const { data: categoriesData, isLoading: categoriesLoading, refetch: refetchCategories } = useFetchSingleProduct('/api/shop/categories');
 
   const [formData, setFormData] = useState({
     title: "",
@@ -61,7 +61,7 @@ export default function EditProductPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/shop/get-product/${id}`);
+        const response = await axios.get(`/api/shop/products/${id}`);
         const data = response.data;
         setProduct(data);
 
@@ -177,7 +177,7 @@ export default function EditProductPage() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/cloudinary/upload",
+        "/api/cloudinary",
         formDataUpload,
         {
           headers: { "Content-Type": "multipart/form-data" },
@@ -250,7 +250,7 @@ export default function EditProductPage() {
 
     if (isExisting && publicId) {
       try {
-        await axios.delete(`http://localhost:5000/cloudinary/delete/${publicId}`);
+        await axios.delete(`/api/cloudinary/${publicId}`);
       } catch (error) {
         console.error("Delete failed:", error);
         showToast("Failed to delete image from server", "error");
@@ -295,7 +295,7 @@ export default function EditProductPage() {
         ?.filter(cat => formData.categories.includes(cat.name))
         .map(cat => cat.id) || [];
 
-      const response = await axios.put(`http://localhost:5000/api/shop/update-product/${id}`, {
+      const response = await axios.put(`/api/shop/products/${id}`, {
         name: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),
@@ -330,7 +330,7 @@ export default function EditProductPage() {
     setIsSubmitting(true);
 
     try {
-      await axios.delete(`http://localhost:5000/api/shop/delete-product/${id}`);
+      await axios.delete(`/api/shop/products/${id}`);
       showToast("Product deleted successfully!", "success");
 
       setTimeout(() => {
