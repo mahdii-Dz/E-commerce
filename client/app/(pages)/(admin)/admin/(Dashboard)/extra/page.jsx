@@ -258,7 +258,6 @@ export default function BannerCategoriesPage() {
 
     if (category.isExisting && categoryId) {
       try {
-        console.log(categoryId);
         
         await axios.delete(`/api/shop/categories/${categoryId}`);
         showToast("Category deleted", "success");

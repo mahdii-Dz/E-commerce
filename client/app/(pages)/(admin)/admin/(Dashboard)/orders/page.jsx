@@ -16,7 +16,6 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterPopup, setShowFilterPopup] = useState(false);
-  console.log(orders);
   
   // Toast state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });

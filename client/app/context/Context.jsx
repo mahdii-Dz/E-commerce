@@ -13,7 +13,6 @@ function Context({ children }) {
         return [];
     });
 
-    console.log(Products);
     
     const Promotions = useMemo(() => {
         if (!Products) return [];

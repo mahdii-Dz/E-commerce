@@ -73,9 +73,6 @@ export default function EditProductPage() {
           "None": "None"
         };
 
-        // Debug logging
-        console.log("Raw backend type:", data.type);
-        console.log("Type after mapping:", typeMap[data.type]);
 
         // Extract category names from product data
         const productCategories = data.categories?.map(cat => cat.name) ||

@@ -8,7 +8,6 @@ import React from 'react'
 function Dashboard() {
   const { data: stats, isLoading: statsLoading, error: statsError } = useFetchSingleProduct('/api/shop/stats')
   const { totalProducts, totalSoldProducts, totalOrders, dailyTotals, CategoryStats, wilayaStats } = stats || {};
-  console.log(stats);
   
 
 
