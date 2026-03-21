@@ -4,6 +4,7 @@ const BACKEND_URL = process.env.BACKEND_URL;
 
 export async function proxyGET(endpoint) {
   const url = `${BACKEND_URL}${endpoint}`;
+  console.log(url);
   const res = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
@@ -45,6 +46,8 @@ export async function proxyRequest(method, endpoint, body = null) {
 
 export async function proxyFormData(endpoint, formData) {
   const url = `${BACKEND_URL}${endpoint}`;
+  console.log(url);
+  
   
   const res = await fetch(url, {
     method: 'POST',
