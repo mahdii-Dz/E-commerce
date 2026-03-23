@@ -260,20 +260,67 @@ export const GetProductById = async (req, res) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
+    const row = rows[0];
+    
+    // ✅ FIXED: Parse categories safely
+    let categories = [];
+    if (row.categories_json) {
+      try {
+        // Wrap in brackets to make it a valid JSON array
+        const parsed = JSON.parse(`[${row.categories_json}]`);
+        categories = parsed.filter(c => c && c.id !== null);
+      } catch (e) {
+        console.error("Failed to parse categories JSON:", e);
+        categories = [];
+      }
+    }
+
+    // ✅ FIXED: Parse colors safely
+    let colors = null;
+    if (row.colors) {
+      try {
+        colors = JSON.parse(row.colors);
+      } catch (e) {
+        console.error("Failed to parse colors JSON:", e);
+        colors = null;
+      }
+    }
+
+    // ✅ FIXED: Parse images safely
+    let images = [];
+    if (row.images) {
+      try {
+        images = JSON.parse(row.images);
+      } catch (e) {
+        console.error("Failed to parse images JSON:", e);
+        images = [];
+      }
+    }
+
+    // Build clean product object
     const product = {
-      ...rows[0],
-      categories: rows[0].categories_json
-        ? JSON.parse(`[${rows[0].categories_json}]`).filter(c => c.id !== null)
-        : [],
-      colors: rows[0].colors ? JSON.parse(rows[0].colors) : null
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      discount_percentage: row.discount_percentage,
+      price: row.price,
+      stock: row.stock,
+      image_url: row.image_url,
+      thumbnail: row.thumbnail,
+      is_active: row.is_active,
+      created_at: row.created_at,
+      type: row.type,
+      categories,
+      colors,
+      images
     };
-    delete product.categories_json;
 
     return res.status(200).json(product);
   } catch (error) {
     return handleDbError(res, error, "fetching product");
   }
 };
+
 
 export const GetProductsByCategory = async (req, res) => {
   try {
@@ -568,7 +615,7 @@ export const RejectOrder = async (req, res) => {
 
 export const GetDashboardStats = async (req, res) => {
   try {
-    // ✅ Run independent queries in parallel for better performance
+    // Run independent queries in parallel for better performance
     const [
       [totalProductsRow],
       [totalOrdersRow],
@@ -583,7 +630,7 @@ export const GetDashboardStats = async (req, res) => {
         SELECT COALESCE(SUM(oi.quantity), 0) AS total 
         FROM order_items oi
         JOIN order_info o ON oi.order_id = o.id
-        WHERE o.status = 'completed'
+        WHERE o.status = 'accepted'
       `),
       pool.query(`
         SELECT DATE(o.created_at) as day, SUM(oi.quantity) as total
@@ -593,32 +640,51 @@ export const GetDashboardStats = async (req, res) => {
         GROUP BY DATE(o.created_at)
         ORDER BY day
       `),
+      // ✅ FIXED: Added status filter and proper data format for pie chart
       pool.query(`
         SELECT 
+          COALESCE(c.name, 'Uncategorized') as label,
+          COALESCE(c.name, 'Uncategorized') as category_name,
           pc.category_id,
-          c.name as category_name,
+          SUM(oi.quantity) as value,
           SUM(oi.quantity) as total_sold
         FROM order_items oi
+        JOIN order_info o ON oi.order_id = o.id
         JOIN product_categories pc ON oi.product_id = pc.product_id
         LEFT JOIN categories c ON pc.category_id = c.id
         GROUP BY pc.category_id, c.name
+        ORDER BY value DESC
       `),
       pool.query(`
-        SELECT wilaya, COUNT(*) AS totalOrders
+        SELECT wilaya as label, COUNT(*) AS value
         FROM order_info
         GROUP BY wilaya
-        ORDER BY totalOrders DESC
+        ORDER BY value DESC
         LIMIT 10
       `)
     ]);
+
+    // ✅ FIXED: Format category stats for pie chart (label/value format)
+    const formattedCategoryStats = categoryStats.map(stat => ({
+      label: stat.label || 'Uncategorized',
+      value: parseInt(stat.value) || 0,
+      category_id: stat.category_id,
+      category_name: stat.category_name
+    }));
+
+    // ✅ FIXED: Format wilaya stats consistently
+    const formattedWilayaStats = wilayaStats.map(stat => ({
+      label: stat.label,
+      value: parseInt(stat.value) || 0
+    }));
 
     return res.status(200).json({
       totalProducts: totalProductsRow[0].total,
       totalOrders: totalOrdersRow[0].total,
       totalSoldProducts: totalSoldRow[0].total,
       dailyTotals: barChartData,
-      CategoryStats: categoryStats,
-      wilayaStats: wilayaStats,
+      CategoryStats: formattedCategoryStats, // Now in pie chart format
+      wilayaStats: formattedWilayaStats
     });
   } catch (error) {
     return handleDbError(res, error, "fetching dashboard stats");
