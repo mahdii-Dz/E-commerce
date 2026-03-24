@@ -89,7 +89,7 @@ function SideBar({ category, isLoadingCategories, isOpen, onClose }) {
     return (
         <>
             {/* Desktop Sidebar */}
-            <aside className='hidden lg:flex bg-white border border-stroke w-1/5 rounded-xl p-6 flex-col justify-between items-start h-fit sticky top-32'>
+            <aside className='hidden lg:flex bg-white border border-stroke w-1/5 rounded-xl p-6 flex-col justify-between items-start h-fit '>
                 {sidebarContent}
             </aside>
 
