@@ -44,7 +44,7 @@ function Main({ Banners, onOpenCategorySidebar }) {
           )}
         </div>
         
-        <div className='w-full lg:w-1/4 h-64 lg:h-90 rounded-xl overflow-clip cursor-pointer relative'>
+        <div className='w-full lg:w-1/4 h-64 lg:h-90 hidden lg:block rounded-xl overflow-clip cursor-pointer relative'>
           {sideBanner ? (
             <Image 
               src={sideBanner.url.trim()} 
