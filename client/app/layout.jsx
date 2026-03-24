@@ -21,7 +21,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto`}
+        className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto overflow-x-hidden`}
       >
         <Providers>
           <Context>

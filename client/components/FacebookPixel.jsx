@@ -14,6 +14,8 @@ const FacebookPixel = () => {
 
     pixel.pageview();
   }, [pathname, loaded]);
+  console.log('pixel id:',pixel.FB_PIXEL_ID);
+  
 
   return (
     <div>

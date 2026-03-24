@@ -1,15 +1,25 @@
-import Footer from "@/components/Footer";
-import Main from "@/components/Main";
-import SideBar from "@/components/SideBar";
+import { Suspense } from "react";
+import HomeClient from "./HomeClient";
+import CategoriesLoader from "@/components/CategoriesLoader";
 
-export default function Home() {
+async function getBanners() {
+  const res = await fetch(`${process.env.BACKEND_URL}/api/shop/get-banners`, {
+    next: { revalidate: 3600 } 
+  });
+  
+  if (!res.ok) {
+    throw new Error('Failed to fetch banners');
+  }
+  
+  return res.json();
+}
+
+export default async function Home() {
+  const banners = await getBanners();
+
   return (
-    <div className="pt-32">
-      <div className="flex gap-6 px-20">
-        <SideBar/>
-        <Main/>
-      </div>
-      <Footer/>
-    </div>
+    <Suspense fallback={<HomeClient banners={banners} categories={null} />}>
+      <CategoriesLoader banners={banners} />
+    </Suspense>
   );
 }
