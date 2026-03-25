@@ -4,7 +4,7 @@ import { createContext, useMemo, useState } from 'react'
 
 export const GlobalContext = createContext(null)
 function Context({ children }) {
-    const { data: Products, isLoading: loading, error } = useFetchAllProducts('/api/shop/products')
+    const { data: Products = [], isLoading: loading, error } = useFetchAllProducts('/api/shop/products')
     const [Cart, setCart] = useState(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('Cart');
@@ -13,7 +13,7 @@ function Context({ children }) {
         return [];
     });
 
-    
+
     const Promotions = useMemo(() => {
         if (!Products) return [];
         return Products.filter(product => product.discount_percentage > 0);

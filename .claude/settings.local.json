@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find 'D:/web develepment/e-commerce' -type f \\\\\\(-name *.js -o -name *.jsx -o -name *.ts -o -name *.tsx -o -name *.json -o -name *.css -o -name *.mjs -o -name *.toml -o -name *.md -o -name *.html -o -name .env* -o -name .gitignore \\\\\\) ! -path */node_modules/* ! -path */.git/* ! -path */.next/*)",
+      "Bash(rm \"D:/web develepment/e-commerce/client/public/scripts/pixel.js\")",
+      "Bash(rmdir \"D:/web develepment/e-commerce/client/public/scripts\")"
+    ]
+  }
+}

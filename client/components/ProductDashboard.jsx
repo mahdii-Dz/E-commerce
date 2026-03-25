@@ -4,6 +4,7 @@ import { useContext, useState, useMemo } from "react";
 import { Plus, Search, Filter, Edit, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { GlobalContext } from "@/app/context/Context";
 import Link from "next/link";
+import Image from "next/image";
 
 const getBadgeStyle = (type) => {
   switch (type) {
@@ -362,7 +363,7 @@ export default function ProductDashboard() {
                   <td className="px-4 py-4">
                     <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
                       {product.thumbnail ? (
-                        <img src={product.thumbnail} alt={product.name} className="w-full h-full object-cover" loading="lazy" />
+                        <Image src={product.thumbnail} alt={product.name} width={48} height={48} className="w-full h-full object-cover" loading="lazy" />
                       ) : (
                         <span className="text-gray-400 text-xs">IMG</span>
                       )}

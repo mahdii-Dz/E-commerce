@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import Image from "next/image";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 
 export default function BannerCategoriesPage() {
@@ -445,9 +446,11 @@ export default function BannerCategoriesPage() {
                 </div>
               ) : bannerImages[0].url ? (
                 <>
-                  <img 
-                    src={bannerImages[0].url} 
-                    alt="Primary Banner" 
+                  <Image
+                    src={bannerImages[0].url}
+                    alt="Primary Banner"
+                    width={300}
+                    height={200}
                     className="w-full h-full object-cover rounded-xl"
                   />
                   {!isSubmitting && (
@@ -484,9 +487,11 @@ export default function BannerCategoriesPage() {
                 </div>
               ) : bannerImages[1].url ? (
                 <>
-                  <img 
-                    src={bannerImages[1].url} 
-                    alt="Secondary Banner" 
+                  <Image
+                    src={bannerImages[1].url}
+                    alt="Secondary Banner"
+                    width={300}
+                    height={200}
                     className="w-full h-full object-cover rounded-xl"
                   />
                   {!isSubmitting && (

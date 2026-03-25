@@ -3,6 +3,7 @@
 import { GlobalContext } from "@/app/context/Context";
 import { ShoppingCart } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useContext } from "react";
 
 function RenderProducts({ Products, Class, isCart = false }) {
@@ -75,13 +76,15 @@ function RenderProducts({ Products, Class, isCart = false }) {
                                 )}
 
                                 {/* Product Image */}
-                                <div className='w-full h-40 sm:h-48 border-b border-stroke cursor-pointer overflow-hidden bg-gray-50'>
+                                <div className='w-full h-40 sm:h-48 border-b border-stroke cursor-pointer overflow-hidden bg-gray-50 relative'>
                                     <Link href={`/product/${product.id}`}>
-                                        <img 
-                                            src={product.image_url || product.thumbnail} 
-                                            alt={product.name} 
-                                            className="w-full h-full object-contain hover:scale-110 transition-transform duration-300" 
-                                            loading='lazy' 
+                                        <Image
+                                            src={product.image_url || product.thumbnail}
+                                            alt={product.name}
+                                            fill
+                                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                            className="object-contain hover:scale-110 transition-transform duration-300"
+                                            loading="lazy"
                                         />
                                     </Link>
                                 </div>

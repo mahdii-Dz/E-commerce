@@ -16,8 +16,11 @@ function ProductPage({ params }) {
     const { id } = React.use(params)
     const { Cart, setCart } = useContext(GlobalContext)
     const { data: product, isLoading: loading, error } = useFetchSingleProduct(`/api/shop/products/${id}`);
-    const category_id = product?.categories[0]?.id
-    const { data: relatedProducts, isLoading: loading2 } = useFetchSingleProduct(`/api/shop/products/category/${category_id}`);
+    const category_id = product?.categories?.[0]?.id
+    const { data: relatedProducts, isLoading: loading2 } = useFetchSingleProduct(
+        category_id ? `/api/shop/products/category/${category_id}` : null,
+        { enabled: !!category_id }
+    );
     
     const [currentImage, setCurrentImage] = useState('')
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -126,7 +129,7 @@ function ProductPage({ params }) {
                                 <button
                                     key={image}
                                     onClick={() => setCurrentImage(image)}
-                                    className={`border flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 flex items-center justify-center overflow-hidden border-stroke rounded-lg transition-all ${currentImage === image ? 'ring-2 ring-primary' : 'hover:border-primary'}`}
+                                    className={`border flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 lg:w-24 m-1 lg:h-24 flex items-center justify-center overflow-hidden border-stroke rounded-lg transition-all ${currentImage === image ? 'ring-2 ring-primary' : 'hover:border-primary'}`}
                                 >
                                     <Image 
                                         src={image} 
@@ -261,8 +264,8 @@ function ProductPage({ params }) {
                 <section className='Related-Products w-full mb-12 lg:mb-16 px-0 lg:px-0'>
                     <div className='w-full flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 lg:mb-12 gap-4'>
                         <h2 className='text-xl lg:text-2xl font-semibold'>Related Products</h2>
-                        <Link 
-                            href={`/products/All?category=${product.categories[0].name}`} 
+                        <Link
+                            href={`/products/All?category=${product.categories?.[0]?.name || ''}`}
                             className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit text-sm lg:text-base'
                         >
                             View All

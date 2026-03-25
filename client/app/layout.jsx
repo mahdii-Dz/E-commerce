@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
             {children}
           </Context>
         </Providers>
-        <FacebookPixel />
+        <FacebookPixel pixelId={process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID} />
       </body>
     </html>
   );

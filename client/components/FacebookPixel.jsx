@@ -2,31 +2,72 @@
 
 import { usePathname } from "next/navigation";
 import Script from "next/script";
-import { useEffect, useState } from "react";
-import * as pixel from "../lib/fpixel";
+import { useEffect, useRef } from "react";
 
-const FacebookPixel = () => {
-  const [loaded, setLoaded] = useState(false);
+const FacebookPixel = ({ pixelId }) => {
   const pathname = usePathname();
+  const pixelIdRef = useRef(pixelId);
 
   useEffect(() => {
-    if (!loaded) return;
+    pixelIdRef.current = pixelId;
+  }, [pixelId]);
 
-    pixel.pageview();
-  }, [pathname, loaded]);
-  console.log('pixel id:',pixel.FB_PIXEL_ID);
-  
+  useEffect(() => {
+    if (!pixelId) return;
+
+    if (window.fbq) {
+      // Prevent duplicate initialization across component remounts
+      if (!window.fbq.__pixelInitialized) {
+        window.fbq('init', pixelId);
+        window.fbq.__pixelInitialized = true;
+      }
+      window.fbq('track', 'PageView');
+    }
+  }, [pathname, pixelId]);
+
+  if (!pixelId) return null;
 
   return (
-    <div>
+    <>
       <Script
-        id="fb-pixel"
-        src="/scripts/pixel.js"
+        id="fb-pixel-init"
         strategy="afterInteractive"
-        onLoad={() => setLoaded(true)}
-        data-pixel-id={pixel.FB_PIXEL_ID}
+        dangerouslySetInnerHTML={{
+          __html: `
+            window.fbq = window.fbq || function() {
+              if (window.fbq.loaded) return;
+              window.fbq.loaded = true;
+              window.fbq.methods = ['track', 'trackCustom'];
+              window.fbq.method = function() {
+                var args = arguments;
+                if (window.fbq.callMethod) {
+                  window.fbq.callMethod.apply(window.fbq, args);
+                } else {
+                  window.fbq.queue.push(args);
+                }
+              };
+              window.fbq.addEventListener = function(event, fn) {
+                if (!window.fbq.callbacks) window.fbq.callbacks = [];
+                window.fbq.callbacks.push([event, fn]);
+              };
+              window.fbq.ifReady = function() {
+                if (window.fbq.callbacks) {
+                  window.fbq.callbacks.forEach(function(fn) { fn[0](fn[1]); });
+                }
+              };
+              window.fbq.queue = [];
+              for (var i = 0; i < window.fbq.methods.length; i++) {
+                window.fbq(window.fbq.methods[i], window.fbq.methods[i]);
+              }
+            };
+          `
+        }}
       />
-    </div>
+      <Script
+        src="https://connect.facebook.net/en_US/fbevents.js"
+        strategy="afterInteractive"
+      />
+    </>
   );
 };
 

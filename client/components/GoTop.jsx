@@ -10,9 +10,9 @@ function GoTop() {
     }
 
     return (
-        <div onClick={scrollToTop} className='bg-primary p-3 rounded-full cursor-pointer hover:bg-red-400 text-white'>
+        <button onClick={scrollToTop} aria-label="Scroll to top" className='bg-primary p-3 rounded-full cursor-pointer hover:bg-red-400 text-white'>
             <ArrowUp />
-        </div>
+        </button>
     )
 }
 

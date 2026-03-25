@@ -95,9 +95,10 @@ function SideBar({ category, isLoadingCategories, isOpen, onClose }) {
 
             {/* Mobile Overlay */}
             {isOpen && (
-                <div 
+                <div
                     className="lg:hidden fixed inset-0 bg-black/50 z-50"
                     onClick={onClose}
+                    role="presentation"
                 />
             )}
 
@@ -107,9 +108,10 @@ function SideBar({ category, isLoadingCategories, isOpen, onClose }) {
                 transform transition-transform duration-300 ease-in-out
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
-                <button 
+                <button
                     onClick={onClose}
                     className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg"
+                    aria-label="Close sidebar"
                 >
                     <X size={24} />
                 </button>

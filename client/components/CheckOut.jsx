@@ -56,6 +56,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                 selectedColor: colors[0]
             }));
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [colors]);
 
     // Get communes for selected wilaya name
@@ -241,7 +242,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
         <form
             id='form'
             onSubmit={handleSubmit}
-            className="flex flex-col w-full items-center self-center mt-4 justify-center gap-6 px-12 py-8 bg-white rounded-xl border-2 border-stroke"
+            className="flex flex-col w-full items-center self-center mt-4 justify-center gap-6 lg:px-12 md:px-8 sm:px-4 px-2 py-8 bg-white rounded-xl border-2 border-stroke"
         >
             {/* First & Last Name */}
             <div className="flex w-full items-center gap-6">

@@ -5,6 +5,7 @@ import { ArrowLeft, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, L
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Image from "next/image";
 import {
   Combobox,
   ComboboxChip,
@@ -478,7 +479,7 @@ export default function EditProductPage() {
               </div>
             ) : images[0] ? (
               <>
-                <img src={images[0].url} alt="Main" className="w-full h-full object-cover border border-stroke rounded-xl" />
+                <Image src={images[0].url} alt="Main" width={300} height={200} className="w-full h-full object-cover border border-stroke rounded-xl" />
                 {!isSubmitting && (
                   <button
                     onClick={(e) => DeleteImageFromDB(e, 0, images[0].publicId, images[0].isExisting)}
@@ -515,7 +516,7 @@ export default function EditProductPage() {
                   </div>
                 ) : item.hasImage ? (
                   <>
-                    <img src={item.image.url} alt={`Product ${item.index}`} className="w-full h-full object-cover border border-stroke rounded-xl" />
+                    <Image src={item.image.url} alt={`Product ${item.index}`} width={300} height={200} className="w-full h-full object-cover border border-stroke rounded-xl" />
                     {!isSubmitting && (
                       <button
                         onClick={(e) => DeleteImageFromDB(e, item.index, item.image.publicId, item.image.isExisting)}
