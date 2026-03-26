@@ -1,9 +1,12 @@
 import express from "express";
 import upload from "../middleware/multer.js";
-const CloudinaryRouter = express.Router();
 import cloudinary from "../utils/cloudinary.js";
+import { verifyAdminSession } from "../middleware/sessionAuth.js";
 
-CloudinaryRouter.post("/upload", upload.single("image"), function (req, res) {
+const CloudinaryRouter = express.Router();
+
+// All cloudinary operations require admin authentication
+CloudinaryRouter.post("/upload", verifyAdminSession, upload.single("image"), function (req, res) {
   cloudinary.uploader.upload(req.file.path, function (err, result) {
     if (err) {
       console.log(err);
@@ -24,7 +27,7 @@ CloudinaryRouter.post("/upload", upload.single("image"), function (req, res) {
   });
 });
 
-CloudinaryRouter.delete("/delete/:publicId", async (req, res) => {
+CloudinaryRouter.delete("/delete/:publicId", verifyAdminSession, async (req, res) => {
   try {
     const result = await cloudinary.uploader.destroy(req.params.publicId);
     res.json(result);
