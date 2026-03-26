@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { proxyGET, proxyRequest } from "@/lib/proxy";
+import { adminAuth } from "@/lib/adminAuth";
 
 export async function GET() {
   try {
@@ -13,10 +14,15 @@ export async function GET() {
     );
   }
 }
+
 export async function POST(request) {
+  const auth = await adminAuth(request);
+  if (auth.error) return auth.error;
+
   try {
     const body = await request.json();
-    const data = await proxyRequest('POST', '/api/shop/add-product', body);
+    const headers = { cookie: request.headers.get('cookie') };
+    const data = await proxyRequest('POST', '/api/shop/add-product', body, headers);
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error('Product create error:', error);

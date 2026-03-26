@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
-import { proxyFormData, proxyRequest } from "@/lib/proxy";
+import { proxyFormData } from "@/lib/proxy";
+import { adminAuth } from "@/lib/adminAuth";
 
 export async function POST(request) {
+  const auth = await adminAuth(request);
+  if (auth.error) return auth.error;
+
   try {
-    // Get the form data from the request
     const formData = await request.formData();
-    
-    // Forward to Express backend
-    const data = await proxyFormData('/cloudinary/upload', formData);
-    
+    const headers = { cookie: request.headers.get('cookie') };
+    const data = await proxyFormData('/cloudinary/upload', formData, headers);
     return NextResponse.json(data);
   } catch (error) {
     console.error('Cloudinary upload error:', error.message);

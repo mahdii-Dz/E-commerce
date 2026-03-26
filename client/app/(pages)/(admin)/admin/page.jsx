@@ -55,11 +55,13 @@ function LoadingSpinner() {
 }
 
 export default function AdminPage() {
+  const router = useRouter();
   const [toast, setToast] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [isLocked, setIsLocked] = useState(false);
-  const router = useRouter()
+  const [isChecking, setIsChecking] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const { values, errors, isSubmitting, setIsSubmitting, setErrors, handleChange, resetForm } = useForm({
     password: ''
@@ -82,11 +84,31 @@ export default function AdminPage() {
     }
   }, [attempts]);
 
+  // Check if already authenticated on mount
+  useEffect(() => {
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/admin/auth/check');
+        const data = await res.json();
+        if (data.authenticated) {
+          router.replace('/admin/dashboard');
+          return;
+        }
+        setIsAuthenticated(false);
+      } catch {
+        setIsAuthenticated(false);
+      } finally {
+        setIsChecking(false);
+      }
+    }
+    checkAuth();
+  }, [router]);
+
   const showToast = useCallback((message, type) => {
     setToast({ message, type });
   }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
 
     if (isLocked) {
@@ -114,19 +136,30 @@ export default function AdminPage() {
       showToast('Access denied', 'error');
     }
 
-
     setIsSubmitting(false);
-  };
+  }, [isLocked, values.password, setErrors, showToast, router]);
 
-  const togglePasswordVisibility = () => {
+  const togglePasswordVisibility = useCallback(() => {
     setShowPassword(prev => !prev);
-  };
+  }, []);
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !isSubmitting) {
       handleSubmit(e);
     }
-  };
+  }, [isSubmitting, handleSubmit]);
+
+  // Don't render the login form while checking auth
+  if (isChecking) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-secondary">Checking authorization...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
@@ -171,7 +204,7 @@ export default function AdminPage() {
                 placeholder="Enter your password"
                 disabled={isLocked || isSubmitting}
                 className={`
-                  w-full px-4 py-3 rounded-xl border-2 bg-gray-50 
+                  w-full px-4 py-3 rounded-xl border-2 bg-gray-50
                   transition-all duration-200 outline-none
                   ${errors.password
                     ? 'border-red-500 focus:border-red-500 bg-red-50'
@@ -250,7 +283,6 @@ export default function AdminPage() {
       <footer className="mt-8 text-center text-gray-400 text-sm">
         <p>© {new Date().getFullYear()} Your Company. All rights reserved.</p>
       </footer>
-
     </div>
   );
 }

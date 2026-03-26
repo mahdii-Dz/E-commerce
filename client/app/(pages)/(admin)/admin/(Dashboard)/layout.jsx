@@ -1,5 +1,6 @@
 import { DashBoardSideBar } from "@/components/DashBoardSideBar";
 import { Roboto } from "next/font/google";
+import { AdminAuthGuard } from "@/components/AdminAuthGuard";
 
 
 const RobotoSans = Roboto({
@@ -16,7 +17,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
     return (
-        < >
+        <AdminAuthGuard>
             <div
                 className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto`}
             >
@@ -25,6 +26,6 @@ export default function RootLayout({ children }) {
                     {children}
                 </div>
             </div>
-        </>
+        </AdminAuthGuard>
     );
 }
