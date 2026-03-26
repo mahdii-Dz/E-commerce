@@ -3,7 +3,27 @@
     "allow": [
       "Bash(find 'D:/web develepment/e-commerce' -type f \\\\\\(-name *.js -o -name *.jsx -o -name *.ts -o -name *.tsx -o -name *.json -o -name *.css -o -name *.mjs -o -name *.toml -o -name *.md -o -name *.html -o -name .env* -o -name .gitignore \\\\\\) ! -path */node_modules/* ! -path */.git/* ! -path */.next/*)",
       "Bash(rm \"D:/web develepment/e-commerce/client/public/scripts/pixel.js\")",
-      "Bash(rmdir \"D:/web develepment/e-commerce/client/public/scripts\")"
+      "Bash(rmdir \"D:/web develepment/e-commerce/client/public/scripts\")",
+      "Bash(npm run:*)",
+      "Bash(find . -type f -name \"*.html\" -exec grep -h \"fbq\" {} +)",
+      "Bash(npm run *)",
+      "Bash(git commit *)",
+      "Bash(git * main)",
+      "Bash(* --version)",
+      "Bash(* --help *)"
     ]
-  }
+  },
+  "allowedTools": [
+        "Task",
+        "Bash(git log:*)", 
+        "Glob",
+        "Grep",
+        "LS",
+        "Read",
+        "Edit",
+        "MultiEdit",
+        "Write",
+        "WebFetch",
+        "WebSearch"
+      ]
 }

@@ -2,7 +2,7 @@ import "./globals.css";
 import { Roboto } from "next/font/google";
 import Context from "./context/Context";
 import Providers from "./providers";
-import FacebookPixel from "@/components/FacebookPixel";
+import GoogleTagManager from "@/components/GoogleTagManager";
 
 
 const RobotoSans = Roboto({
@@ -29,8 +29,9 @@ export default function RootLayout({ children }) {
             {children}
           </Context>
         </Providers>
-        <FacebookPixel pixelId={process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID} />
+            <GoogleTagManager />
       </body>
     </html>
   );
 }
+
