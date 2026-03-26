@@ -10,20 +10,21 @@
       "Bash(git commit *)",
       "Bash(git * main)",
       "Bash(* --version)",
-      "Bash(* --help *)"
+      "Bash(* --help *)",
+      "Bash(find 'D:/web develepment/e-commerce/server' -name *.js -type f)"
     ]
   },
   "allowedTools": [
-        "Task",
-        "Bash(git log:*)", 
-        "Glob",
-        "Grep",
-        "LS",
-        "Read",
-        "Edit",
-        "MultiEdit",
-        "Write",
-        "WebFetch",
-        "WebSearch"
-      ]
+    "Task",
+    "Bash(git log:*)",
+    "Glob",
+    "Grep",
+    "LS",
+    "Read",
+    "Edit",
+    "MultiEdit",
+    "Write",
+    "WebFetch",
+    "WebSearch"
+  ]
 }
