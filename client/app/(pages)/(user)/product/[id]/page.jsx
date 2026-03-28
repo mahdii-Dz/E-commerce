@@ -111,7 +111,7 @@ function ProductPage({ params }) {
                             />
                             <div className='absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center'>
                                 <span className='text-white font-medium bg-black/60 px-4 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity'>
-                                    Click to view full size
+                                    انقر لعرض الحجم الكامل
                                 </span>
                             </div>
                             
@@ -133,7 +133,7 @@ function ProductPage({ params }) {
                                 >
                                     <Image 
                                         src={image} 
-                                        alt={`${product.name} - view ${index + 1}`}
+                                        alt={`${product.name} - عرض ${index + 1}`}
                                         width={96}
                                         height={96}
                                         className='object-contain hover:scale-110 transition-transform duration-300'
@@ -144,46 +144,46 @@ function ProductPage({ params }) {
                     </div>
 
                     {/* Right Column - Product Info */}
-                    <div className='w-full lg:w-1/2 h-fit flex flex-col items-start gap-3 lg:gap-4'>
-                        <h2 className='text-xl lg:text-2xl font-bold'>{product.name}</h2>
+                    <div className='w-full lg:w-1/2 h-fit flex flex-col items-start gap-3 lg:gap-4 text-right'>
+                        <h2 className='text-xl lg:text-2xl font-bold w-full'>{product.name}</h2>
 
-                        <p className='text-secondary text-sm lg:text-base'>
-                            Category:
-                            <span className='ml-2 text-black'>
+                        <p className='text-secondary text-sm lg:text-base w-full'>
+                            الفئة:
+                            <span className='mr-2 text-black'>
                                 {product.categories.map(cat => cat.name).join(' | ')}
                             </span>
                         </p>
 
                         {/* Price */}
                         {PriceWithDiscount < product.price ? (
-                            <p className="text-gray-600">
+                            <p className="text-gray-600 w-full">
                                 <span className='line-through text-secondary text-base lg:text-lg'>
-                                    {product.price}DA
+                                    {product.price} دج
                                 </span>
-                                <span className='text-primary text-xl lg:text-2xl font-semibold ml-2'>
-                                    {Math.round(PriceWithDiscount)}DA
+                                <span className='text-primary text-xl lg:text-2xl font-semibold mr-2'>
+                                    {Math.round(PriceWithDiscount)} دج
                                 </span>
                             </p>
                         ) : (
-                            <p className="text-primary text-xl lg:text-2xl font-semibold">
-                                {product.price}DA
+                            <p className="text-primary text-xl lg:text-2xl font-semibold w-full">
+                                {product.price} دج
                             </p>
                         )}
 
                         {/* Stock Status */}
                         {product.is_active ? (
                             <p className='bg-[#B2F9B0] text-[#3FD125] px-2.5 py-1 text-sm font-medium rounded-full'>
-                                In Stock
+                                في المخزن
                             </p>
                         ) : (
                             <p className='bg-red-300 text-red-600 px-2.5 py-1 text-sm font-medium rounded-full'>
-                                Out of Stock
+                                نفذ من المخزن
                             </p>
                         )}
 
                         {/* Description */}
-                        <p className='font-semibold text-sm lg:text-base'>Description:</p>
-                        <p className='text-gray-600 text-sm lg:text-base leading-relaxed'>
+                        <p className='font-semibold text-sm lg:text-base w-full'>الوصف:</p>
+                        <p className='text-gray-600 text-sm lg:text-base leading-relaxed w-full'>
                             {product.description}
                         </p>
 
@@ -191,15 +191,15 @@ function ProductPage({ params }) {
                         <div className='flex items-start w-full bg-stroke/30 h-fit border lg:border-2 rounded-xl p-3 lg:p-4 gap-3 lg:gap-4 border-stroke'>
                             <Van className='text-primary flex-shrink-0' size={20} />
                             <div>
-                                <h4 className='font-semibold text-sm lg:text-base'>Estimated Delivery</h4>
+                                <h4 className='font-semibold text-sm lg:text-base'>التوصيل المتوقع</h4>
                                 <p className='text-secondary text-xs lg:text-sm'>
-                                    {month.slice(0, 3)} {today} - {month.slice(0, 3)} {ArriveDay}, {year}
+                                    {today} - {ArriveDay} {month}, {year}
                                 </p>
                             </div>
                         </div>
 
                         {/* Quantity */}
-                        <h3 className='text-sm lg:text-base font-medium'>Quantity</h3>
+                        <h3 className='text-sm lg:text-base font-medium w-full'>الكمية</h3>
                         <div className='w-full gap-3 lg:gap-6 flex flex-col sm:flex-row items-stretch sm:items-center'>
                             {/* Quantity Selector */}
                             <div className='flex gap-2 lg:gap-3 px-3 lg:px-4 py-2 border border-stroke rounded-full w-fit'>
@@ -212,7 +212,7 @@ function ProductPage({ params }) {
                                 </button>
                                 <p className='min-w-[20px] text-center'>{quantity}</p>
                                 <button 
-                                    onClick={() => setQuantity(q => q + 1)} 
+                                    onClick={() => quantity < 10 && setQuantity(q => q + 1)} 
                                     className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full p-1 transition-colors'
                                 >
                                     <Plus size={18} />
@@ -226,7 +226,7 @@ function ProductPage({ params }) {
                                     className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full sm:flex-1 hover:bg-red-50 transition-colors text-sm lg:text-base'
                                 >
                                     <ShoppingCart size={18} />
-                                    Remove From Cart
+                                    إزالة من السلة
                                 </button>
                             ) : (
                                 <button 
@@ -234,7 +234,7 @@ function ProductPage({ params }) {
                                     className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full sm:flex-1 hover:bg-primary/5 transition-colors text-sm lg:text-base'
                                 >
                                     <ShoppingCart size={18} />
-                                    Add To Cart
+                                    أضف إلى السلة
                                 </button>
                             )}
                         </div>
@@ -244,7 +244,7 @@ function ProductPage({ params }) {
                             href="#form" 
                             className='w-full bg-primary text-white flex items-center justify-center py-3 rounded-full cursor-pointer hover:bg-red-600 transition-colors text-sm lg:text-base font-medium'
                         >
-                            Buy Now
+                            اشتر الآن
                         </a>
 
                         {/* Checkout Form */}
@@ -263,13 +263,13 @@ function ProductPage({ params }) {
                 {/* Related Products Section */}
                 <section className='Related-Products w-full mb-12 lg:mb-16 px-0 lg:px-0'>
                     <div className='w-full flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 lg:mb-12 gap-4'>
-                        <h2 className='text-xl lg:text-2xl font-semibold'>Related Products</h2>
+                        <h2 className='text-xl lg:text-2xl font-semibold'>منتجات ذات صلة</h2>
                         <Link
                             href={`/products/All?category=${product.categories?.[0]?.name || ''}`}
                             className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit text-sm lg:text-base'
                         >
-                            View All
-                            <ArrowRight size={16} />
+                            عرض الكل
+                            <ArrowRight size={16} className="rotate-180" />
                         </Link>
                     </div>
                     <div className='w-full'>

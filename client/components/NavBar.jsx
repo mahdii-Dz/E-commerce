@@ -53,13 +53,13 @@ function NavBar({ onOpenCategorySidebar }) {
         </Link>
 
         {/* Desktop Search */}
-        <div className='hidden lg:flex search justify-between items-center rounded-2xl border border-stroke pr-4 w-2/4 max-w-2xl'>
+        <div className='hidden lg:flex search justify-between items-center rounded-2xl border border-stroke pl-4 w-2/4 max-w-2xl'>
+          <Search className="cursor-pointer hover:text-primary transition-colors flex-shrink-0" />
           <input 
             type="search" 
-            placeholder='Search Products...' 
-            className='h-12.5 p-4 outline-none w-full bg-transparent min-w-0' 
+            placeholder='ابحث عن المنتجات...' 
+            className='h-12.5 p-4 outline-none w-full bg-transparent min-w-0 text-right' 
           />
-          <Search className="cursor-pointer hover:text-primary transition-colors flex-shrink-0" />
         </div>
 
         {/* Right Section */}
@@ -87,14 +87,14 @@ function NavBar({ onOpenCategorySidebar }) {
       {/* Mobile Search Overlay */}
       {isSearchOpen && (
         <div className="lg:hidden fixed top-16 left-0 right-0 max-w-full bg-white border-b border-stroke p-4 z-40">
-          <div className='flex justify-between items-center rounded-xl border border-stroke pr-4 max-w-full'>
+          <div className='flex justify-between items-center rounded-xl border border-stroke pl-4 max-w-full'>
+            <Search className="cursor-pointer text-gray-500 flex-shrink-0" />
             <input 
               type="search" 
-              placeholder='Search Products...' 
-              className='h-12 p-4 outline-none w-full bg-transparent min-w-0' 
+              placeholder='ابحث عن المنتجات...' 
+              className='h-12 p-4 outline-none w-full bg-transparent min-w-0 text-right' 
               autoFocus
             />
-            <Search className="cursor-pointer text-gray-500 flex-shrink-0" />
           </div>
         </div>
       )}
@@ -109,49 +109,49 @@ function NavBar({ onOpenCategorySidebar }) {
 
       {/* Mobile Nav Menu Sidebar */}
       <div className={`
-        lg:hidden fixed top-16 left-0 h-[calc(100vh-64px)] w-64 max-w-full bg-white border-r border-stroke z-50 transform transition-transform duration-300 ease-in-out
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:hidden fixed top-16 right-0 h-[calc(100vh-64px)] w-64 max-w-full bg-white border-l border-stroke z-50 transform transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'}
       `}>
         <div className="p-6 space-y-2 max-w-full">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Menu</p>
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">القائمة</p>
           
           <Link 
             href="/" 
             onClick={handleCloseMenu}
             className="block p-3 rounded-xl hover:bg-primary/10 hover:text-primary font-medium transition-colors"
           >
-            Home
+            الرئيسية
           </Link>
           <Link 
             href="/products/All" 
             onClick={handleCloseMenu}
             className="block p-3 rounded-xl hover:bg-primary/10 hover:text-primary font-medium transition-colors"
           >
-            All Products
+            جميع المنتجات
           </Link>
           <Link 
             href="/products/Promotions" 
             onClick={handleCloseMenu}
             className="block p-3 rounded-xl hover:bg-primary/10 hover:text-primary font-medium transition-colors"
           >
-            Promotions
+            التخفيضات
           </Link>
           <Link 
             href="/contact" 
             onClick={handleCloseMenu}
             className="block p-3 rounded-xl hover:bg-primary/10 hover:text-primary font-medium transition-colors"
           >
-            Contact Us
+            اتصل بنا
           </Link>
           
           <div className="h-px bg-stroke my-4"></div>
           
           <button 
             onClick={handleOpenCategory}
-            className="w-full text-left p-3 rounded-xl hover:bg-primary/10 hover:text-primary font-medium transition-colors flex items-center gap-2"
+            className="w-full text-right p-3 rounded-xl hover:bg-primary/10 hover:text-primary font-medium transition-colors flex items-center gap-2"
           >
             <Menu size={18} />
-            Shop by Category
+            تسوق حسب الفئة
           </button>
           
           <div className="h-px bg-stroke my-4"></div>
@@ -162,7 +162,7 @@ function NavBar({ onOpenCategorySidebar }) {
             className="flex items-center gap-3 p-3 rounded-xl hover:bg-primary/10 hover:text-primary font-medium transition-colors"
           >
             <ShoppingCart size={20} />
-            Cart ({mounted ? cartCount : 0})
+            السلة ({mounted ? cartCount : 0})
           </Link>
         </div>
       </div>

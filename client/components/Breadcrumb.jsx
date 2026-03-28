@@ -3,26 +3,37 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import React from 'react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function Breadcrumb() {
   const pathname = usePathname();
   const paths = pathname.split('/').filter(Boolean);
 
   const breadcrumbItems = [
-    { label: 'Home', href: '/' },
+    { label: 'الرئيسية', href: '/' },
     ...paths.map((path, index) => {
       const href = `/${paths.slice(0, index + 1).join('/')}`;
 
       // Special handling for the "product" segment
       let finalHref = href;
-      if (path === 'products' || path === 'product') {
+      let label = decodeURIComponent(path);
+      
+      if (path === 'products') {
+        label = 'المنتجات';
         finalHref = '/products/All'; 
+      } else if (path === 'product') {
+        label = 'المنتج';
+        finalHref = '/products/All';
+      } else if (path === 'cart') {
+        label = 'السلة';
+      } else if (path === 'contact') {
+        label = 'اتصل بنا';
       }
 
       const isLast = index === paths.length - 1;
 
       return {
-        label: decodeURIComponent(path),
+        label,
         href: finalHref,
         isLast,
       };
@@ -31,12 +42,12 @@ export default function Breadcrumb() {
 
   return (
     <nav aria-label="Breadcrumb" className="text-gray-500 text-sm">
-      <ol className="flex items-center space-x-2">
+      <ol className="flex items-center space-x-1">
         {breadcrumbItems.map((item, i) => (
           <React.Fragment key={i}>
             {i > 0 && (
               <li>
-                <span>›</span>
+                <span className=" block"><ChevronLeft size={12}/></span>
               </li>
             )}
             <li>

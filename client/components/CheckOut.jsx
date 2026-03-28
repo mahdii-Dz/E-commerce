@@ -169,13 +169,13 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-                    <h2 className="text-2xl font-bold text-green-600 mb-2">Order Confirmed!</h2>
-                    <p className="text-gray-600 mb-6">Thank you for your purchase. Your order has been successfully placed.</p>
+                    <h2 className="text-2xl font-bold text-green-600 mb-2">تم تأكيد الطلب!</h2>
+                    <p className="text-gray-600 mb-6">شكراً لك على الشراء. تم تقديم طلبك بنجاح.</p>
                     <button
                         onClick={handleSuccessContinue}
                         className="w-[200px] cursor-pointer h-11 bg-primary text-white rounded-xl hover:opacity-90 transition-opacity font-medium text-sm"
                     >
-                        Continue Shopping
+                        الاستمرار في التسوق
                     </button>
                 </div>
             </div>
@@ -186,14 +186,14 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
         return (
             <div className="flex flex-col w-full items-center justify-center gap-6 px-6 py-8 bg-white rounded-xl border-2 border-stroke">
                 <div className="text-center w-1/2">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">Confirm Your Order</h2>
+                    <h2 className="text-xl font-bold text-gray-800 mb-4">تأكيد طلبك</h2>
                     <div className="bg-gray-50 p-4 rounded-lg mb-6 flex flex-col items-start w-full">
-                        <p className="font-medium text-gray-700 mb-2">Details:</p>
-                        <p className="text-gray-600">Name: {formData.firstName} {formData.lastName}</p>
-                        <p className="text-gray-600">Phone: {formData.phoneNumber}</p>
-                        <p className="text-gray-600">Wilaya: {formData.wilaya}</p>
-                        <p className="text-gray-600">Baladiya: {formData.baladiya}</p>
-                        <p className="text-gray-600">Delivery: {formData.delivery === 'domicile' ? 'Domicile' : 'Stop Desk'}</p>
+                        <p className="font-medium text-gray-700 mb-2">التفاصيل:</p>
+                        <p className="text-gray-600">الاسم: {formData.firstName} {formData.lastName}</p>
+                        <p className="text-gray-600">الهاتف: {formData.phoneNumber}</p>
+                        <p className="text-gray-600">الولاية: {formData.wilaya}</p>
+                        <p className="text-gray-600">البلدية: {formData.baladiya}</p>
+                        <p className="text-gray-600">التوصيل: {formData.delivery === 'domicile' ? 'للمنزل' : 'استلام من المكتب'}</p>
 
                         {/* Color confirmation with name and hex */}
                         {formData.selectedColor && (
@@ -210,17 +210,17 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                         )}
 
                         <div className="w-full border-t border-gray-200 my-3"></div>
-                        <p className="text-gray-600">Product Price: {productPrice}DA</p>
-                        <p className="text-gray-600">Delivery Fee: {deliveryPrice}DA</p>
-                        <p className="text-gray-600">Quantity: {Quantity}</p>
-                        <p className="text-xl font-bold mt-2 text-primary">Total: {totalPrice}DA</p>
+                        <p className="text-gray-600">سعر المنتج: {productPrice} دج</p>
+                        <p className="text-gray-600">رسوم التوصيل: {deliveryPrice} دج</p>
+                        <p className="text-gray-600">الكمية: {Quantity}</p>
+                        <p className="text-xl font-bold mt-2 text-primary">الإجمالي: {totalPrice} دج</p>
                     </div>
                     <div className="flex gap-4 justify-center">
                         <button
                             onClick={handleBack}
                             className="w-[100px] cursor-pointer h-11 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition-opacity font-medium text-sm"
                         >
-                            Back
+                            رجوع
                         </button>
                         <button
                             onClick={handleConfirm}
@@ -230,7 +230,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                                 : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
                                 }`}
                         >
-                            {mutation.isPending ? 'Confirming...' : 'Confirm'}
+                            {mutation.isPending ? 'جاري التأكيد...' : 'تأكيد'}
                         </button>
                     </div>
                 </div>
@@ -248,27 +248,27 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             <div className="flex w-full items-center gap-6">
                 <div className="flex flex-col w-full">
                     <label htmlFor="firstName" className="font-medium text-black text-base mb-2">
-                        First Name *
+                        الاسم الأول *
                     </label>
                     <Input
                         id="firstName"
                         value={formData.firstName}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        placeholder="First name"
-                        className="h-11"
+                        placeholder="الاسم الأول"
+                        className="h-11 text-right"
                         required
                     />
                 </div>
                 <div className="flex flex-col w-full">
                     <label htmlFor="lastName" className="font-medium text-black text-base mb-2">
-                        Last Name *
+                        اللقب *
                     </label>
                     <Input
                         id="lastName"
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        placeholder="Last name"
-                        className="h-11"
+                        placeholder="اللقب"
+                        className="h-11 text-right"
                         required
                     />
                 </div>
@@ -277,7 +277,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             {/* Phone Number */}
             <div className="flex flex-col w-full">
                 <label htmlFor="phoneNumber" className="font-medium text-black text-base mb-2">
-                    Phone Number *
+                    رقم الهاتف *
                 </label>
                 <Input
                     id="phoneNumber"
@@ -285,7 +285,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                     value={formData.phoneNumber}
                     onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
                     placeholder="0x xxxxxxxx"
-                    className="h-11"
+                    className="h-11 text-right"
                     required
                 />
             </div>
@@ -294,7 +294,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             {colors && colors.length > 0 && (
                 <div className="flex flex-col w-full">
                     <label className="font-medium text-black text-base mb-3">
-                        Select Color *
+                        اختر اللون *
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {colors.map((color) => (
@@ -311,7 +311,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                                     className="w-10 h-10 rounded-full border border-gray-300 shadow-sm flex-shrink-0"
                                     style={{ backgroundColor: `#${color.hex}` }}
                                 />
-                                <div className="flex flex-col items-start text-left">
+                                <div className="flex flex-col items-start text-right">
                                     <span className={`font-medium text-sm ${formData.selectedColor?.hex === color.hex ? 'text-primary' : 'text-gray-800'
                                         }`}>
                                         {color.name}
@@ -321,7 +321,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
 
                                 {/* Checkmark for selected */}
                                 {formData.selectedColor?.hex === color.hex && (
-                                    <div className="absolute top-2 right-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
+                                    <div className="absolute top-2 left-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
                                         <Check className="w-3 h-3 text-white" strokeWidth={3} />
                                     </div>
                                 )}
@@ -334,20 +334,21 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             {/* Wilaya */}
             <div className="flex flex-col w-full">
                 <label htmlFor="wilaya" className="font-medium text-black text-base mb-2">
-                    Wilaya *
+                    الولاية *
                 </label>
                 <Select
                     value={formData.wilaya}
                     onValueChange={handleWilayaChange}
                 >
                     <SelectTrigger className="w-full h-11!">
-                        <SelectValue placeholder="Select wilaya" />
+                        <SelectValue placeholder="اختر الولاية" />
                     </SelectTrigger>
                     <SelectContent>
                         {orderedWilayas.map(([code, data]) => (
                             <SelectItem
                                 key={code}
                                 value={data.name}
+                                className="text-right"
                             >
                                 {code} - {data.name}
                             </SelectItem>
@@ -359,7 +360,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             {/* Baladiya */}
             <div className="flex flex-col w-full">
                 <label htmlFor="baladiya" className="font-medium text-black text-base mb-2">
-                    Baladiya *
+                    البلدية *
                 </label>
                 <Select
                     value={formData.baladiya}
@@ -367,13 +368,14 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                     disabled={!communes.length}
                 >
                     <SelectTrigger className="w-full h-11!">
-                        <SelectValue placeholder="Select baladiya" />
+                        <SelectValue placeholder="اختر البلدية" />
                     </SelectTrigger>
                     <SelectContent>
                         {communes.map((commune, index) => (
                             <SelectItem
                                 key={`${formData.wilaya}-${index}`}
                                 value={commune}
+                                className="text-right"
                             >
                                 {commune}
                             </SelectItem>
@@ -385,7 +387,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             {/* Delivery Type */}
             <div className="flex flex-col w-full">
                 <label htmlFor="delivery" className="font-medium text-black text-base mb-2">
-                    Delivery *
+                    التوصيل *
                 </label>
                 <Select
                     value={formData.delivery}
@@ -395,29 +397,29 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="domicile">Domicile</SelectItem>
-                        <SelectItem value="stopDesk">Stop Desk</SelectItem>
+                        <SelectItem value="domicile" className="text-right">توصيل للمنزل</SelectItem>
+                        <SelectItem value="stopDesk" className="text-right">استلام من المكتب</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
 
             {/* Total Price */}
             <div className="w-full flex flex-col items-start gap-2">
-                <div className='w-full px-16 flex justify-between'>
-                    <span className="font-medium text-black text-lg">Quantity:</span>
+                <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
+                    <span className="font-medium text-black text-lg">الكمية:</span>
                     <div className='flex gap-3.5 px-2 py-1 border border-stroke rounded-full'>
                         <button type='button' onClick={() => Quantity > 1 && setQuantity(q => q - 1)} className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full'><Minus /></button>
                         <p>{Quantity}</p>
                         <button type='button' onClick={() => setQuantity(q => q + 1)} className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full'><Plus /></button>
                     </div>
                 </div>
-                <div className='w-full px-16 flex justify-between'>
-                    <span className="font-medium text-black text-lg">Delivery:</span>
-                    <p className="font-medium text-primary text-xl">{deliveryPrice}DA</p>
+                <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
+                    <span className="font-medium text-black text-lg">رسوم التوصيل:</span>
+                    <p className="font-medium text-primary text-xl">{deliveryPrice} دج</p>
                 </div>
-                <div className='w-full px-16 flex justify-between'>
-                    <span className="font-medium text-black text-lg">Total:</span>
-                    <span className="font-medium text-primary text-xl">{totalPrice}DA</span>
+                <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
+                    <span className="font-medium text-black text-lg">الإجمالي:</span>
+                    <span className="font-medium text-primary text-xl">{totalPrice} دج</span>
                 </div>
             </div>
 
@@ -430,7 +432,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                         : 'bg-primary text-white hover:opacity-90 cursor-pointer'
                     }`}
             >
-                Place Order
+                إتمام الطلب
             </button>
         </form>
     );

@@ -20,11 +20,11 @@ function CartPage() {
         
         {/* Header */}
         <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6 lg:mt-8 mb-8 lg:mb-14'>
-          <h2 className='text-2xl sm:text-3xl lg:text-4xl font-bold'>My Cart</h2>
+          <h2 className='text-2xl sm:text-3xl lg:text-4xl font-bold'>سلتي</h2>
           
           {!isEmpty && (
             <p className='text-secondary text-sm lg:text-base'>
-              {Cart.length} item{Cart.length !== 1 ? 's' : ''} in cart
+              {Cart.length} {Cart.length === 1 ? 'عنصر' : 'عناصر'} في السلة
             </p>
           )}
         </div>
@@ -37,15 +37,15 @@ function CartPage() {
               <div className='w-20 h-20 lg:w-24 lg:h-24 bg-stroke/50 rounded-full flex items-center justify-center mb-6'>
                 <ShoppingCart size={32} className='text-secondary lg:w-10 lg:h-10' />
               </div>
-              <h3 className='text-xl lg:text-2xl font-semibold mb-2'>Your cart is empty</h3>
+              <h3 className='text-xl lg:text-2xl font-semibold mb-2'>سلة التسوق فارغة</h3>
               <p className='text-secondary text-sm lg:text-base mb-6 text-center px-4'>
-                Looks like you haven&apos;t added anything to your cart yet
+                يبدو أنك لم تضف أي شيء إلى سلتك بعد
               </p>
               <Link 
                 href="/products/All"
                 className='bg-primary text-white px-6 lg:px-8 py-2.5 lg:py-3 rounded-full font-medium hover:bg-primary/90 transition-colors text-sm lg:text-base'
               >
-                Start Shopping
+                ابدأ التسوق
               </Link>
             </div>
           ) : (

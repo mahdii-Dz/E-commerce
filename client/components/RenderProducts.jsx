@@ -119,7 +119,7 @@ function RenderProducts({ Products, Class, isCart = false }) {
 
                                     {/* Stock */}
                                     <p className='text-xs sm:text-sm'>
-                                        In Stock: <span className='font-semibold text-[#38A9FA]'>{product.stock}</span>
+                                        في المخزن: <span className='font-semibold text-[#38A9FA]'>{product.stock}</span>
                                     </p>
 
                                     {/* Action Buttons */}
@@ -129,13 +129,13 @@ function RenderProducts({ Products, Class, isCart = false }) {
                                                 onClick={() => handleRemoveFromCart(product.id)} 
                                                 className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke px-3 sm:px-4 py-2 rounded-full bg-white text-sm'
                                             >
-                                                Remove
+                                                إزالة
                                             </button>
                                             <Link 
                                                 href={`/product/${product.id}`} 
                                                 className="w-full flex items-center justify-center gap-2 font-medium cursor-pointer text-white py-2 rounded-full bg-primary text-sm"
                                             >
-                                                Buy Now
+                                                اشتر الآن
                                             </Link>
                                         </div>
                                     ) : Cart.find(item => item.id === product.id) ? (
@@ -144,8 +144,8 @@ function RenderProducts({ Products, Class, isCart = false }) {
                                             className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke px-3 sm:px-4 py-2 rounded-full bg-white w-full sm:w-fit text-sm mt-auto'
                                         >
                                             <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />
-                                            <span className="hidden sm:inline">Remove From Cart</span>
-                                            <span className="sm:hidden">Remove</span>
+                                            <span className="hidden sm:inline">إزالة من السلة</span>
+                                            <span className="sm:hidden">إزالة</span>
                                         </button>
                                     ) : (
                                         <button 
@@ -153,8 +153,8 @@ function RenderProducts({ Products, Class, isCart = false }) {
                                             className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke px-3 sm:px-4 py-2 rounded-full bg-white w-full sm:w-fit text-sm mt-auto hover:bg-gray-50 transition-colors'
                                         >
                                             <ShoppingCart size={16} className="sm:w-[18px] sm:h-[18px]" />
-                                            <span className="hidden sm:inline">Add To Cart</span>
-                                            <span className="sm:hidden">Add</span>
+                                            <span className="hidden sm:inline">أضف إلى السلة</span>
+                                            <span className="sm:hidden">إضافة</span>
                                         </button>
                                     )}
                                 </div>
@@ -162,7 +162,7 @@ function RenderProducts({ Products, Class, isCart = false }) {
                         ))
                     ) : (
                         <div className={`w-full flex items-center justify-center py-12 col-span-full text-gray-500`}>
-                            No products available.
+                            لا توجد منتجات متاحة.
                         </div>
                     )}
                 </div>

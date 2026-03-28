@@ -137,9 +137,9 @@ export default function ProductFilterPage({ params, searchParams }) {
 
     // Filter sidebar content (reusable for desktop and mobile)
     const FilterContent = () => (
-        <div className='w-full'>
+        <div className='w-full text-right'>
             <div className='flex justify-between items-center lg:mb-0 mb-4'>
-                <h2 className='text-lg font-semibold'>Filters</h2>
+                <h2 className='text-lg font-semibold'>الفلاتر</h2>
                 <button 
                     onClick={() => setIsMobileFilterOpen(false)}
                     className="lg:hidden p-2 hover:bg-gray-100 rounded-lg"
@@ -149,16 +149,16 @@ export default function ProductFilterPage({ params, searchParams }) {
             </div>
             
             <div className='w-full mt-4'>
-                <h3 className='mb-3 text-sm font-medium'>Category</h3>
+                <h3 className='mb-3 text-sm font-medium'>الفئة</h3>
                 <Select value={filter.category} onValueChange={(value) => setFilter({ ...filter, category: value })}>
-                    <SelectTrigger className="w-full h-10">
+                    <SelectTrigger className="w-full h-10!">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
-                            <SelectItem value='AllCategories'>All Categories</SelectItem>
+                            <SelectItem value='AllCategories' className="text-right">جميع الفئات</SelectItem>
                             {categories?.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                                <SelectItem key={cat.id} value={cat.name} className="text-right">{cat.name}</SelectItem>
                             ))}
                         </SelectGroup>
                     </SelectContent>
@@ -166,32 +166,32 @@ export default function ProductFilterPage({ params, searchParams }) {
             </div>
 
             <div className='w-full mt-4'>
-                <h3 className='mb-3 text-sm font-medium'>Price Range</h3>
+                <h3 className='mb-3 text-sm font-medium'>نطاق السعر</h3>
                 <Select value={filter.price} onValueChange={(value) => setFilter({ ...filter, price: value })}>
-                    <SelectTrigger className="w-full h-10">
+                    <SelectTrigger className="w-full h-10!">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
-                            <SelectItem value='AllPrices'>All Prices</SelectItem>
-                            <SelectItem value='0-2500'>0 - 2500</SelectItem>
-                            <SelectItem value='2500-5000'>2500 - 5000</SelectItem>
-                            <SelectItem value='5000-10000'>5000 - 10,000</SelectItem>
+                            <SelectItem value='AllPrices' className="text-right">جميع الأسعار</SelectItem>
+                            <SelectItem value='0-2500' className="text-right">0 - 2500</SelectItem>
+                            <SelectItem value='2500-5000' className="text-right">2500 - 5000</SelectItem>
+                            <SelectItem value='5000-10000' className="text-right">5000 - 10,000</SelectItem>
                         </SelectGroup>
                     </SelectContent>
                 </Select>
             </div>
 
             <div className='w-full mt-4'>
-                <h3 className='mb-3 text-sm font-medium'>Sort By</h3>
+                <h3 className='mb-3 text-sm font-medium'>ترتيب حسب</h3>
                 <Select value={filter.sort} onValueChange={(value) => setFilter({ ...filter, sort: value })}>
-                    <SelectTrigger className="w-full h-10">
+                    <SelectTrigger className="w-full h-10!">
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                         <SelectGroup>
-                            <SelectItem value='Newest'>Newest First</SelectItem>
-                            <SelectItem value='Oldest'>Oldest First</SelectItem>
+                            <SelectItem value='Newest' className="text-right">الأحدث أولاً</SelectItem>
+                            <SelectItem value='Oldest' className="text-right">الأقدم أولاً</SelectItem>
                         </SelectGroup>
                     </SelectContent>
                 </Select>
@@ -204,7 +204,7 @@ export default function ProductFilterPage({ params, searchParams }) {
                 }}
                 className='w-full mt-6 px-4 py-2 rounded-lg cursor-pointer border-[1.5px] border-primary hover:bg-primary hover:text-white transition-colors text-sm lg:hidden'
             >
-                Reset all filters
+                إعادة ضبط جميع الفلاتر
             </button>
         </div>
     );
@@ -215,12 +215,12 @@ export default function ProductFilterPage({ params, searchParams }) {
             
             {/* Header Section */}
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6'>
-                <div>
-                    <h1 className="text-xl lg:text-2xl font-bold capitalize">{routerFilter} Products</h1>
+                <div className="text-right">
+                    <h1 className="text-xl lg:text-2xl font-bold capitalize">منتجات {routerFilter === 'All' ? 'جميع' : routerFilter}</h1>
                     <p className='text-secondary mt-1 text-sm'>
                         {filteredProducts.length === 0
-                            ? 'No products found'
-                            : `Showing ${visibleProducts.length} of ${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`
+                            ? 'لم يتم العثور على منتجات'
+                            : `عرض ${visibleProducts.length} من ${filteredProducts.length} منتج${filteredProducts.length !== 1 ? 'ات' : ''}`
                         }
                     </p>
                 </div>
@@ -232,14 +232,14 @@ export default function ProductFilterPage({ params, searchParams }) {
                         className='lg:hidden flex items-center gap-2 px-4 py-2 rounded-lg border border-stroke hover:bg-gray-50 transition-colors'
                     >
                         <SlidersHorizontal size={18} />
-                        Filters
+                        الفلاتر
                     </button>
                     
                     <button 
                         onClick={ResetFilter}
                         className='hidden sm:block px-6 lg:px-9 py-2 rounded-lg cursor-pointer border-[1.5px] border-primary hover:bg-primary hover:text-white transition-colors text-sm whitespace-nowrap'
                     >
-                        Reset all filters
+                        إعادة ضبط جميع الفلاتر
                     </button>
                 </div>
             </div>
@@ -287,8 +287,8 @@ export default function ProductFilterPage({ params, searchParams }) {
             {(visibleProducts.length === filteredProducts.length && filteredProducts.length !== 0) && (
                 <div className='w-full flex items-center justify-center mt-8 mb-8 text-secondary px-4'>
                     <p className='text-center text-sm'>
-                        You&apos;ve seen it all! No more products to show.<br />
-                        Showing all {visibleProducts.length} products
+                        لقد رأيت كل شيء! لا توجد منتجات أخرى لعرضها.<br />
+                        عرض جميع المنتجات ({visibleProducts.length})
                     </p>
                 </div>
             )}

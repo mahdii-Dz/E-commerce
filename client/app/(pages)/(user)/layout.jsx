@@ -20,7 +20,7 @@ export const metadata = {
 
 export default function UserLayout({ children }) {
     return (
-        <div className={`${RobotoSans.variable} font-sans antialiased bg-background w-full max-w-full min-h-screen overflow-x-hidden`}>
+        <div dir="rtl" lang="ar" className={`${RobotoSans.variable} font-sans antialiased bg-background w-full max-w-full min-h-screen overflow-x-hidden`}>
             {/* NavBar is now in HomeClient, so remove from here or keep if needed on all pages */}
             <NavBar />
             {children}

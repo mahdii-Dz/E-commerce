@@ -22,7 +22,7 @@ function Main({ Banners, onOpenCategorySidebar }) {
         className="lg:hidden w-full mb-4 flex items-center justify-center gap-3 bg-white border border-stroke rounded-xl p-4 font-medium hover:bg-primary/5 transition-all"
       >
         <Menu size={20} />
-        Shop by Category
+        تسوق حسب الفئة
       </button>
 
       {/* Banners */}
@@ -31,7 +31,7 @@ function Main({ Banners, onOpenCategorySidebar }) {
           {mainBanner ? (
             <Image 
               src={mainBanner.url.trim()} 
-              alt="Main banner" 
+              alt="الإعلان الرئيسي" 
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 75vw"
@@ -39,7 +39,7 @@ function Main({ Banners, onOpenCategorySidebar }) {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
-              No banner available
+              لا يوجد إعلان متاح
             </div>
           )}
         </div>
@@ -48,14 +48,14 @@ function Main({ Banners, onOpenCategorySidebar }) {
           {sideBanner ? (
             <Image 
               src={sideBanner.url.trim()} 
-              alt="Side banner" 
+              alt="إعلان جانبي" 
               fill
               sizes="(max-width: 1024px) 100vw, 25vw"
               className="object-cover hover:scale-110 transition-transform duration-300" 
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-primary text-white font-semibold text-xl">
-              Special Offer
+              عرض خاص
             </div>
           )}
         </div>
@@ -64,10 +64,10 @@ function Main({ Banners, onOpenCategorySidebar }) {
       {/* Products sections... */}
       <section className='mt-10 px-4 lg:px-0'>
         <div className='flex justify-between items-center'>
-          <h1 className='text-xl lg:text-2xl font-semibold'>Promotion</h1>
+          <h1 className='text-xl lg:text-2xl font-semibold'>تخفيضات</h1>
           <Link href="/products/Promotions" className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit text-sm lg:text-base'>
-            View All
-            <ArrowRight size={16} />
+            عرض الكل
+            <ArrowRight size={16} className="rotate-180" />
           </Link>
         </div>
         <RenderProducts Products={Promotions && Promotions.slice(0, 3)} Class={'mt-8'} />
@@ -75,10 +75,10 @@ function Main({ Banners, onOpenCategorySidebar }) {
 
       <section className='mt-10 px-4 lg:px-0'>
         <div className='flex justify-between items-center'>
-          <h1 className='text-xl lg:text-2xl font-semibold'>Newest Products</h1>
+          <h1 className='text-xl lg:text-2xl font-semibold'>أحدث المنتجات</h1>
           <Link href="/products/Newest" className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit text-sm lg:text-base'>
-            View All
-            <ArrowRight size={16} />
+            عرض الكل
+            <ArrowRight size={16} className="rotate-180" />
           </Link>
         </div>
         <RenderProducts Products={NewestProducts && NewestProducts.slice(0, 3)} Class={'mt-8'} />
@@ -86,10 +86,10 @@ function Main({ Banners, onOpenCategorySidebar }) {
 
       <section className='mt-10 px-4 lg:px-0 mb-10'>
         <div className='flex justify-between items-center'>
-          <h1 className='text-xl lg:text-2xl font-semibold'>All Products</h1>
+          <h1 className='text-xl lg:text-2xl font-semibold'>جميع المنتجات</h1>
           <Link href="/products/All" className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit text-sm lg:text-base'>
-            View All
-            <ArrowRight size={16} />
+            عرض الكل
+            <ArrowRight size={16} className="rotate-180" />
           </Link>
         </div>
         <RenderProducts Products={Products && Products.slice(0, 12)} Class={'mt-8'} />
