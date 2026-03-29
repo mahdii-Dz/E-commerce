@@ -39,9 +39,9 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
         wilaya: 'Alger',
         baladiya: '',
         delivery: 'domicile',
-        selectedColor: null, 
+        selectedColor: null,
     });
-    
+
     const [deliveryPrice, setDeliveryPrice] = useState(0);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -81,7 +81,6 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             delivery: prev.delivery,
         }));
     };
-
     // Update delivery price when wilaya name or delivery type changes
     useEffect(() => {
         const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
@@ -132,6 +131,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             last_name: formData.lastName,
             phone: formData.phoneNumber,
             wilaya: formData.wilaya,
+            wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya),
             baladiya: formData.baladiya,
             delivery_type: formData.delivery,
             product_id: productId,
@@ -143,7 +143,6 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
         };
         mutation.mutate(orderData);
     };
-
     const handleBack = () => {
         setShowConfirmation(false);
     };
@@ -303,8 +302,8 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                                 type="button"
                                 onClick={() => handleInputChange('selectedColor', color)}
                                 className={`relative flex items-center cursor-pointer gap-3 p-3 rounded-xl border-2 transition-all ${formData.selectedColor?.hex === color.hex
-                                        ? 'border-primary bg-red-50'
-                                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                                    ? 'border-primary bg-red-50'
+                                    : 'border-gray-200 hover:border-gray-300 bg-white'
                                     }`}
                             >
                                 <div
@@ -337,6 +336,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                     الولاية *
                 </label>
                 <Select
+                    dir="rtl"
                     value={formData.wilaya}
                     onValueChange={handleWilayaChange}
                 >
@@ -363,6 +363,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                     البلدية *
                 </label>
                 <Select
+                    dir="rtl"
                     value={formData.baladiya}
                     onValueChange={(value) => handleInputChange('baladiya', value)}
                     disabled={!communes.length}
@@ -390,6 +391,7 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                     التوصيل *
                 </label>
                 <Select
+                    dir="rtl"
                     value={formData.delivery}
                     onValueChange={(value) => handleInputChange('delivery', value)}
                 >
@@ -428,8 +430,8 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                 type="submit"
                 disabled={colors.length > 0 && !formData.selectedColor}
                 className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${colors.length > 0 && !formData.selectedColor
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-primary text-white hover:opacity-90 cursor-pointer'
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-primary text-white hover:opacity-90 cursor-pointer'
                     }`}
             >
                 إتمام الطلب

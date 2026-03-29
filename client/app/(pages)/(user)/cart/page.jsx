@@ -20,7 +20,7 @@ function CartPage() {
         
         {/* Header */}
         <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6 lg:mt-8 mb-8 lg:mb-14'>
-          <h2 className='text-2xl sm:text-3xl lg:text-4xl font-bold'>سلتي</h2>
+          <h2 className='text-2xl sm:text-3xl lg:text-4xl font-bold'>السلة</h2>
           
           {!isEmpty && (
             <p className='text-secondary text-sm lg:text-base'>

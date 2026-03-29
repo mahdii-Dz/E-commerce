@@ -150,7 +150,7 @@ export default function ProductFilterPage({ params, searchParams }) {
             
             <div className='w-full mt-4'>
                 <h3 className='mb-3 text-sm font-medium'>الفئة</h3>
-                <Select value={filter.category} onValueChange={(value) => setFilter({ ...filter, category: value })}>
+                <Select dir="rtl" value={filter.category} onValueChange={(value) => setFilter({ ...filter, category: value })}>
                     <SelectTrigger className="w-full h-10!">
                         <SelectValue />
                     </SelectTrigger>
@@ -167,7 +167,7 @@ export default function ProductFilterPage({ params, searchParams }) {
 
             <div className='w-full mt-4'>
                 <h3 className='mb-3 text-sm font-medium'>نطاق السعر</h3>
-                <Select value={filter.price} onValueChange={(value) => setFilter({ ...filter, price: value })}>
+                <Select dir="rtl" value={filter.price} onValueChange={(value) => setFilter({ ...filter, price: value })}>
                     <SelectTrigger className="w-full h-10!">
                         <SelectValue />
                     </SelectTrigger>
@@ -184,7 +184,7 @@ export default function ProductFilterPage({ params, searchParams }) {
 
             <div className='w-full mt-4'>
                 <h3 className='mb-3 text-sm font-medium'>ترتيب حسب</h3>
-                <Select value={filter.sort} onValueChange={(value) => setFilter({ ...filter, sort: value })}>
+                <Select dir="rtl" value={filter.sort} onValueChange={(value) => setFilter({ ...filter, sort: value })}>
                     <SelectTrigger className="w-full h-10!">
                         <SelectValue />
                     </SelectTrigger>
@@ -216,7 +216,7 @@ export default function ProductFilterPage({ params, searchParams }) {
             {/* Header Section */}
             <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6'>
                 <div className="text-right">
-                    <h1 className="text-xl lg:text-2xl font-bold capitalize">منتجات {routerFilter === 'All' ? 'جميع' : routerFilter}</h1>
+                    <h1 className="text-xl lg:text-2xl font-bold capitalize">{routerFilter === 'All' ? 'جميع المنتجات' : routerFilter === 'Promotions' ? 'منتجات عليها تخفيض' : routerFilter === 'Newest' ? 'منتجات جديدة' : routerFilter === 'TopSold' ? 'الأكثر مبيعًا' : routerFilter === "BestDeal" ? 'أفضل العروض' : ''}</h1>
                     <p className='text-secondary mt-1 text-sm'>
                         {filteredProducts.length === 0
                             ? 'لم يتم العثور على منتجات'

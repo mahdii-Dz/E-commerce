@@ -11,7 +11,9 @@
       "Bash(git * main)",
       "Bash(* --version)",
       "Bash(* --help *)",
-      "Bash(find 'D:/web develepment/e-commerce/server' -name *.js -type f)"
+      "Bash(find 'D:/web develepment/e-commerce/server' -name *.js -type f)",
+      "Bash(find client/app/api/admin -name *.js -o -name *.jsx)",
+      "Bash(cd /d/web develepment/e-commerce)"
     ]
   },
   "allowedTools": [

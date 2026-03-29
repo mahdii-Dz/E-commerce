@@ -16,7 +16,7 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterPopup, setShowFilterPopup] = useState(false);
-  
+
   // Toast state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -148,7 +148,7 @@ export default function OrdersPage() {
   const getPageNumbers = () => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -174,9 +174,31 @@ export default function OrdersPage() {
   };
 
   const handleAccept = async (orderId) => {
+    const orderToAccept = orders.find(order => order.order_id === orderId);
+     
     try {
-      const response = await axios.put(`/api/shop/orders/accept/${orderId}`);
-      showToast(`Order #${orderId} accepted successfully`, 'success');
+      const sendToEroTrakc = await axios.post('/api/admin/Delivery', {
+        nom_client: orderToAccept.fullname,
+        telephone: orderToAccept.phone,
+        commune: orderToAccept.baladiya,
+        code_wilaya: orderToAccept.wilaya_code,
+        address: orderToAccept.address,
+        produit: orderToAccept.product_name,
+        quantite: orderToAccept.quantity,
+        montant: parseInt(orderToAccept.fullPrice) + parseInt(orderToAccept.delivery_Price),
+        boutique: 'E-Commerce Shop',
+        delivery_type: orderToAccept.delivery_type === 'domicile' ? 0 : 1
+      });
+      if (sendToEroTrakc.status === 200) {
+        const response = await axios.put(`/api/shop/orders/accept/${orderId}`);
+        if (response.status === 200) {
+          showToast(`Order #${orderId} accepted and sent to delivery successfully`, 'success');
+        } else {
+          showToast(`Order #${orderId} sent to delivery but failed to be accept in the database`, 'error');
+        }
+      } else {
+        showToast(`Order #${orderId} failed to be sent to delivery`, 'error');
+      }
       // Refresh orders after action
       const refreshResponse = await axios.get('/api/shop/orders');
       setOrders(refreshResponse.data);
@@ -227,11 +249,10 @@ export default function OrdersPage() {
     <div className="w-full ml-64 pt-6 px-9 pb-16 relative">
       {/* Toast Notification */}
       {toast.show && (
-        <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform translate-y-0 ${
-          toast.type === 'success' 
-            ? 'bg-green-500 text-white' 
+        <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform translate-y-0 ${toast.type === 'success'
+            ? 'bg-green-500 text-white'
             : 'bg-red-500 text-white'
-        }`}>
+          }`}>
           <div className="flex items-center gap-3">
             {toast.type === 'success' ? (
               <Check className="w-5 h-5" />
@@ -239,7 +260,7 @@ export default function OrdersPage() {
               <X className="w-5 h-5" />
             )}
             <span className="font-medium">{toast.message}</span>
-            <button 
+            <button
               onClick={() => setToast({ show: false, message: '', type: 'success' })}
               className="ml-2 hover:opacity-80"
             >
@@ -274,8 +295,8 @@ export default function OrdersPage() {
             <button
               onClick={() => setShowFilterPopup(!showFilterPopup)}
               className={`flex items-center justify-center w-full gap-2 cursor-pointer px-4 py-2.5 border rounded-lg transition-colors ${hasActiveFilters
-                  ? "border-[#FA3145] bg-red-50 text-[#FA3145]"
-                  : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                ? "border-[#FA3145] bg-red-50 text-[#FA3145]"
+                : "border-gray-200 text-gray-700 hover:bg-gray-50"
                 }`}
             >
               <Filter size={20} />
@@ -414,7 +435,7 @@ export default function OrdersPage() {
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-600">
                     <span className="truncate max-w-[150px] block">
-                      {Array.isArray(order.items) 
+                      {Array.isArray(order.items)
                         ? order.items.map(item => item.product_name).join(', ')
                         : order.product_name}
                     </span>
@@ -422,7 +443,7 @@ export default function OrdersPage() {
                   <td className="px-4 py-4">
                     {order.color_hex ? (
                       <div className="flex items-center gap-2">
-                        <div 
+                        <div
                           className="w-6 h-6 rounded-full border border-gray-300 shadow-sm"
                           style={{ backgroundColor: `#${order.color_hex}` }}
                           title={`#${order.color_hex}`}
@@ -447,14 +468,14 @@ export default function OrdersPage() {
                   </td>
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button 
+                      <button
                         className="w-8 h-8 flex cursor-pointer justify-center items-center rounded-full border-2 border-[#42fa31] hover:bg-green-50 transition-colors"
                         onClick={() => handleAccept(order.order_id)}
                         title="Accept Order"
                       >
                         <Check className="w-4 h-4 text-[#42fa31]" strokeWidth={3} />
                       </button>
-                      <button 
+                      <button
                         className="w-8 h-8 flex cursor-pointer justify-center items-center rounded-full border-2 border-[#FA3145] hover:bg-red-50 transition-colors"
                         onClick={() => handleReject(order.order_id)}
                         title="Reject Order"
@@ -494,8 +515,8 @@ export default function OrdersPage() {
                     <button
                       onClick={() => goToPage(page)}
                       className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${currentPage === page
-                          ? "bg-[#FA3145] text-white"
-                          : "text-gray-600 hover:bg-gray-100"
+                        ? "bg-[#FA3145] text-white"
+                        : "text-gray-600 hover:bg-gray-100"
                         }`}
                     >
                       {page}

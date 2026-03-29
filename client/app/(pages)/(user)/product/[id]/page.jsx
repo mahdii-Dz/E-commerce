@@ -94,55 +94,6 @@ function ProductPage({ params }) {
                 {/* Product Details Section */}
                 <section className='w-full h-fit mb-12 lg:mb-20 flex flex-col lg:flex-row justify-between items-start gap-8 lg:gap-12 px-4 lg:px-6 py-6 lg:py-8 bg-white border lg:border-2 mt-6 lg:mt-8 border-stroke rounded-xl'>
                     
-                    {/* Left Column - Images */}
-                    <div className='w-full lg:w-1/2 flex flex-col items-start gap-4'>
-                        {/* Main Image */}
-                        <div 
-                            onClick={() => setIsModalOpen(true)} 
-                            className='relative cursor-pointer border w-full h-64 sm:h-80 lg:h-[420px] flex items-center bg-stroke/50 justify-center overflow-hidden border-stroke rounded-lg group'
-                        >
-                            <Image 
-                                src={currentImage || product?.images[0]} 
-                                alt={product.name}
-                                fill
-                                className='object-contain bg-white'
-                                sizes="(max-width: 1024px) 100vw, 50vw"
-                                priority
-                            />
-                            <div className='absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center'>
-                                <span className='text-white font-medium bg-black/60 px-4 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity'>
-                                    انقر لعرض الحجم الكامل
-                                </span>
-                            </div>
-                            
-                            {/* Discount Badge */}
-                            {product.discount_percentage > 0 && (
-                                <div className='discount bg-primary absolute top-2 right-2 px-0.5 rounded-full'>
-                                    <p className='text-white text-xs px-2 py-1'>-{product.discount_percentage}%</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Thumbnail Images */}
-                        <div className='flex gap-2 lg:gap-4 flex-wrap w-full overflow-x-auto pb-2'>
-                            {product.images.map((image, index) => (
-                                <button
-                                    key={image}
-                                    onClick={() => setCurrentImage(image)}
-                                    className={`border flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 lg:w-24 m-1 lg:h-24 flex items-center justify-center overflow-hidden border-stroke rounded-lg transition-all ${currentImage === image ? 'ring-2 ring-primary' : 'hover:border-primary'}`}
-                                >
-                                    <Image 
-                                        src={image} 
-                                        alt={`${product.name} - عرض ${index + 1}`}
-                                        width={96}
-                                        height={96}
-                                        className='object-contain hover:scale-110 transition-transform duration-300'
-                                    />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
                     {/* Right Column - Product Info */}
                     <div className='w-full lg:w-1/2 h-fit flex flex-col items-start gap-3 lg:gap-4 text-right'>
                         <h2 className='text-xl lg:text-2xl font-bold w-full'>{product.name}</h2>
@@ -192,8 +143,8 @@ function ProductPage({ params }) {
                             <Van className='text-primary flex-shrink-0' size={20} />
                             <div>
                                 <h4 className='font-semibold text-sm lg:text-base'>التوصيل المتوقع</h4>
-                                <p className='text-secondary text-xs lg:text-sm'>
-                                    {today} - {ArriveDay} {month}, {year}
+                                <p className='text-secondary text-xs lg:text-sm '>
+                                    {today} - {ArriveDay} {month} 
                                 </p>
                             </div>
                         </div>
@@ -258,6 +209,57 @@ function ProductPage({ params }) {
                             />
                         </div>
                     </div>
+
+                    {/* Left Column - Images */}
+                    <div className='w-full lg:w-1/2 flex flex-col items-start gap-4'>
+                        {/* Main Image */}
+                        <div 
+                            onClick={() => setIsModalOpen(true)} 
+                            className='relative cursor-pointer border w-full h-64 sm:h-80 lg:h-[420px] flex items-center bg-stroke/50 justify-center overflow-hidden border-stroke rounded-lg group'
+                        >
+                            <Image 
+                                src={currentImage || product?.images[0]} 
+                                alt={product.name}
+                                fill
+                                className='object-contain bg-white'
+                                sizes="(max-width: 1024px) 100vw, 50vw"
+                                priority
+                            />
+                            <div className='absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center'>
+                                <span className='text-white font-medium bg-black/60 px-4 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity'>
+                                    انقر لعرض الحجم الكامل
+                                </span>
+                            </div>
+                            
+                            {/* Discount Badge */}
+                            {product.discount_percentage > 0 && (
+                                <div className='discount bg-primary absolute top-2 right-2 px-0.5 rounded-full'>
+                                    <p className='text-white text-xs px-2 py-1'>-{product.discount_percentage}%</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Thumbnail Images */}
+                        <div className='flex gap-2 lg:gap-4 flex-wrap w-full overflow-x-auto pb-2'>
+                            {product.images.map((image, index) => (
+                                <button
+                                    key={image}
+                                    onClick={() => setCurrentImage(image)}
+                                    className={`border flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 lg:w-24 m-1 lg:h-24 flex items-center justify-center overflow-hidden border-stroke rounded-lg transition-all ${currentImage === image ? 'ring-2 ring-primary' : 'hover:border-primary'}`}
+                                >
+                                    <Image 
+                                        src={image} 
+                                        alt={`${product.name} - عرض ${index + 1}`}
+                                        width={96}
+                                        height={96}
+                                        className='object-contain hover:scale-110 transition-transform duration-300'
+                                    />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    
                 </section>
 
                 {/* Related Products Section */}
