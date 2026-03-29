@@ -15,33 +15,33 @@ router.get('/get-products/category/:categoryId', GetProductsByCategory);
 router.post('/add-order', AddOrder);
 
 // Protected GET routes - require admin session (expose sensitive data)
-// router.get('/get-orders', verifyAdminSession, GetOrders);
-// router.get('/get-stats', verifyAdminSession, GetDashboardStats);
+router.get('/get-orders', verifyAdminSession, GetOrders);
+router.get('/get-stats', verifyAdminSession, GetDashboardStats);
 
-// // Protected write routes - require admin session
-// router.post('/add-category', verifyAdminSession, AddCategory);
-// router.post('/add-product', verifyAdminSession, AddProduct);
-// router.put('/update-product/:id', verifyAdminSession, UpdateProduct);
-// router.put('/accept-order/:id', verifyAdminSession, AcceptOrder);
-// router.put('/reject-order/:id', verifyAdminSession, RejectOrder);
-// router.put('/update-banners', verifyAdminSession, updateBanners);
-// router.delete('/delete-product/:id', verifyAdminSession, DeleteProduct);
-// router.delete('/delete-category/:id', verifyAdminSession, DeleteCategory);
+// Protected write routes - require admin session
+router.post('/add-category', verifyAdminSession, AddCategory);
+router.post('/add-product', verifyAdminSession, AddProduct);
+router.put('/update-product/:id', verifyAdminSession, UpdateProduct);
+router.put('/accept-order/:id', verifyAdminSession, AcceptOrder);
+router.put('/reject-order/:id', verifyAdminSession, RejectOrder);
+router.put('/update-banners', verifyAdminSession, updateBanners);
+router.delete('/delete-product/:id', verifyAdminSession, DeleteProduct);
+router.delete('/delete-category/:id', verifyAdminSession, DeleteCategory);
 
 //////////////////////////////////////////////////////////////////////////////////////
 
-router.get('/get-orders',  GetOrders);
-router.get('/get-stats',  GetDashboardStats);
+// router.get('/get-orders',  GetOrders);
+// router.get('/get-stats',  GetDashboardStats);
 
-// Protected write routes - require admin session
-router.post('/add-category',  AddCategory);
-router.post('/add-product', AddProduct);
-router.put('/update-product/:id',  UpdateProduct);
-router.put('/accept-order/:id',  AcceptOrder);
-router.put('/reject-order/:id',  RejectOrder);
-router.put('/update-banners',  updateBanners);
-router.delete('/delete-product/:id',  DeleteProduct);
-router.delete('/delete-category/:id',  DeleteCategory);
+// // Protected write routes - require admin session
+// router.post('/add-category',  AddCategory);
+// router.post('/add-product', AddProduct);
+// router.put('/update-product/:id',  UpdateProduct);
+// router.put('/accept-order/:id',  AcceptOrder);
+// router.put('/reject-order/:id',  RejectOrder);
+// router.put('/update-banners',  updateBanners);
+// router.delete('/delete-product/:id',  DeleteProduct);
+// router.delete('/delete-category/:id',  DeleteCategory);
 
 
 
