@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 export async function POST(request,{ params }) {
-    const data = await request.body();
+    const data = await request.json();
     const {nom_client, telephone, commune, code_wilaya,address,montant, produit, quantite, boutique, delivery_type} = data;
     const api_token = process.env.ECOTRACK_API_TOKEN;
     console.log('name:', nom_client,'telephone:',telephone,'commune:',commune,'code_wilaya:',code_wilaya,'address:',address,'montant:',montant,'produit:',produit,'quantite:',quantite,'boutique:',boutique,'delivery_type:',delivery_type);
