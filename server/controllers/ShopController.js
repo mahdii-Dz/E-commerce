@@ -158,6 +158,7 @@ export const AddOrder = async (req, res) => {
       last_name,
       phone,
       wilaya,
+      wilaya_code,
       baladiya,
       delivery_type,
       product_id,
@@ -181,8 +182,8 @@ export const AddOrder = async (req, res) => {
     const [orderInfo] = await connection.query(
       `INSERT INTO order_info 
        (first_name, last_name, phone, wilaya, baladiya, 
-        delivery_type, delivery_Price, color_name, color_hex) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        delivery_type, delivery_Price, color_name, color_hex,wilaya_code) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
       [
         first_name.trim(),
         last_name.trim(),
@@ -193,6 +194,7 @@ export const AddOrder = async (req, res) => {
         delivery_Price || 0,
         color_name || null,
         color_hex || null,
+        wilaya_code
       ]
     );
 
@@ -642,6 +644,9 @@ export const GetOrders = async (req, res) => {
         CONCAT(o.first_name, ' ', o.last_name) AS fullname,
         o.phone,
         CONCAT(o.baladiya, ',', o.wilaya) AS address,
+        o.baladiya,
+        o.wilaya,
+        o.wilaya_code,
         o.delivery_type,
         o.delivery_Price,
         oi.quantity,
