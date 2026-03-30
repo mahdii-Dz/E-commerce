@@ -1,9 +1,14 @@
 /**
  * Backend session validation middleware.
- * Validates admin session tokens proxied from the Next.js frontend.
  *
- * The Next.js frontend signs each request with HMAC using a shared secret.
- * Express validates the signature to ensure requests come from an authenticated admin.
+ * Accepts requests from the Next.js proxy via:
+ *   Authorization: Bearer <SESSION_SECRET>
+ *
+ * Required env var on Render:
+ *   SESSION_SECRET  — must match the value set on Netlify
+ *   ADMIN_PASS      — used as fallback if SESSION_SECRET is not set
+ *
+ * The HMAC-signed cookie path is kept for backward compatibility.
  */
 
 import crypto from 'crypto';
@@ -11,32 +16,47 @@ import crypto from 'crypto';
 const SHARED_SECRET = process.env.SESSION_SECRET || process.env.ADMIN_PASS;
 
 if (!SHARED_SECRET) {
-  console.warn('WARNING: SESSION_SECRET not set. Admin routes will be unprotected.');
+  console.warn(
+    'WARNING: Neither SESSION_SECRET nor ADMIN_PASS is set. ' +
+    'Admin routes will reject all requests.'
+  );
+}
+
+// ─── Bearer-token helpers ────────────────────────────────────────────────────
+
+/**
+ * Constant-time string comparison (lengths may differ → always false).
+ */
+function safeEqual(a, b) {
+  try {
+    const bufA = Buffer.from(String(a));
+    const bufB = Buffer.from(String(b));
+    if (bufA.length !== bufB.length) return false;
+    return crypto.timingSafeEqual(bufA, bufB);
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Create a session token signature for forwarding to backend.
- * Called by the frontend when proxying admin requests.
- *
- * @param {string} token - The admin_session token
- * @returns {string} - The HMAC signature (token:signature)
+ * Check the Authorization: Bearer <token> header.
+ * Returns true when the token matches SHARED_SECRET.
  */
+function checkBearerToken(req) {
+  if (!SHARED_SECRET) return false;
+  const authHeader = req.headers['authorization'] || '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match) return false;
+  return safeEqual(match[1], SHARED_SECRET);
+}
+
+// ─── Cookie-HMAC helpers (legacy) ────────────────────────────────────────────
+
 export function signSessionToken(token) {
   if (!token || !SHARED_SECRET) return '';
-  const signature = crypto
-    .createHmac('sha256', SHARED_SECRET)
-    .update(token)
-    .digest('hex');
-  return `${token}:${signature}`;
+  return `${token}:${crypto.createHmac('sha256', SHARED_SECRET).update(token).digest('hex')}`;
 }
 
-/**
- * Verify a session token signature from the proxy.
- * Called by the backend Express server.
- *
- * @param {string} signedToken - The signed token from the Cookie header (token:signature)
- * @returns {{ valid: boolean, reason?: string }}
- */
 export function verifySessionToken(signedToken) {
   if (!signedToken || typeof signedToken !== 'string') {
     return { valid: false, reason: 'Missing or invalid token format' };
@@ -54,7 +74,6 @@ export function verifySessionToken(signedToken) {
   }
 
   if (!SHARED_SECRET) {
-    // If no secret configured, reject all
     return { valid: false, reason: 'Server misconfiguration' };
   }
 
@@ -70,15 +89,21 @@ export function verifySessionToken(signedToken) {
   return { valid: true, token };
 }
 
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
 /**
- * Express middleware to protect admin routes.
- * Checks for a signed admin_session cookie.
- *
- * Usage:
- *   router.put('/accept-order/:id', verifyAdminSession, acceptOrderHandler);
+ * Verify admin session.
+ * Accepts:
+ *   1. Authorization: Bearer <SESSION_SECRET>   ← Next.js proxy requests
+ *   2. Cookie: admin_session=<token:hmac>        ← legacy signed-cookie path
  */
 export function verifyAdminSession(req, res, next) {
-  // Get the admin_session cookie
+  // 1. Preferred: static bearer token (server-to-server)
+  if (checkBearerToken(req)) {
+    return next();
+  }
+
+  // 2. Fallback: signed admin_session cookie
   const cookies = req.headers.cookie || '';
   const match = cookies.match(/admin_session=([^;]+)/);
   const signedToken = match ? match[1] : null;
@@ -88,7 +113,6 @@ export function verifyAdminSession(req, res, next) {
   }
 
   const { valid, reason } = verifySessionToken(signedToken);
-
   if (!valid) {
     return res.status(401).json({ error: `Unauthorized: ${reason || 'Invalid session'}` });
   }
@@ -96,23 +120,4 @@ export function verifyAdminSession(req, res, next) {
   next();
 }
 
-/**
- * Same as verifyAdminSession but timing-safe string comparison
- */
-export function verifyAdminSessionSafe(req, res, next) {
-  const cookies = req.headers.cookie || '';
-  const match = cookies.match(/admin_session=([^;]+)/);
-  const signedToken = match ? match[1] : null;
-
-  if (!signedToken) {
-    return res.status(401).json({ error: 'Unauthorized: Admin session required' });
-  }
-
-  const { valid, reason } = verifySessionToken(signedToken);
-
-  if (!valid) {
-    return res.status(401).json({ error: `Unauthorized: ${reason || 'Invalid session'}` });
-  }
-
-  next();
-}
+export const verifyAdminSessionSafe = verifyAdminSession;

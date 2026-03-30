@@ -1,66 +1,60 @@
-const BACKEND_URL = process.env.BACKEND_URL;
-
 /**
- * Extract the admin_session cookie and forward it as-is to the backend.
+ * Proxy helpers — Next.js server → Express backend
  *
- * The cookie now contains "token:signature" (HMAC-signed), which is exactly
- * the format the Express backend's verifySessionToken() expects.
- * No re-signing is required.
+ * Required env vars on BOTH Netlify and Render:
+ *   SESSION_SECRET  — shared secret used for server-to-server auth
+ *   ADMIN_PASS      — fallback if SESSION_SECRET is not set
+ *
+ * The Authorization: Bearer header is used so the backend can verify
+ * that every request originates from the trusted Next.js server, without
+ * relying on per-request cookie HMAC forwarding.
  */
-function getAdminSessionCookie(cookieHeader) {
-  if (!cookieHeader) return null;
 
-  const cookies = Object.fromEntries(
-    cookieHeader.split(';').map(c => {
-      const [key, ...val] = c.trim().split('=');
-      return [key, val.join('=')];
-    })
-  );
+const BACKEND_URL = process.env.BACKEND_URL;
+const INTERNAL_SECRET = process.env.SESSION_SECRET || process.env.ADMIN_PASS;
 
-  const signedToken = cookies['admin_session'];
-  if (!signedToken) return null;
-
-  return `admin_session=${signedToken}`;
-}
-
-export async function proxyGET(endpoint, requestHeaders = {}) {
-  const url = `${BACKEND_URL}${endpoint}`;
+function buildServerHeaders(extra = {}) {
   const headers = {
     'Content-Type': 'application/json',
+    ...extra,
   };
 
-  const rawCookie = requestHeaders.cookie || requestHeaders.get?.('cookie');
-  const sessionCookie = getAdminSessionCookie(rawCookie);
-  if (sessionCookie) {
-    headers['Cookie'] = sessionCookie;
+  if (INTERNAL_SECRET) {
+    headers['Authorization'] = `Bearer ${INTERNAL_SECRET}`;
   }
 
-  const res = await fetch(url, { headers });
+  return headers;
+}
+
+export async function proxyGET(endpoint, _requestHeaders = {}) {
+  if (!BACKEND_URL) {
+    throw new Error('BACKEND_URL environment variable is not set.');
+  }
+
+  const res = await fetch(`${BACKEND_URL}${endpoint}`, {
+    headers: buildServerHeaders(),
+  });
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(`Backend error: ${error}`);
+    throw new Error(`Backend error (${res.status}): ${error}`);
   }
 
   return res.json();
 }
 
 /**
- * Proxy POST/PUT/DELETE to Express backend
+ * Proxy POST / PUT / DELETE to Express backend
  */
-export async function proxyRequest(method, endpoint, body = null, requestHeaders = {}) {
+export async function proxyRequest(method, endpoint, body = null, _requestHeaders = {}) {
+  if (!BACKEND_URL) {
+    throw new Error('BACKEND_URL environment variable is not set.');
+  }
+
   const options = {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: buildServerHeaders(),
   };
-
-  const rawCookie = requestHeaders.cookie || requestHeaders.get?.('cookie');
-  const sessionCookie = getAdminSessionCookie(rawCookie);
-  if (sessionCookie) {
-    options.headers['Cookie'] = sessionCookie;
-  }
 
   if (body) {
     options.body = JSON.stringify(body);
@@ -70,23 +64,23 @@ export async function proxyRequest(method, endpoint, body = null, requestHeaders
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(`Backend error: ${error}`);
+    throw new Error(`Backend error (${res.status}): ${error}`);
   }
 
   return res.json();
 }
 
-export async function proxyFormData(endpoint, formData, requestHeaders = {}) {
-  const url = `${BACKEND_URL}${endpoint}`;
-  const headers = {};
-
-  const rawCookie = requestHeaders.cookie || requestHeaders.get?.('cookie');
-  const sessionCookie = getAdminSessionCookie(rawCookie);
-  if (sessionCookie) {
-    headers['Cookie'] = sessionCookie;
+export async function proxyFormData(endpoint, formData, _requestHeaders = {}) {
+  if (!BACKEND_URL) {
+    throw new Error('BACKEND_URL environment variable is not set.');
   }
 
-  const res = await fetch(url, {
+  const headers = {};
+  if (INTERNAL_SECRET) {
+    headers['Authorization'] = `Bearer ${INTERNAL_SECRET}`;
+  }
+
+  const res = await fetch(`${BACKEND_URL}${endpoint}`, {
     method: 'POST',
     body: formData,
     headers,
@@ -94,7 +88,7 @@ export async function proxyFormData(endpoint, formData, requestHeaders = {}) {
 
   if (!res.ok) {
     const error = await res.text();
-    throw new Error(`Backend error: ${error}`);
+    throw new Error(`Backend error (${res.status}): ${error}`);
   }
 
   return res.json();
