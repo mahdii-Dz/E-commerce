@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { createSession } from '@/lib/sessions';
 
 function generateSessionToken() {
-  return crypto.randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString('hex'); // 64 hex chars
 }
 
 export async function POST(request) {
@@ -15,18 +15,20 @@ export async function POST(request) {
 
   if (password === process.env.ADMIN_PASS) {
     const token = generateSessionToken();
-    const stored = createSession(token);
+    // createSession now returns the signed "token:signature" string
+    const signedToken = createSession(token);
 
-    if (!stored) {
+    if (!signedToken) {
       return NextResponse.json({ success: false, error: 'Failed to create session' }, { status: 500 });
     }
 
     const response = NextResponse.json({ success: true });
-    response.cookies.set('admin_session', token, {
+    // Store the signed token in the cookie — no server-side state needed
+    response.cookies.set('admin_session', signedToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 3600
+      maxAge: 3600,
     });
     return response;
   }

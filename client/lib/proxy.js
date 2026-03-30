@@ -1,25 +1,14 @@
-import crypto from 'crypto';
-
 const BACKEND_URL = process.env.BACKEND_URL;
-const SESSION_SECRET = process.env.SESSION_SECRET || process.env.ADMIN_PASS;
 
 /**
- * Sign a session token with HMAC for backend verification.
+ * Extract the admin_session cookie and forward it as-is to the backend.
+ *
+ * The cookie now contains "token:signature" (HMAC-signed), which is exactly
+ * the format the Express backend's verifySessionToken() expects.
+ * No re-signing is required.
  */
-function signSessionToken(token) {
-  if (!token || !SESSION_SECRET) return token;
-  const signature = crypto
-    .createHmac('sha256', SESSION_SECRET)
-    .update(token)
-    .digest('hex');
-  return `${token}:${signature}`;
-}
-
-/**
- * Extract and sign the admin session cookie for backend verification.
- */
-function getSignedSessionCookie(cookieHeader) {
-  if (!cookieHeader || !SESSION_SECRET) return null;
+function getAdminSessionCookie(cookieHeader) {
+  if (!cookieHeader) return null;
 
   const cookies = Object.fromEntries(
     cookieHeader.split(';').map(c => {
@@ -28,11 +17,9 @@ function getSignedSessionCookie(cookieHeader) {
     })
   );
 
-  const rawToken = cookies['admin_session'];
-  if (!rawToken) return null;
+  const signedToken = cookies['admin_session'];
+  if (!signedToken) return null;
 
-  // Sign the token for backend verification
-  const signedToken = signSessionToken(rawToken);
   return `admin_session=${signedToken}`;
 }
 
@@ -42,11 +29,10 @@ export async function proxyGET(endpoint, requestHeaders = {}) {
     'Content-Type': 'application/json',
   };
 
-  // Sign and forward admin session cookie if present
   const rawCookie = requestHeaders.cookie || requestHeaders.get?.('cookie');
-  const signedCookie = getSignedSessionCookie(rawCookie);
-  if (signedCookie) {
-    headers['Cookie'] = signedCookie;
+  const sessionCookie = getAdminSessionCookie(rawCookie);
+  if (sessionCookie) {
+    headers['Cookie'] = sessionCookie;
   }
 
   const res = await fetch(url, { headers });
@@ -70,11 +56,10 @@ export async function proxyRequest(method, endpoint, body = null, requestHeaders
     },
   };
 
-  // Sign and forward admin session cookie if present
   const rawCookie = requestHeaders.cookie || requestHeaders.get?.('cookie');
-  const signedCookie = getSignedSessionCookie(rawCookie);
-  if (signedCookie) {
-    options.headers['Cookie'] = signedCookie;
+  const sessionCookie = getAdminSessionCookie(rawCookie);
+  if (sessionCookie) {
+    options.headers['Cookie'] = sessionCookie;
   }
 
   if (body) {
@@ -95,11 +80,10 @@ export async function proxyFormData(endpoint, formData, requestHeaders = {}) {
   const url = `${BACKEND_URL}${endpoint}`;
   const headers = {};
 
-  // Sign and forward admin session cookie if present
   const rawCookie = requestHeaders.cookie || requestHeaders.get?.('cookie');
-  const signedCookie = getSignedSessionCookie(rawCookie);
-  if (signedCookie) {
-    headers['Cookie'] = signedCookie;
+  const sessionCookie = getAdminSessionCookie(rawCookie);
+  if (sessionCookie) {
+    headers['Cookie'] = sessionCookie;
   }
 
   const res = await fetch(url, {
