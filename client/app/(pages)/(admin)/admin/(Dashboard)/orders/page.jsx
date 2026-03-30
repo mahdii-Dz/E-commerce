@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Filter, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Check, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import { useEffect } from 'react';
 
@@ -16,6 +16,12 @@ export default function OrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterPopup, setShowFilterPopup] = useState(false);
+
+  // Loading states for individual order actions
+  const [processingOrders, setProcessingOrders] = useState({
+    accepting: new Set(),
+    rejecting: new Set()
+  });
 
   // Toast state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -173,9 +179,29 @@ export default function OrdersPage() {
     return pages;
   };
 
+  // Helper to set loading state for a specific order
+  const setOrderProcessing = (orderId, action, isProcessing) => {
+    setProcessingOrders(prev => {
+      const newSet = new Set(prev[action]);
+      if (isProcessing) {
+        newSet.add(orderId);
+      } else {
+        newSet.delete(orderId);
+      }
+      return { ...prev, [action]: newSet };
+    });
+  };
+
   const handleAccept = async (orderId) => {
+    // Prevent double-click
+    if (processingOrders.accepting.has(orderId) || processingOrders.rejecting.has(orderId)) {
+      return;
+    }
+
     const orderToAccept = orders.find(order => order.order_id === orderId);
-     
+
+    setOrderProcessing(orderId, 'accepting', true);
+
     try {
       const sendToEroTrakc = await axios.post('/api/admin/Delivery', {
         nom_client: orderToAccept.fullname,
@@ -189,6 +215,7 @@ export default function OrdersPage() {
         boutique: 'E-Commerce Shop',
         delivery_type: orderToAccept.delivery_type === 'domicile' ? 0 : 1
       });
+
       if (sendToEroTrakc.status === 200) {
         const response = await axios.put(`/api/shop/orders/accept/${orderId}`);
         if (response.status === 200) {
@@ -196,19 +223,29 @@ export default function OrdersPage() {
         } else {
           showToast(`Order #${orderId} sent to delivery but failed to be accept in the database`, 'error');
         }
-      } else {
-        showToast(`Order #${orderId} failed to be sent to delivery`, 'error');
+      } else if(sendToEroTrakc.data.success === false || sendToEroTrakc.data.error) {
+        showToast(`Order #${orderId} failed to be sent to delivery & error is : ${sendToEroTrakc.data.error}`, 'error');
       }
+
       // Refresh orders after action
       const refreshResponse = await axios.get('/api/shop/orders');
       setOrders(refreshResponse.data);
     } catch (error) {
       console.error('Error accepting order:', error);
-      showToast(error.response?.data?.message || 'Failed to accept order', 'error');
+      showToast(error.response?.data?.error || 'Failed to accept order', 'error');
+    } finally {
+      setOrderProcessing(orderId, 'accepting', false);
     }
   };
 
   const handleReject = async (orderId) => {
+    // Prevent double-click
+    if (processingOrders.accepting.has(orderId) || processingOrders.rejecting.has(orderId)) {
+      return;
+    }
+
+    setOrderProcessing(orderId, 'rejecting', true);
+
     try {
       const response = await axios.put(`/api/shop/orders/reject/${orderId}`);
       showToast(`Order #${orderId} rejected successfully`, 'success');
@@ -218,6 +255,8 @@ export default function OrdersPage() {
     } catch (error) {
       console.error('Error rejecting order:', error);
       showToast(error.response?.data?.message || 'Failed to reject order', 'error');
+    } finally {
+      setOrderProcessing(orderId, 'rejecting', false);
     }
   };
 
@@ -412,80 +451,111 @@ export default function OrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {currentOrders.map((order) => (
-                <tr key={order.order_id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                    #{order.order_id}
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="font-medium text-gray-900">{order.fullname}</span>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-600">{order.phone}</td>
-                  <td className="px-4 py-4 text-sm text-gray-600">
-                    <span className="text-xs font-medium">{order.address}</span>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-600">
-                    <span className="text-xs">
-                      {order.delivery_type},
-                      <span className="text-[#FA3145] font-medium">
-                        {order.delivery_Price}
-                      </span>{" "}
-                      DA
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-600">
-                    <span className="truncate max-w-[150px] block">
-                      {Array.isArray(order.items)
-                        ? order.items.map(item => item.product_name).join(', ')
-                        : order.product_name}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4">
-                    {order.color_hex ? (
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-6 h-6 rounded-full border border-gray-300 shadow-sm"
-                          style={{ backgroundColor: `#${order.color_hex}` }}
-                          title={`#${order.color_hex}`}
-                        />
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-gray-800">
-                            {order.color_name || 'Unknown'}
-                          </span>
+              {currentOrders.map((order) => {
+                const isAccepting = processingOrders.accepting.has(order.order_id);
+                const isRejecting = processingOrders.rejecting.has(order.order_id);
+                const isProcessing = isAccepting || isRejecting;
+
+                return (
+                  <tr key={order.order_id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                      #{order.order_id}
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="font-medium text-gray-900">{order.fullname}</span>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600">{order.phone}</td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      <span className="text-xs font-medium">{order.address}</span>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      <span className="text-xs">
+                        {order.delivery_type},
+                        <span className="text-[#FA3145] font-medium">
+                          {order.delivery_Price}
+                        </span>{" "}
+                        DA
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      <span className="truncate max-w-[150px] block">
+                        {Array.isArray(order.items)
+                          ? order.items.map(item => item.product_name).join(', ')
+                          : order.product_name}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      {order.color_hex ? (
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded-full border border-gray-300 shadow-sm"
+                            style={{ backgroundColor: `#${order.color_hex}` }}
+                            title={`#${order.color_hex}`}
+                          />
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-800">
+                              {order.color_name || 'Unknown'}
+                            </span>
+                          </div>
                         </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-600">
+                      {Array.isArray(order.items)
+                        ? order.items.reduce((sum, item) => sum + item.quantity, 0)
+                        : order.quantity}
+                    </td>
+                    <td className="px-4 py-4 text-sm font-bold text-gray-900">
+                      {Array.isArray(order.items) ? order.totalPrice : order.fullPrice} DA
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {/* Accept Button with Loading State */}
+                        <button
+                          className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${
+                            isAccepting
+                              ? "border-green-400 bg-green-50 cursor-wait"
+                              : isProcessing
+                              ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
+                              : "border-[#42fa31] hover:bg-green-50 cursor-pointer"
+                          }`}
+                          onClick={() => handleAccept(order.order_id)}
+                          disabled={isProcessing}
+                          title={isAccepting ? "Processing..." : "Accept Order"}
+                        >
+                          {isAccepting ? (
+                            <Loader2 className="w-4 h-4 text-green-500 animate-spin" />
+                          ) : (
+                            <Check className="w-4 h-4 text-[#42fa31]" strokeWidth={3} />
+                          )}
+                        </button>
+
+                        {/* Reject Button with Loading State */}
+                        <button
+                          className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${
+                            isRejecting
+                              ? "border-red-400 bg-red-50 cursor-wait"
+                              : isProcessing
+                              ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
+                              : "border-[#FA3145] hover:bg-red-50 cursor-pointer"
+                          }`}
+                          onClick={() => handleReject(order.order_id)}
+                          disabled={isProcessing}
+                          title={isRejecting ? "Processing..." : "Reject Order"}
+                        >
+                          {isRejecting ? (
+                            <Loader2 className="w-4 h-4 text-red-500 animate-spin" />
+                          ) : (
+                            <X className="w-4 h-4 text-[#FA3145]" strokeWidth={3} />
+                          )}
+                        </button>
                       </div>
-                    ) : (
-                      <span className="text-sm text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-600">
-                    {Array.isArray(order.items)
-                      ? order.items.reduce((sum, item) => sum + item.quantity, 0)
-                      : order.quantity}
-                  </td>
-                  <td className="px-4 py-4 text-sm font-bold text-gray-900">
-                    {Array.isArray(order.items) ? order.totalPrice : order.fullPrice} DA
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        className="w-8 h-8 flex cursor-pointer justify-center items-center rounded-full border-2 border-[#42fa31] hover:bg-green-50 transition-colors"
-                        onClick={() => handleAccept(order.order_id)}
-                        title="Accept Order"
-                      >
-                        <Check className="w-4 h-4 text-[#42fa31]" strokeWidth={3} />
-                      </button>
-                      <button
-                        className="w-8 h-8 flex cursor-pointer justify-center items-center rounded-full border-2 border-[#FA3145] hover:bg-red-50 transition-colors"
-                        onClick={() => handleReject(order.order_id)}
-                        title="Reject Order"
-                      >
-                        <X className="w-4 h-4 text-[#FA3145]" strokeWidth={3} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
