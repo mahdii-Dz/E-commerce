@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Filter, Check, X, ChevronLeft, ChevronRight, Loader2, Edit } from 'lucide-react';
 import axios from 'axios';
-import { useEffect, useMemo } from 'react';
 import { wilayaData } from '@/lib/wilayaData';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -245,7 +244,7 @@ export default function OrdersPage() {
         } else {
           showToast(`Order #${orderId} sent to delivery but failed to be accept in the database`, 'error');
         }
-      } else if(sendToEroTrakc.data.success === false || sendToEroTrakc.data.error) {
+      } else if (sendToEroTrakc.data.success === false || sendToEroTrakc.data.error) {
         showToast(`Order #${orderId} failed to be sent to delivery & error is : ${sendToEroTrakc.data.error}`, 'error');
       }
 
@@ -372,8 +371,8 @@ export default function OrdersPage() {
       {/* Toast Notification */}
       {toast.show && (
         <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform translate-y-0 ${toast.type === 'success'
-            ? 'bg-green-500 text-white'
-            : 'bg-red-500 text-white'
+          ? 'bg-green-500 text-white'
+          : 'bg-red-500 text-white'
           }`}>
           <div className="flex items-center gap-3">
             {toast.type === 'success' ? (
@@ -614,13 +613,12 @@ export default function OrdersPage() {
 
                         {/* Accept Button with Loading State */}
                         <button
-                          className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${
-                            isAccepting
+                          className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${isAccepting
                               ? "border-green-400 bg-green-50 cursor-wait"
                               : isProcessing
-                              ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
-                              : "border-[#42fa31] hover:bg-green-50 cursor-pointer"
-                          }`}
+                                ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
+                                : "border-[#42fa31] hover:bg-green-50 cursor-pointer"
+                            }`}
                           onClick={() => handleAccept(order.order_id)}
                           disabled={isProcessing}
                           title={isAccepting ? "Processing..." : "Accept Order"}
@@ -634,13 +632,12 @@ export default function OrdersPage() {
 
                         {/* Reject Button with Loading State */}
                         <button
-                          className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${
-                            isRejecting
+                          className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${isRejecting
                               ? "border-red-400 bg-red-50 cursor-wait"
                               : isProcessing
-                              ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
-                              : "border-[#FA3145] hover:bg-red-50 cursor-pointer"
-                          }`}
+                                ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
+                                : "border-[#FA3145] hover:bg-red-50 cursor-pointer"
+                            }`}
                           onClick={() => handleReject(order.order_id)}
                           disabled={isProcessing}
                           title={isRejecting ? "Processing..." : "Reject Order"}
@@ -882,9 +879,8 @@ export default function OrdersPage() {
               <button
                 onClick={handleSave}
                 disabled={isSaving}
-                className={`px-6 py-2 rounded-lg text-white transition-colors ${
-                  isSaving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                }`}
+                className={`px-6 py-2 rounded-lg text-white transition-colors ${isSaving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
               >
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
