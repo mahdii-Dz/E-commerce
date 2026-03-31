@@ -221,8 +221,25 @@ export default function OrdersPage() {
     try {
       // Compute totals from items array
       const totalQty = orderToAccept.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
-      const productNames = orderToAccept.items?.map(item => item.product_name).join(', ') || '';
       const fullName = `${orderToAccept.first_name || ''} ${orderToAccept.last_name || ''}`.trim();
+
+      // Format produit as: "product name, color (quantity), color (quantity)..." for each product
+      // Group items by product
+      const productGroups = orderToAccept.items?.reduce((acc, item) => {
+        if (!acc[item.product_name]) {
+          acc[item.product_name] = [];
+        }
+        acc[item.product_name].push(item);
+        return acc;
+      }, {}) || {};
+
+      // Build produit string: "Product1 (Color1: qty, Color2: qty), Product2 (Color1: qty)"
+      const produit = Object.entries(productGroups)
+        .map(([productName, items]) => {
+          const colorQtys = items.map(item => `${item.color_name} (${item.quantity})`).join(', ');
+          return `${productName} (${colorQtys})`;
+        })
+        .join(', ');
 
       const sendToEroTrakc = await axios.post('/api/admin/Delivery', {
         nom_client: fullName,
@@ -230,7 +247,7 @@ export default function OrdersPage() {
         commune: orderToAccept.baladiya,
         code_wilaya: orderToAccept.wilaya_code,
         address: orderToAccept.address,
-        produit: productNames,
+        produit: produit,
         quantite: totalQty,
         montant: orderToAccept.totalPrice,
         boutique: 'E-Commerce Shop',
