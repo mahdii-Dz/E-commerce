@@ -653,7 +653,8 @@ export const GetOrders = async (req, res) => {
     const [rows] = await pool.query(`
       SELECT
         o.id AS order_id,
-        CONCAT(o.first_name, ' ', o.last_name) AS fullname,
+        o.first_name,
+        o.last_name,
         o.phone,
         CONCAT(o.baladiya, ',', o.wilaya) AS address,
         o.baladiya,
@@ -685,7 +686,8 @@ export const GetOrders = async (req, res) => {
       if (!ordersMap.has(orderId)) {
         ordersMap.set(orderId, {
           order_id: orderId,
-          fullname: row.fullname,
+          first_name: row.first_name,
+          last_name: row.last_name,
           phone: row.phone,
           address: row.address,
           baladiya: row.baladiya,
@@ -725,6 +727,75 @@ export const GetOrders = async (req, res) => {
     return res.status(200).json(groupedOrders);
   } catch (error) {
     console.error("Error fetching orders:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const UpdateOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      first_name,
+      last_name,
+      phone,
+      wilaya,
+      baladiya,
+      delivery_type,
+      delivery_Price,
+      wilaya_code
+    } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: "Order ID is required" });
+    }
+
+    // Optional: Validate that order exists and is pending
+    const [orderCheck] = await pool.query(
+      "SELECT status FROM order_info WHERE id = ?",
+      [id]
+    );
+    if (orderCheck.length === 0) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+    // Only allow editing pending orders
+    if (orderCheck[0].status !== 'pending') {
+      return res.status(403).json({ error: "Only pending orders can be edited" });
+    }
+
+    const allowedFields = [
+      'first_name', 'last_name', 'phone', 'wilaya',
+      'baladiya', 'delivery_type', 'delivery_Price', 'wilaya_code'
+    ];
+
+    const updates = [];
+    const values = [];
+
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        updates.push(`${field} = ?`);
+        const value = req.body[field];
+        values.push(typeof value === 'string' ? value.trim() : value);
+      }
+    });
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    values.push(id);
+
+    const [result] = await pool.query(
+      `UPDATE order_info SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    return res.status(200).json({ message: "Order updated successfully" });
+  } catch (error) {
+    console.error("Error updating order:", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };

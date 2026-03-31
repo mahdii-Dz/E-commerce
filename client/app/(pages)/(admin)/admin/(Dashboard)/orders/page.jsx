@@ -1,9 +1,12 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Filter, Check, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, Filter, Check, X, ChevronLeft, ChevronRight, Loader2, Edit } from 'lucide-react';
 import axios from 'axios';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { wilayaData } from '@/lib/wilayaData';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -25,6 +28,20 @@ export default function OrdersPage() {
 
   // Toast state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
+  // Edit modal state
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [editForm, setEditForm] = useState({
+    first_name: '',
+    last_name: '',
+    phone: '',
+    wilaya: 'Alger',
+    baladiya: '',
+    delivery_type: 'domicile',
+    delivery_Price: 0,
+    wilaya_code: ''
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -69,9 +86,9 @@ export default function OrdersPage() {
     // Search filter
     if (searchQuery) {
       result = result.filter(order =>
-        order.fullname?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        `${order.first_name} ${order.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.phone?.includes(searchQuery) ||
-        order.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.items?.some(item => item.product_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         order.order_id?.toString().includes(searchQuery)
       );
     }
@@ -203,15 +220,20 @@ export default function OrdersPage() {
     setOrderProcessing(orderId, 'accepting', true);
 
     try {
+      // Compute totals from items array
+      const totalQty = orderToAccept.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+      const productNames = orderToAccept.items?.map(item => item.product_name).join(', ') || '';
+      const fullName = `${orderToAccept.first_name || ''} ${orderToAccept.last_name || ''}`.trim();
+
       const sendToEroTrakc = await axios.post('/api/admin/Delivery', {
-        nom_client: orderToAccept.fullname,
+        nom_client: fullName,
         telephone: orderToAccept.phone,
         commune: orderToAccept.baladiya,
         code_wilaya: orderToAccept.wilaya_code,
         address: orderToAccept.address,
-        produit: orderToAccept.product_name,
-        quantite: orderToAccept.quantity,
-        montant: parseInt(orderToAccept.fullPrice) + parseInt(orderToAccept.delivery_Price),
+        produit: productNames,
+        quantite: totalQty,
+        montant: orderToAccept.totalPrice,
         boutique: 'E-Commerce Shop',
         delivery_type: orderToAccept.delivery_type === 'domicile' ? 0 : 1
       });
@@ -257,6 +279,67 @@ export default function OrdersPage() {
       showToast(error.response?.data?.message || 'Failed to reject order', 'error');
     } finally {
       setOrderProcessing(orderId, 'rejecting', false);
+    }
+  };
+
+  // Edit order handlers
+  const editCommunes = useMemo(() => {
+    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === editForm.wilaya);
+    return code ? wilayaData[code]?.municipalities || [] : [];
+  }, [editForm.wilaya]);
+
+  const handleEdit = (order) => {
+    setEditingOrder(order);
+    // Find wilaya code from name
+    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === order.wilaya) || '';
+    const baladiya = order.baladiya || '';
+    setEditForm({
+      first_name: order.first_name || '',
+      last_name: order.last_name || '',
+      phone: order.phone || '',
+      wilaya: order.wilaya || 'Alger',
+      baladiya: baladiya,
+      delivery_type: order.delivery_type || 'domicile',
+      delivery_Price: order.delivery_Price || 0,
+      wilaya_code: order.wilaya_code || code
+    });
+  };
+
+  const handleEditWilayaChange = (value) => {
+    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === value);
+    if (!code) return;
+    const data = wilayaData[code];
+    const newCommunes = data?.municipalities || [];
+    const newBaladiya = newCommunes.length > 0 ? newCommunes[0] : '';
+    setEditForm(prev => ({
+      ...prev,
+      wilaya: value,
+      wilaya_code: code,
+      baladiya: newBaladiya
+    }));
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch(`/api/shop/orders/${editingOrder.order_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm)
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to update order');
+      }
+      setEditingOrder(null);
+      // Refresh orders list
+      const refreshResponse = await axios.get('/api/shop/orders');
+      setOrders(refreshResponse.data);
+      showToast(`Order #${editingOrder.order_id} updated successfully`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to update order', 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -462,7 +545,9 @@ export default function OrdersPage() {
                       #{order.order_id}
                     </td>
                     <td className="px-4 py-4">
-                      <span className="font-medium text-gray-900">{order.fullname}</span>
+                      <span className="font-medium text-gray-900">
+                        {order.first_name} {order.last_name}
+                      </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">{order.phone}</td>
                     <td className="px-4 py-4 text-sm text-gray-600">
@@ -485,18 +570,23 @@ export default function OrdersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      {order.color_hex ? (
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-6 h-6 rounded-full border border-gray-300 shadow-sm"
-                            style={{ backgroundColor: `#${order.color_hex}` }}
-                            title={`#${order.color_hex}`}
-                          />
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium text-gray-800">
-                              {order.color_name || 'Unknown'}
-                            </span>
-                          </div>
+                      {order.items && order.items.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {order.items.map((item, idx) => (
+                            <div
+                              key={`${item.product_id}-${item.color_hex}-${idx}`}
+                              className="flex items-center gap-2"
+                            >
+                              <div
+                                className="w-5 h-5 rounded-full border border-gray-300 shadow-sm flex-shrink-0"
+                                style={{ backgroundColor: `#${item.color_hex}` }}
+                                title={item.color_name}
+                              />
+                              <span className="text-sm text-gray-700">
+                                {item.color_name} <span className="text-gray-500">({item.quantity})</span>
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       ) : (
                         <span className="text-sm text-gray-400">-</span>
@@ -512,6 +602,16 @@ export default function OrdersPage() {
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => handleEdit(order)}
+                          className="w-8 h-8 flex justify-center items-center rounded-full border-2 border-blue-500 hover:bg-blue-50 cursor-pointer"
+                          title="Edit Order"
+                          disabled={isProcessing}
+                        >
+                          <Edit className="w-4 h-4 text-blue-500" />
+                        </button>
+
                         {/* Accept Button with Loading State */}
                         <button
                           className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${
@@ -607,6 +707,191 @@ export default function OrdersPage() {
           </div>
         </footer>
       </div>
+
+      {/* Edit Order Modal */}
+      {editingOrder && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-800">
+                Edit Order #{editingOrder.order_id}
+              </h2>
+              <button
+                onClick={() => setEditingOrder(null)}
+                disabled={isSaving}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Customer Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                  <Input
+                    value={editForm.first_name}
+                    onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                  <Input
+                    value={editForm.last_name}
+                    onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                <Input
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Wilaya and Baladiya */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Wilaya</label>
+                  <Select
+                    dir="rtl"
+                    value={editForm.wilaya}
+                    onValueChange={handleEditWilayaChange}
+                  >
+                    <SelectTrigger className="w-full h-11">
+                      <SelectValue placeholder="اختر الولاية" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(wilayaData)
+                        .sort(([codeA], [codeB]) => parseInt(codeA, 10) - parseInt(codeB, 10))
+                        .map(([code, data]) => (
+                          <SelectItem key={code} value={data.name}>
+                            {code} - {data.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Baladiya</label>
+                  <Select
+                    dir="rtl"
+                    value={editForm.baladiya}
+                    onValueChange={(value) => setEditForm({ ...editForm, baladiya: value })}
+                    disabled={!editCommunes.length}
+                  >
+                    <SelectTrigger className="w-full h-11">
+                      <SelectValue placeholder="اختر البلدية" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {editCommunes.map((commune) => (
+                        <SelectItem key={commune} value={commune}>
+                          {commune}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Delivery Type & Price */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Type</label>
+                  <Select
+                    dir="rtl"
+                    value={editForm.delivery_type}
+                    onValueChange={(value) => setEditForm({ ...editForm, delivery_type: value })}
+                  >
+                    <SelectTrigger className="w-full h-11">
+                      <SelectValue placeholder="Select delivery type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="domicile">توصيل للمنزل</SelectItem>
+                      <SelectItem value="stopDesk">استلام من المكتب</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Price (DA)</label>
+                  <Input
+                    type="number"
+                    value={editForm.delivery_Price}
+                    onChange={(e) => setEditForm({ ...editForm, delivery_Price: Number(e.target.value) })}
+                    className="w-full"
+                    min="0"
+                  />
+                </div>
+              </div>
+
+              {/* Items */}
+              <div>
+                <h4 className="font-semibold text-gray-800 mb-3">Order Items</h4>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {editingOrder.items?.map((item) => (
+                        <tr key={`${item.product_id}-${item.color_hex}`}>
+                          <td className="px-4 py-3">{item.product_name}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-5 h-5 rounded-full border border-gray-300"
+                                style={{ backgroundColor: `#${item.color_hex}` }}
+                              />
+                              {item.color_name}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">{item.quantity}</td>
+                          <td className="px-4 py-3">{item.price_per_unit} DA</td>
+                          <td className="px-4 py-3 font-medium">{item.fullPrice} DA</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => setEditingOrder(null)}
+                disabled={isSaving}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`px-6 py-2 rounded-lg text-white transition-colors ${
+                  isSaving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Click outside to close popup */}
       {showFilterPopup && (

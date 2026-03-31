@@ -1,5 +1,5 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder,UpdateProduct,DeleteProduct,DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, getBanners, updateBanners } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, getBanners, updateBanners } from '../controllers/ShopController.js';
 import { verifyAdminSession } from '../middleware/sessionAuth.js';
 
 const router = express.Router();
@@ -24,6 +24,7 @@ router.post('/add-product', verifyAdminSession, AddProduct);
 router.put('/update-product/:id', verifyAdminSession, UpdateProduct);
 router.put('/accept-order/:id', verifyAdminSession, AcceptOrder);
 router.put('/reject-order/:id', verifyAdminSession, RejectOrder);
+router.put('/update-order/:id', verifyAdminSession, UpdateOrder);
 router.put('/update-banners', verifyAdminSession, updateBanners);
 router.delete('/delete-product/:id', verifyAdminSession, DeleteProduct);
 router.delete('/delete-category/:id', verifyAdminSession, DeleteCategory);
