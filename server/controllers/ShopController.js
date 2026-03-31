@@ -161,29 +161,32 @@ export const AddOrder = async (req, res) => {
       wilaya_code,
       baladiya,
       delivery_type,
-      product_id,
-      quantity,
-      price_per_unit,
       delivery_Price,
-      color_name,
-      color_hex,
+      items,
     } = req.body;
 
     if (!first_name || !last_name || !phone || !wilaya || !baladiya) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    if (!product_id || !quantity || !price_per_unit) {
-      return res.status(400).json({ error: "Product details are required" });
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Items array is required and cannot be empty" });
+    }
+    // Validate each item
+    for (const item of items) {
+      if (!item.product_id || !item.quantity || !item.price_per_unit) {
+        return res.status(400).json({ error: "Each item must have product_id, quantity, and price_per_unit" });
+      }
     }
 
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
+    // Insert order_info without color fields
     const [orderInfo] = await connection.query(
-      `INSERT INTO order_info 
-       (first_name, last_name, phone, wilaya, baladiya, 
-        delivery_type, delivery_Price, color_name, color_hex,wilaya_code) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?)`,
+      `INSERT INTO order_info
+       (first_name, last_name, phone, wilaya, baladiya,
+        delivery_type, delivery_Price, wilaya_code)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         first_name.trim(),
         last_name.trim(),
@@ -192,24 +195,32 @@ export const AddOrder = async (req, res) => {
         baladiya,
         delivery_type,
         delivery_Price || 0,
-        color_name || null,
-        color_hex || null,
         wilaya_code
       ]
     );
 
-    const [orderItem] = await connection.query(
-      `INSERT INTO order_items 
-       (order_id, product_id, quantity, price_per_unit) 
-       VALUES (?, ?, ?, ?)`,
-      [orderInfo.insertId, product_id, quantity, price_per_unit]
+    // Insert multiple order_items with color info
+    const orderItemsValues = items.map(item => [
+      orderInfo.insertId,
+      item.product_id,
+      item.quantity,
+      item.price_per_unit,
+      item.color_name || null,
+      item.color_hex || null
+    ]);
+
+    const [orderItemResult] = await connection.query(
+      `INSERT INTO order_items
+       (order_id, product_id, quantity, price_per_unit, color_name, color_hex)
+       VALUES ?`,
+      [orderItemsValues]
     );
 
-    if (orderInfo.affectedRows === 1 && orderItem.affectedRows === 1) {
+    if (orderInfo.affectedRows === 1 && orderItemResult.affectedRows === items.length) {
       await connection.commit();
-      return res.status(201).json({ 
+      return res.status(201).json({
         message: "Order created successfully",
-        orderId: orderInfo.insertId 
+        orderId: orderInfo.insertId
       });
     } else {
       await connection.rollback();
@@ -638,7 +649,8 @@ export const GetDashboardStats = async (req, res) => {
 
 export const GetOrders = async (req, res) => {
   try {
-    const [orders] = await pool.query(`
+    // Fetch raw order items with product details and colors from order_items
+    const [rows] = await pool.query(`
       SELECT
         o.id AS order_id,
         CONCAT(o.first_name, ' ', o.last_name) AS fullname,
@@ -650,19 +662,67 @@ export const GetOrders = async (req, res) => {
         o.delivery_type,
         o.delivery_Price,
         oi.quantity,
-        o.color_name,
-        o.color_hex,
+        oi.color_name,
+        oi.color_hex,
         ROUND(oi.price_per_unit) AS price,
-        ROUND((oi.quantity * oi.price_per_unit)) AS fullPrice,
-        p.name AS product_name
+        ROUND(oi.quantity * oi.price_per_unit) AS fullPrice,
+        p.name AS product_name,
+        p.id AS product_id
       FROM
         order_info o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN products p ON oi.product_id = p.id
       WHERE o.status = 'pending'
+      ORDER BY o.id ASC
     `);
 
-    return res.status(200).json(orders);
+    // Group rows by order_id to create items array
+    const ordersMap = new Map();
+
+    for (const row of rows) {
+      const orderId = row.order_id;
+
+      if (!ordersMap.has(orderId)) {
+        ordersMap.set(orderId, {
+          order_id: orderId,
+          fullname: row.fullname,
+          phone: row.phone,
+          address: row.address,
+          baladiya: row.baladiya,
+          wilaya: row.wilaya,
+          wilaya_code: row.wilaya_code,
+          delivery_type: row.delivery_type,
+          delivery_Price: row.delivery_Price,
+          items: [],
+          totalPrice: 0
+        });
+      }
+
+      const order = ordersMap.get(orderId);
+
+      // Add this order item
+      order.items.push({
+        product_id: row.product_id,
+        product_name: row.product_name,
+        quantity: row.quantity,
+        price_per_unit: row.price,
+        fullPrice: row.fullPrice,
+        color_name: row.color_name,
+        color_hex: row.color_hex
+      });
+
+      // Accumulate total
+      order.totalPrice += row.fullPrice;
+    }
+
+    // Add delivery price to total for each order
+    for (const order of ordersMap.values()) {
+      order.totalPrice += order.delivery_Price || 0;
+    }
+
+    const groupedOrders = Array.from(ordersMap.values());
+
+    return res.status(200).json(groupedOrders);
   } catch (error) {
     console.error("Error fetching orders:", error);
     return res.status(500).json({ error: "Internal Server Error" });

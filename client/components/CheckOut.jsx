@@ -10,7 +10,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { wilayaData } from '@/lib/wilayaData';
-import { Minus, Plus, Check } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 
@@ -31,7 +31,7 @@ const submitOrder = async (orderData) => {
     return response.json();
 };
 
-export default function CheckOut({ productPrice, Quantity, setQuantity, productId, colors = [] }) {
+export default function CheckOut({ productPrice, productId, colors = [] }) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -39,25 +39,35 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
         wilaya: 'Alger',
         baladiya: '',
         delivery: 'domicile',
-        selectedColor: null,
     });
 
+    // Color quantities: key = color.hex, value = quantity (number)
+    const [colorQuantities, setColorQuantities] = useState({});
     const [deliveryPrice, setDeliveryPrice] = useState(0);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
-    const totalPrice = deliveryPrice + (productPrice * Quantity);
-    const router = useRouter();
 
-    // Auto-select first color when colors array changes
+    // Initialize colorQuantities when colors change
     useEffect(() => {
-        if (colors && colors.length > 0 && !formData.selectedColor) {
-            setFormData(prev => ({
-                ...prev,
-                selectedColor: colors[0]
-            }));
+        if (colors && colors.length > 0) {
+            const initial = {};
+            colors.forEach(c => {
+                initial[c.hex] = 0;
+            });
+            setColorQuantities(initial);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [colors]);
+
+    // Compute total price
+    const totalPrice = useMemo(() => {
+        const itemsTotal = colors.reduce((sum, c) => {
+            const qty = colorQuantities[c.hex] || 0;
+            return sum + (qty * productPrice);
+        }, 0);
+        return deliveryPrice + itemsTotal;
+    }, [colorQuantities, deliveryPrice, colors, productPrice]);
+    const router = useRouter();
 
     // Get communes for selected wilaya name
     const communes = useMemo(() => {
@@ -112,7 +122,12 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
         onSuccess: () => {
             setShowConfirmation(false);
             setShowSuccess(true);
-            setQuantity(1);
+            // Reset color quantities
+            if (colors && colors.length > 0) {
+                const reset = {};
+                colors.forEach(c => { reset[c.hex] = 0; });
+                setColorQuantities(reset);
+            }
         },
         onError: (error) => {
             alert('Order failed: ' + error.message);
@@ -126,6 +141,20 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
     };
 
     const handleConfirm = () => {
+        // Build items array from colorQuantities with quantity > 0
+        const items = colors
+            .filter(c => {
+                const qty = colorQuantities[c.hex] || 0;
+                return qty > 0;
+            })
+            .map(c => ({
+                product_id: productId,
+                quantity: colorQuantities[c.hex],
+                price_per_unit: productPrice,
+                color_name: c.name,
+                color_hex: c.hex
+            }));
+
         const orderData = {
             first_name: formData.firstName,
             last_name: formData.lastName,
@@ -134,12 +163,8 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya),
             baladiya: formData.baladiya,
             delivery_type: formData.delivery,
-            product_id: productId,
             delivery_Price: deliveryPrice,
-            price_per_unit: productPrice,
-            quantity: Quantity,
-            color_name: formData.selectedColor?.name,
-            color_hex: formData.selectedColor?.hex,
+            items,
         };
         mutation.mutate(orderData);
     };
@@ -149,7 +174,12 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
 
     const handleSuccessContinue = () => {
         setTimeout(() => { setShowSuccess(false); }, [500]);
-        setQuantity(1);
+        // Reset color quantities
+        if (colors && colors.length > 0) {
+            const reset = {};
+            colors.forEach(c => { reset[c.hex] = 0; });
+            setColorQuantities(reset);
+        }
         router.push('/');
     };
 
@@ -194,24 +224,27 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                         <p className="text-gray-600">البلدية: {formData.baladiya}</p>
                         <p className="text-gray-600">التوصيل: {formData.delivery === 'domicile' ? 'للمنزل' : 'استلام من المكتب'}</p>
 
-                        {/* Color confirmation with name and hex */}
-                        {formData.selectedColor && (
-                            <div className="flex items-center gap-3 mt-2 p-2 bg-white rounded-lg border border-gray-200">
-                                <div
-                                    className="w-8 h-8 rounded-full border border-gray-300 shadow-sm"
-                                    style={{ backgroundColor: `#${formData.selectedColor.hex}` }}
-                                />
-                                <div className="flex flex-col items-start ">
-                                    <span className="font-medium text-gray-800">{formData.selectedColor.name}</span>
-                                    <span className="text-xs text-gray-500">#{formData.selectedColor.hex}</span>
+                        {/* Items list */}
+                        <div className="w-full mt-2 space-y-2">
+                            {colors.filter(c => (colorQuantities[c.hex] || 0) > 0).map(color => (
+                                <div key={color.hex} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-200">
+                                    <div
+                                        className="w-6 h-6 rounded-full border border-gray-300 shadow-sm"
+                                        style={{ backgroundColor: `#${color.hex}` }}
+                                    />
+                                    <div className="flex flex-col items-start flex-1">
+                                        <span className="font-medium text-gray-800">{color.name}</span>
+                                        <span className="text-xs text-gray-500">#{color.hex}</span>
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        {colorQuantities[color.hex]} × {productPrice} دج = {colorQuantities[color.hex] * productPrice} دج
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            ))}
+                        </div>
 
                         <div className="w-full border-t border-gray-200 my-3"></div>
-                        <p className="text-gray-600">سعر المنتج: {productPrice} دج</p>
                         <p className="text-gray-600">رسوم التوصيل: {deliveryPrice} دج</p>
-                        <p className="text-gray-600">الكمية: {Quantity}</p>
                         <p className="text-xl font-bold mt-2 text-primary">الإجمالي: {totalPrice} دج</p>
                     </div>
                     <div className="flex gap-4 justify-center">
@@ -289,42 +322,67 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                 />
             </div>
 
-            {/* Color Selection - Shows name and hex */}
+            {/* Color Quantities */}
             {colors && colors.length > 0 && (
                 <div className="flex flex-col w-full">
                     <label className="font-medium text-black text-base mb-3">
-                        اختر اللون *
+                        الكمية لكل لون *
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-3">
                         {colors.map((color) => (
-                            <button
+                            <div
                                 key={color.hex}
-                                type="button"
-                                onClick={() => handleInputChange('selectedColor', color)}
-                                className={`relative flex items-center cursor-pointer gap-3 p-3 rounded-xl border-2 transition-all ${formData.selectedColor?.hex === color.hex
-                                    ? 'border-primary bg-red-50'
-                                    : 'border-gray-200 hover:border-gray-300 bg-white'
-                                    }`}
+                                className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white"
                             >
-                                <div
-                                    className="w-10 h-10 rounded-full border border-gray-300 shadow-sm flex-shrink-0"
-                                    style={{ backgroundColor: `#${color.hex}` }}
-                                />
-                                <div className="flex flex-col items-start text-right">
-                                    <span className={`font-medium text-sm ${formData.selectedColor?.hex === color.hex ? 'text-primary' : 'text-gray-800'
-                                        }`}>
-                                        {color.name}
-                                    </span>
-                                    <span className="text-xs text-gray-500">#{color.hex}</span>
-                                </div>
-
-                                {/* Checkmark for selected */}
-                                {formData.selectedColor?.hex === color.hex && (
-                                    <div className="absolute top-2 left-2 w-5 h-5 bg-primary rounded-full flex items-center justify-center">
-                                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className="w-10 h-10 rounded-full border border-gray-300 shadow-sm flex-shrink-0"
+                                        style={{ backgroundColor: `#${color.hex}` }}
+                                    />
+                                    <div className="flex flex-col items-start text-right">
+                                        <span className="font-medium text-sm text-gray-800">
+                                            {color.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500">#{color.hex}</span>
                                     </div>
-                                )}
-                            </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setColorQuantities(prev => ({
+                                            ...prev,
+                                            [color.hex]: Math.max(0, (prev[color.hex] || 0) - 1)
+                                        }))}
+                                        className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full p-1 border border-stroke transition-colors'
+                                        disabled={(colorQuantities[color.hex] || 0) <= 0}
+                                    >
+                                        <Minus size={18} />
+                                    </button>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={colorQuantities[color.hex] || 0}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value, 10);
+                                            setColorQuantities(prev => ({
+                                                ...prev,
+                                                [color.hex]: isNaN(val) ? 0 : Math.max(0, val)
+                                            }));
+                                        }}
+                                        className='w-16 text-center border border-stroke rounded-md py-1'
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setColorQuantities(prev => ({
+                                            ...prev,
+                                            [color.hex]: (prev[color.hex] || 0) + 1
+                                        }))}
+                                        className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full p-1 border border-stroke transition-colors'
+                                    >
+                                        <Plus size={18} />
+                                    </button>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -405,16 +463,8 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
                 </Select>
             </div>
 
-            {/* Total Price */}
+            {/* Price Summary */}
             <div className="w-full flex flex-col items-start gap-2">
-                <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
-                    <span className="font-medium text-black text-lg">الكمية:</span>
-                    <div className='flex gap-3.5 px-2 py-1 border border-stroke rounded-full'>
-                        <button type='button' onClick={() => Quantity > 1 && setQuantity(q => q - 1)} className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full'><Minus /></button>
-                        <p>{Quantity}</p>
-                        <button type='button' onClick={() => setQuantity(q => q + 1)} className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full'><Plus /></button>
-                    </div>
-                </div>
                 <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
                     <span className="font-medium text-black text-lg">رسوم التوصيل:</span>
                     <p className="font-medium text-primary text-xl">{deliveryPrice} دج</p>
@@ -428,8 +478,8 @@ export default function CheckOut({ productPrice, Quantity, setQuantity, productI
             {/* Submit Button */}
             <button
                 type="submit"
-                disabled={colors.length > 0 && !formData.selectedColor}
-                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${colors.length > 0 && !formData.selectedColor
+                disabled={colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)}
+                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-primary text-white hover:opacity-90 cursor-pointer'
                     }`}

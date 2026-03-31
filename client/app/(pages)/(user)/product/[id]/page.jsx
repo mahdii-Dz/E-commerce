@@ -24,7 +24,6 @@ function ProductPage({ params }) {
     
     const [currentImage, setCurrentImage] = useState('')
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [quantity, setQuantity] = useState(1)
     const modalRef = useRef(null);
     const date = new Date();
     const today = date.getDate()
@@ -149,46 +148,24 @@ function ProductPage({ params }) {
                             </div>
                         </div>
 
-                        {/* Quantity */}
-                        <h3 className='text-sm lg:text-base font-medium w-full'>الكمية</h3>
-                        <div className='w-full gap-3 lg:gap-6 flex flex-col sm:flex-row items-stretch sm:items-center'>
-                            {/* Quantity Selector */}
-                            <div className='flex gap-2 lg:gap-3 px-3 lg:px-4 py-2 border border-stroke rounded-full w-fit'>
-                                <button 
-                                    onClick={() => quantity > 1 && setQuantity(q => q - 1)} 
-                                    className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full p-1 transition-colors'
-                                    disabled={quantity <= 1}
-                                >
-                                    <Minus size={18} />
-                                </button>
-                                <p className='min-w-[20px] text-center'>{quantity}</p>
-                                <button 
-                                    onClick={() => quantity < 10 && setQuantity(q => q + 1)} 
-                                    className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full p-1 transition-colors'
-                                >
-                                    <Plus size={18} />
-                                </button>
-                            </div>
-
-                            {/* Add to Cart Button */}
-                            {Cart.find(item => item.id === product.id) ? (
-                                <button 
-                                    onClick={() => handleRemoveFromCart(product.id)} 
-                                    className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full sm:flex-1 hover:bg-red-50 transition-colors text-sm lg:text-base'
-                                >
-                                    <ShoppingCart size={18} />
-                                    إزالة من السلة
-                                </button>
-                            ) : (
-                                <button 
-                                    onClick={() => handleAddToCart(product)} 
-                                    className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full sm:flex-1 hover:bg-primary/5 transition-colors text-sm lg:text-base'
-                                >
-                                    <ShoppingCart size={18} />
-                                    أضف إلى السلة
-                                </button>
-                            )}
-                        </div>
+                        {/* Add to Cart Button */}
+                        {Cart.find(item => item.id === product.id) ? (
+                            <button
+                                onClick={() => handleRemoveFromCart(product.id)}
+                                className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full hover:bg-red-50 transition-colors text-sm lg:text-base'
+                            >
+                                <ShoppingCart size={18} />
+                                إزالة من السلة
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => handleAddToCart(product)}
+                                className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full hover:bg-primary/5 transition-colors text-sm lg:text-base'
+                            >
+                                <ShoppingCart size={18} />
+                                أضف إلى السلة
+                            </button>
+                        )}
 
                         {/* Buy Now Button */}
                         <a 
@@ -200,12 +177,10 @@ function ProductPage({ params }) {
 
                         {/* Checkout Form */}
                         <div className="w-full">
-                            <CheckOut 
-                                productPrice={PriceWithDiscount} 
-                                Quantity={quantity} 
-                                setQuantity={setQuantity} 
-                                productId={product.id} 
-                                colors={product.colors} 
+                            <CheckOut
+                                productPrice={PriceWithDiscount}
+                                productId={product.id}
+                                colors={product.colors}
                             />
                         </div>
                     </div>
