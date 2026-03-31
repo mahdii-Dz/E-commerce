@@ -713,13 +713,13 @@ export const GetOrders = async (req, res) => {
         color_hex: row.color_hex
       });
 
-      // Accumulate total
-      order.totalPrice += row.fullPrice;
+      // Accumulate total (ensure numeric addition)
+      order.totalPrice = (order.totalPrice || 0) + Number(row.fullPrice);
     }
 
     // Add delivery price to total for each order
     for (const order of ordersMap.values()) {
-      order.totalPrice += order.delivery_Price || 0;
+      order.totalPrice += Number(order.delivery_Price) || 0;
     }
 
     const groupedOrders = Array.from(ordersMap.values());
