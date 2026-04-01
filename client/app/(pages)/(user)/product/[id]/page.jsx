@@ -91,7 +91,7 @@ function ProductPage({ params }) {
                 <Breadcrumb />
                 
                 {/* Product Details Section */}
-                <section className='w-full h-fit mb-12 lg:mb-20 flex flex-col lg:flex-row justify-between items-start gap-8 lg:gap-12 px-4 lg:px-6 py-6 lg:py-8 bg-white border lg:border-2 mt-6 lg:mt-8 border-stroke rounded-xl'>
+                <section className='w-full h-fit mb-12 lg:mb-20 flex flex-col-reverse lg:flex-row justify-between items-start gap-8 lg:gap-12 px-4 lg:px-6 py-6 lg:py-8 bg-white border lg:border-2 mt-6 lg:mt-8 border-stroke rounded-xl'>
                     
                     {/* Right Column - Product Info */}
                     <div className='w-full lg:w-1/2 h-fit flex flex-col items-start gap-3 lg:gap-4 text-right'>
