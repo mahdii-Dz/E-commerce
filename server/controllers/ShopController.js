@@ -433,7 +433,7 @@ export const GetProducts = async (req, res) => {
           is_active: row.is_active,
           created_at: row.created_at,
           type: row.type,
-          offers: row.offers ? JSON.parse(row.offers) : null,
+          offers: row.offers ? (typeof row.offers === 'string' ? JSON.parse(row.offers) : row.offers) : null,
           categories: [],
         });
       }
@@ -504,7 +504,7 @@ export const GetProductById = async (req, res) => {
           created_at: row.created_at,
           type: row.type,
           colors: row.colors,
-          offers: row.offers ? JSON.parse(row.offers) : null,
+          offers: row.offers ? (typeof row.offers === 'string' ? JSON.parse(row.offers) : row.offers) : null,
           categories: [],
         });
       }
@@ -575,7 +575,7 @@ export const GetProductsByCategory = async (req, res) => {
           is_active: row.is_active,
           created_at: row.created_at,
           type: row.type,
-          offers: row.offers ? JSON.parse(row.offers) : null,
+          offers: row.offers ? (typeof row.offers === 'string' ? JSON.parse(row.offers) : row.offers) : null,
           categories: [],
         });
       }
