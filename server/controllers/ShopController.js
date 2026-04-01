@@ -744,7 +744,8 @@ export const GetOrders = async (req, res) => {
 
     // Add delivery price to total for each order
     for (const order of ordersMap.values()) {
-      order.totalPrice = order.items.reduce((sum, item) => sum + item.fullPrice, 0) + (Number(order.delivery_Price) || 0);
+      const subtotal = order.items.reduce((sum, item) => sum + Number(item.fullPrice), 0);
+      order.totalPrice = subtotal + Number(order.delivery_Price || 0);
     }
 
     const groupedOrders = Array.from(ordersMap.values());
