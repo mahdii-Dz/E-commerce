@@ -27,7 +27,7 @@ function ProductPage({ params }) {
     const modalRef = useRef(null);
     const date = new Date();
     const today = date.getDate()
-    const deliveryDate = new Date(date.setDate(date.getDate() + 7));
+    const deliveryDate = new Date(date.setDate(date.getDate() + 2));
     const ArriveDay = deliveryDate.getDate();
     const month = deliveryDate.toLocaleString('default', { month: 'long' });
     const year = deliveryDate.getFullYear();
