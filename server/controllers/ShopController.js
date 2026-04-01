@@ -87,6 +87,7 @@ export const AddProduct = async (req, res) => {
       discount_percentage,
       thumbnail,
       colors,
+      offers,
     } = req.body;
 
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -104,9 +105,9 @@ export const AddProduct = async (req, res) => {
 
     const [productResult] = await connection.query(
       `INSERT INTO products (
-        name, description, price, stock, type, images, 
-        thumbnail, discount_percentage, colors
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        name, description, price, stock, type, images,
+        thumbnail, discount_percentage, colors, offers
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         description || null,
@@ -117,6 +118,7 @@ export const AddProduct = async (req, res) => {
         thumbnail || null,
         discount_percentage || 0,
         colors ? JSON.stringify(colors) : null,
+        offers ? JSON.stringify(offers) : null,
       ]
     );
 
@@ -137,7 +139,7 @@ export const AddProduct = async (req, res) => {
     }
 
     await connection.commit();
-    
+
     return res.status(201).json({
       message: "Product created successfully",
       productId,
@@ -181,7 +183,7 @@ export const AddOrder = async (req, res) => {
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
-    // Insert order_info without color fields
+    // Insert order_info
     const [orderInfo] = await connection.query(
       `INSERT INTO order_info
        (first_name, last_name, phone, wilaya, baladiya,
@@ -199,19 +201,20 @@ export const AddOrder = async (req, res) => {
       ]
     );
 
-    // Insert multiple order_items with color info
+    // Insert multiple order_items with color info and offer_text
     const orderItemsValues = items.map(item => [
       orderInfo.insertId,
       item.product_id,
       item.quantity,
       item.price_per_unit,
       item.color_name || null,
-      item.color_hex || null
+      item.color_hex || null,
+      item.offer_text || null
     ]);
 
     const [orderItemResult] = await connection.query(
       `INSERT INTO order_items
-       (order_id, product_id, quantity, price_per_unit, color_name, color_hex)
+       (order_id, product_id, quantity, price_per_unit, color_name, color_hex, offer_text)
        VALUES ?`,
       [orderItemsValues]
     );
@@ -251,16 +254,17 @@ export const UpdateProduct = async (req, res) => {
       type,
       categoryIds,
       colors,
+      offers,
     } = req.body;
 
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
     const [result] = await connection.query(
-      `UPDATE products 
-       SET name = ?, description = ?, price = ?, stock = ?, 
-           discount_percentage = ?, images = ?, thumbnail = ?, 
-           type = ?, colors = ?
+      `UPDATE products
+       SET name = ?, description = ?, price = ?, stock = ?,
+           discount_percentage = ?, images = ?, thumbnail = ?,
+           type = ?, colors = ?, offers = ?
        WHERE id = ?`,
       [
         name?.trim(),
@@ -272,6 +276,7 @@ export const UpdateProduct = async (req, res) => {
         thumbnail || null,
         type || null,
         colors ? JSON.stringify(colors) : null,
+        offers ? JSON.stringify(offers) : null,
         id,
       ]
     );
@@ -387,7 +392,7 @@ export const GetCategories = async (req, res) => {
 export const GetProducts = async (req, res) => {
   try {
     const [rows] = await pool.query(`
-      SELECT 
+      SELECT
         p.id,
         p.name,
         p.description,
@@ -400,6 +405,7 @@ export const GetProducts = async (req, res) => {
         p.thumbnail,
         p.created_at,
         p.type,
+        p.offers,
         c.id AS category_id,
         c.name AS category_name
       FROM products p
@@ -427,6 +433,7 @@ export const GetProducts = async (req, res) => {
           is_active: row.is_active,
           created_at: row.created_at,
           type: row.type,
+          offers: row.offers ? JSON.parse(row.offers) : null,
           categories: [],
         });
       }
@@ -452,7 +459,7 @@ export const GetProductById = async (req, res) => {
     const { id } = req.params;
     const [rows] = await pool.query(
       `
-      SELECT 
+      SELECT
         p.id,
         p.name,
         p.description,
@@ -466,6 +473,7 @@ export const GetProductById = async (req, res) => {
         p.created_at,
         p.type,
         p.colors,
+        p.offers,
         c.id AS category_id,
         c.name AS category_name
       FROM products p
@@ -496,6 +504,7 @@ export const GetProductById = async (req, res) => {
           created_at: row.created_at,
           type: row.type,
           colors: row.colors,
+          offers: row.offers ? JSON.parse(row.offers) : null,
           categories: [],
         });
       }
@@ -522,7 +531,7 @@ export const GetProductsByCategory = async (req, res) => {
     const { categoryId } = req.params;
     const [rows] = await pool.query(
       `
-      SELECT 
+      SELECT
         p.id,
         p.name,
         p.description,
@@ -535,6 +544,7 @@ export const GetProductsByCategory = async (req, res) => {
         p.is_active,
         p.created_at,
         p.type,
+        p.offers,
         c.id AS category_id,
         c.name AS category_name
         FROM products p
@@ -545,7 +555,7 @@ export const GetProductsByCategory = async (req, res) => {
     `,
       [categoryId],
     );
-    
+
     const productMap = new Map();
 
     for (const row of rows) {
@@ -565,6 +575,7 @@ export const GetProductsByCategory = async (req, res) => {
           is_active: row.is_active,
           created_at: row.created_at,
           type: row.type,
+          offers: row.offers ? JSON.parse(row.offers) : null,
           categories: [],
         });
       }
@@ -668,7 +679,8 @@ export const GetOrders = async (req, res) => {
         ROUND(oi.price_per_unit) AS price,
         ROUND(oi.quantity * oi.price_per_unit) AS fullPrice,
         p.name AS product_name,
-        p.id AS product_id
+        p.id AS product_id,
+        oi.offer_text
       FROM
         order_info o
         JOIN order_items oi ON o.id = oi.order_id
@@ -677,7 +689,7 @@ export const GetOrders = async (req, res) => {
       ORDER BY o.id ASC
     `);
 
-    // Group rows by order_id to create items array
+    // Group rows by order_id, then by product_id + offer_text
     const ordersMap = new Map();
 
     for (const row of rows) {
@@ -701,24 +713,38 @@ export const GetOrders = async (req, res) => {
       }
 
       const order = ordersMap.get(orderId);
+      const groupKey = `${row.product_id}|${row.offer_text || ''}`;
 
-      // Add this order item
-      order.items.push({
-        product_id: row.product_id,
-        product_name: row.product_name,
-        quantity: row.quantity,
-        price_per_unit: row.price,
-        fullPrice: row.fullPrice,
+      // Find or create grouped item
+      let item = order.items.find(i => i.product_id === row.product_id && i.offer_text === (row.offer_text || ''));
+      if (!item) {
+        item = {
+          product_id: row.product_id,
+          product_name: row.product_name,
+          quantity: 0,
+          price_per_unit: row.price,
+          fullPrice: 0,
+          offer_text: row.offer_text || null,
+          colors: []
+        };
+        order.items.push(item);
+      }
+
+      // Accumulate quantity and fullPrice
+      item.quantity += row.quantity;
+      item.fullPrice += row.fullPrice;
+
+      // Add color entry
+      item.colors.push({
         color_name: row.color_name,
-        color_hex: row.color_hex
+        color_hex: row.color_hex,
+        quantity: row.quantity
       });
-
-      // Accumulate total (ensure numeric addition)
-      order.totalPrice = (order.totalPrice || 0) + Number(row.fullPrice);
     }
 
     // Add delivery price to total for each order
     for (const order of ordersMap.values()) {
+      order.totalPrice = order.items.reduce((sum, item) => sum + item.fullPrice, 0);
       order.totalPrice += Number(order.delivery_Price) || 0;
     }
 
