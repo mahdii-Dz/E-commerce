@@ -706,7 +706,7 @@ export const GetOrders = async (req, res) => {
           wilaya: row.wilaya,
           wilaya_code: row.wilaya_code,
           delivery_type: row.delivery_type,
-          delivery_Price: row.delivery_Price,
+          delivery_Price: Number(row.delivery_Price) || 0,
           items: [],
           totalPrice: 0
         });
@@ -722,7 +722,7 @@ export const GetOrders = async (req, res) => {
           product_id: row.product_id,
           product_name: row.product_name,
           quantity: 0,
-          price_per_unit: row.price,
+          price_per_unit: Number(row.price) || 0,
           fullPrice: 0,
           offer_text: row.offer_text || null,
           colors: []
@@ -730,15 +730,17 @@ export const GetOrders = async (req, res) => {
         order.items.push(item);
       }
 
-      // Accumulate quantity and fullPrice
-      item.quantity += row.quantity;
-      item.fullPrice += row.fullPrice;
+      // Accumulate quantity and fullPrice - ensure numeric addition
+      const qty = Number(row.quantity) || 0;
+      const fullPrice = Number(row.fullPrice) || 0;
+      item.quantity += qty;
+      item.fullPrice += fullPrice;
 
       // Add color entry
       item.colors.push({
         color_name: row.color_name,
         color_hex: row.color_hex,
-        quantity: row.quantity
+        quantity: qty
       });
     }
 
