@@ -223,23 +223,11 @@ export default function OrdersPage() {
       const totalQty = orderToAccept.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
       const fullName = `${orderToAccept.first_name || ''} ${orderToAccept.last_name || ''}`.trim();
 
-      // Format produit as: "product name, color (quantity), color (quantity)..." for each product
-      // Group items by product
-      const productGroups = orderToAccept.items?.reduce((acc, item) => {
-        if (!acc[item.product_name]) {
-          acc[item.product_name] = [];
-        }
-        acc[item.product_name].push(item);
-        return acc;
-      }, {}) || {};
-
-      // Build produit string: "Product1 (Color1: qty, Color2: qty), Product2 (Color1: qty)"
-      const produit = Object.entries(productGroups)
-        .map(([productName, items]) => {
-          const colorQtys = items.map(item => `${item.color_name} (${item.quantity})`).join(', ');
-          return `${productName} (${colorQtys})`;
-        })
-        .join(', ');
+      // Build produit string using consolidated items with colors array
+      const produit = orderToAccept.items?.map(item => {
+        const colorQtys = item.colors.map(c => `${c.color_name} (${c.quantity})`).join(', ');
+        return `${item.product_name}${item.offer_text ? ' - ' + item.offer_text : ''} (${colorQtys})`;
+      }).join(', ');
 
       const sendToEroTrakc = await axios.post('/api/admin/Delivery', {
         nom_client: fullName,
@@ -370,7 +358,7 @@ export default function OrdersPage() {
   if (error) {
     return (
       <div className="w-full ml-64 pt-6 px-9 pb-16 flex items-center justify-center h-96">
-        <p className="text-[#FA3145]">{error}</p>
+        <p className="text-[#FA3145]">{error?.message || error}</p>
       </div>
     );
   }
@@ -543,7 +531,6 @@ export default function OrdersPage() {
                 <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Location</th>
                 <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Delivery</th>
                 <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Products</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Color</th>
                 <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Qty</th>
                 <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Total</th>
                 <th className="px-4 py-4 text-center text-sm font-semibold text-gray-700 w-32">Actions</th>
@@ -579,28 +566,27 @@ export default function OrdersPage() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      <span className="truncate max-w-[150px] block">
-                        {Array.isArray(order.items)
-                          ? order.items.map(item => item.product_name).join(', ')
-                          : order.product_name}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4">
                       {order.items && order.items.length > 0 ? (
                         <div className="flex flex-col gap-2">
                           {order.items.map((item, idx) => (
-                            <div
-                              key={`${item.product_id}-${item.color_hex}-${idx}`}
-                              className="flex items-center gap-2"
-                            >
-                              <div
-                                className="w-5 h-5 rounded-full border border-gray-300 shadow-sm flex-shrink-0"
-                                style={{ backgroundColor: `#${item.color_hex}` }}
-                                title={item.color_name}
-                              />
-                              <span className="text-sm text-gray-700">
-                                {item.color_name} <span className="text-gray-500">({item.quantity})</span>
+                            <div key={`${item.product_id}-${idx}`} className="text-sm break-words max-w-[250px]">
+                              <span className="font-medium">
+                                {item.product_name}
+                                {item.offer_text && <span> - عرض: {item.offer_text}</span>}
                               </span>
+                              {item.colors && item.colors.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  {item.colors.map((c, ci) => (
+                                    <span key={ci} className="inline-flex items-center gap-1">
+                                      <div
+                                        className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
+                                        style={{ backgroundColor: `#${c.color_hex}` }}
+                                      />
+                                      <span>{c.color_name} ({c.quantity})</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -614,7 +600,9 @@ export default function OrdersPage() {
                         : order.quantity}
                     </td>
                     <td className="px-4 py-4 text-sm font-bold text-gray-900">
-                      {Array.isArray(order.items) ? order.totalPrice : order.fullPrice} DA
+                      {Array.isArray(order.items)
+                        ? (parseFloat(order.totalPrice) || 0).toFixed(2)
+                        : (parseFloat(order.fullPrice) || 0).toFixed(2)} DA
                     </td>
                     <td className="px-4 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
@@ -861,21 +849,35 @@ export default function OrdersPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {editingOrder.items?.map((item) => (
-                        <tr key={`${item.product_id}-${item.color_hex}`}>
-                          <td className="px-4 py-3">{item.product_name}</td>
+                      {editingOrder.items?.map((item, idx) => (
+                        <tr key={`${item.product_id}-${idx}`}>
                           <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="w-5 h-5 rounded-full border border-gray-300"
-                                style={{ backgroundColor: `#${item.color_hex}` }}
-                              />
-                              {item.color_name}
-                            </div>
+                            <span className="block break-words max-w-[250px]">
+                              {item.product_name}
+                              {item.offer_text && <span> - عرض: {item.offer_text}</span>}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {item.colors && item.colors.length > 0 ? (
+                              <div className="flex flex-col gap-1">
+                                {item.colors.map((c, ci) => (
+                                  <div key={ci} className="flex items-center gap-2">
+                                    <div
+                                      className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
+                                      style={{ backgroundColor: `#${c.color_hex}` }}
+                                    />
+                                    <span className="text-xs">{c.color_name}</span>
+                                    <span className="text-xs text-gray-500">({c.quantity})</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">-</span>
+                            )}
                           </td>
                           <td className="px-4 py-3">{item.quantity}</td>
-                          <td className="px-4 py-3">{item.price_per_unit} DA</td>
-                          <td className="px-4 py-3 font-medium">{item.fullPrice} DA</td>
+                          <td className="px-4 py-3">{Number(item.price_per_unit).toFixed(2)} DA</td>
+                          <td className="px-4 py-3 font-medium">{Number(item.fullPrice).toFixed(2)} DA</td>
                         </tr>
                       ))}
                     </tbody>

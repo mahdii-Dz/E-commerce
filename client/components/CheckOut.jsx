@@ -31,7 +31,7 @@ const submitOrder = async (orderData) => {
     return response.json();
 };
 
-export default function CheckOut({ productPrice, productId, colors = [] }) {
+export default function CheckOut({ productPrice, productId, colors = [], selectedOffer = null }) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -46,6 +46,7 @@ export default function CheckOut({ productPrice, productId, colors = [] }) {
     const [deliveryPrice, setDeliveryPrice] = useState(0);
     const [showConfirmation, setShowConfirmation] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [submitError, setSubmitError] = useState(''); // for validation errors
 
     // Initialize colorQuantities when colors change
     useEffect(() => {
@@ -59,14 +60,44 @@ export default function CheckOut({ productPrice, productId, colors = [] }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [colors]);
 
+    // Reset color quantities when selectedOffer changes
+    useEffect(() => {
+        if (colors && colors.length > 0) {
+            const reset = {};
+            colors.forEach(c => {
+                reset[c.hex] = 0;
+            });
+            setColorQuantities(reset);
+        }
+        setSubmitError('');
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedOffer, colors]);
+
+    // Effective price based on selected offer
+    const effectivePrice = useMemo(() => {
+        if (!selectedOffer) return productPrice;
+        return selectedOffer.price / selectedOffer.quantity;
+    }, [selectedOffer, productPrice]);
+
+    // Total allocated quantity across colors
+    const totalAllocated = useMemo(() => {
+        return Object.values(colorQuantities).reduce((sum, qty) => sum + qty, 0);
+    }, [colorQuantities]);
+
+    // Validation error: must match offer quantity exactly
+    const quantityError = selectedOffer && totalAllocated !== selectedOffer.quantity
+        ? "يجب أن تطابق القيمة المختارة عرض الشراء"
+        : '';
+
     // Compute total price
     const totalPrice = useMemo(() => {
         const itemsTotal = colors.reduce((sum, c) => {
             const qty = colorQuantities[c.hex] || 0;
-            return sum + (qty * productPrice);
+            return sum + (qty * effectivePrice);
         }, 0);
         return deliveryPrice + itemsTotal;
-    }, [colorQuantities, deliveryPrice, colors, productPrice]);
+    }, [colorQuantities, deliveryPrice, colors, effectivePrice]);
+
     const router = useRouter();
 
     // Get communes for selected wilaya name
@@ -141,6 +172,12 @@ export default function CheckOut({ productPrice, productId, colors = [] }) {
     };
 
     const handleConfirm = () => {
+        // Validation: if offer selected, total must match exactly
+        if (selectedOffer && totalAllocated !== selectedOffer.quantity) {
+            setSubmitError(`ءارشلا ضرع ةراتخملا ةيمكلا قباطت نأ بجي (المطلوب: ${selectedOffer.quantity}، الحالي: ${totalAllocated})`);
+            return;
+        }
+
         // Build items array from colorQuantities with quantity > 0
         const items = colors
             .filter(c => {
@@ -150,9 +187,10 @@ export default function CheckOut({ productPrice, productId, colors = [] }) {
             .map(c => ({
                 product_id: productId,
                 quantity: colorQuantities[c.hex],
-                price_per_unit: productPrice,
+                price_per_unit: effectivePrice,
                 color_name: c.name,
-                color_hex: c.hex
+                color_hex: c.hex,
+                offer_text: selectedOffer ? `${selectedOffer.quantity} for ${selectedOffer.price} DA` : null
             }));
 
         const orderData = {
@@ -328,6 +366,36 @@ export default function CheckOut({ productPrice, productId, colors = [] }) {
                     <label className="font-medium text-black text-base mb-3">
                         الكمية لكل لون *
                     </label>
+
+                    {/* Selected Offer Summary */}
+                    {selectedOffer && (
+                        <div className="mb-3 p-3 bg-primary/10 border border-primary/20 rounded-lg">
+                            <p className="text-primary font-medium text-right">
+                                العرض المختار: شراء {selectedOffer.quantity} قطع بسعر {selectedOffer.price} دج
+                                {selectedOffer.savedMoney > 0 && ` (وفر ${selectedOffer.savedMoney} دج)`}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Offer progress indicator */}
+                    {selectedOffer && (
+                        <div className="mb-3">
+                            <p className="text-sm text-gray-600">
+                                يجب توزيع {selectedOffer.quantity} قطع (تم تخصيص: {totalAllocated})
+                            </p>
+                            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
+                                <div
+                                    className="h-full bg-primary transition-all duration-300"
+                                    style={{ width: `${Math.min((totalAllocated / selectedOffer.quantity) * 100, 100)}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {quantityError && (
+                        <p className="text-red-500 text-sm mb-2">{quantityError}</p>
+                    )}
+
                     <div className="flex flex-col gap-3">
                         {colors.map((color) => (
                             <div
@@ -373,11 +441,16 @@ export default function CheckOut({ productPrice, productId, colors = [] }) {
                                     />
                                     <button
                                         type="button"
-                                        onClick={() => setColorQuantities(prev => ({
-                                            ...prev,
-                                            [color.hex]: (prev[color.hex] || 0) + 1
-                                        }))}
+                                        onClick={() => {
+                                            if (totalAllocated < (selectedOffer?.quantity || 1)) {
+                                                setColorQuantities(prev => ({
+                                                    ...prev,
+                                                    [color.hex]: (prev[color.hex] || 0) + 1
+                                                }));
+                                            }
+                                        }}
                                         className='cursor-pointer hover:bg-primary/80 hover:text-white rounded-full p-1 border border-stroke transition-colors'
+                                        disabled={totalAllocated >= (selectedOffer?.quantity || 1)}
                                     >
                                         <Plus size={18} />
                                     </button>
@@ -478,8 +551,8 @@ export default function CheckOut({ productPrice, productId, colors = [] }) {
             {/* Submit Button */}
             <button
                 type="submit"
-                disabled={colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)}
-                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)
+                disabled={(colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) || !!quantityError}
+                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${(colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) || !!quantityError
                     ? 'bg-gray-400 cursor-not-allowed'
                     : 'bg-primary text-white hover:opacity-90 cursor-pointer'
                     }`}

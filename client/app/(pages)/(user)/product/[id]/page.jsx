@@ -7,10 +7,11 @@ import Footer from '@/components/Footer';
 import Loader from '@/components/Loader';
 import RenderProducts from '@/components/RenderProducts';
 import { useFetchSingleProduct } from '@/components/useFetchSingleProduct';
-import { ArrowRight, Minus, Plus, ShoppingCart, Van, XIcon } from 'lucide-react';
+import { ArrowRight, Check, Minus, Percent, Plus, ShoppingCart, Sparkles, Tag, Van, XIcon } from 'lucide-react';
 import Link from 'next/link';
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 function ProductPage({ params }) {
     const { id } = React.use(params)
@@ -33,10 +34,42 @@ function ProductPage({ params }) {
     const year = deliveryDate.getFullYear();
     const [PriceWithDiscount, setPriceWithDiscount] = useState(0)
 
+    // Offers state
+    const [offers, setOffers] = useState([]);
+    const [selectedOffer, setSelectedOffer] = useState(null);
+
+    // Determine best offer (lowest price per item)
+    const bestOffer = useCallback(() => {
+        if (offers.length === 0) return null;
+        return offers.reduce((best, current) => {
+            const bestPricePerItem = best.price / best.quantity;
+            const currentPricePerItem = current.price / current.quantity;
+            return currentPricePerItem < bestPricePerItem ? current : best;
+        });
+    }, [offers]);
+
     useEffect(() => {
         if (product) {
             setCurrentImage(product.images[0])
             setPriceWithDiscount(product.discount_percentage > 0 ? product.price - (product.price * product.discount_percentage / 100) : product.price)
+
+            // Calculate effective price (after discount)
+            const effectivePrice = product.discount_percentage > 0
+                ? product.price - (product.price * product.discount_percentage / 100)
+                : product.price;
+
+            // Build offers array: always include buy-1 at discounted price (if any), then any admin-defined offers
+            const buyOneOffer = {
+                quantity: 1,
+                price: effectivePrice,
+                savedMoney: product.price - effectivePrice
+            };
+            const productOffers = product.offers && Array.isArray(product.offers) ? product.offers : [];
+            const allOffers = [buyOneOffer, ...productOffers];
+            setOffers(allOffers);
+
+            // Default select the buy-1 offer
+            setSelectedOffer(buyOneOffer);
         }
     }, [product])
 
@@ -82,7 +115,7 @@ function ProductPage({ params }) {
     }
 
     if (loading) return <div className='w-full h-dvh flex items-center justify-center text-xl'><Loader/></div>;
-    if (error) return <div className='w-full h-dvh flex items-center justify-center text-red-500 text-xl'>Error: {error}</div>;
+    if (error) return <div className='w-full h-dvh flex items-center justify-center text-red-500 text-xl'>Error: {error?.message || error}</div>;
     if (!product) return <div className='w-full h-dvh flex items-center justify-center text-xl'>Product not found</div>;
 
     return (
@@ -167,13 +200,80 @@ function ProductPage({ params }) {
                             </button>
                         )}
 
-                        {/* Buy Now Button */}
-                        <a 
-                            href="#form" 
-                            className='w-full bg-primary text-white flex items-center justify-center py-3 rounded-full cursor-pointer hover:bg-red-600 transition-colors text-sm lg:text-base font-medium'
-                        >
-                            اشتر الآن
-                        </a>
+                        {/* Offers Selection Section */}
+                        <div className='w-full flex flex-col gap-4 mt-4'>
+                            <h3 className='font-semibold text-lg text-black'>العروض:</h3>
+                            <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
+                                {offers.map((offer, idx) => {
+                                    const isSelected = selectedOffer?.quantity === offer.quantity && selectedOffer?.price === offer.price;
+                                    const best = bestOffer();
+                                    const isBest = best && best.quantity === offer.quantity && best.price === offer.price;
+                                    const regularTotal = offer.quantity * product.price;
+                                    const showCrossedOriginal = offer.price < regularTotal;
+                                    const pricePerItem = (offer.price / offer.quantity).toFixed(2);
+
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => setSelectedOffer(offer)}
+                                            className={cn(
+                                                "relative flex flex-col items-start gap-2 p-4 rounded-xl border-2 transition-all text-right",
+                                                isSelected
+                                                    ? "border-primary bg-primary/5 shadow-md ring-2 ring-primary/20"
+                                                    : "border-gray-200 hover:border-primary/30 bg-white"
+                                            )}
+                                        >
+                                            {/* Header: Quantity badge and Best badge */}
+                                            <div className='flex items-center justify-between w-full'>
+                                                <div className='flex items-center gap-2'>
+                                                    <span className='bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1'>
+                                                        <Tag size={12} />
+                                                        {offer.quantity} قطعة
+                                                    </span>
+                                                </div>
+                                                {isBest && (
+                                                    <span className='bg-green-100 text-green-700 text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1'>
+                                                        <Sparkles size={12} />
+                                                        الأفضل
+                                                    </span>
+                                                )}
+                                                {isSelected && (
+                                                    <Check className='absolute top-3 left-3 text-primary' size={20} />
+                                                )}
+                                            </div>
+
+                                            {/* Price section */}
+                                            <div className='flex items-baseline gap-2 mt-1'>
+                                                {showCrossedOriginal && (
+                                                    <span className='text-sm text-gray-400 line-through'>
+                                                        {regularTotal.toLocaleString()} دج
+                                                    </span>
+                                                )}
+                                                <span className={cn(
+                                                    "text-xl font-bold",
+                                                    isSelected ? "text-primary" : "text-gray-800"
+                                                )}>
+                                                    {offer.price.toLocaleString()} دج
+                                                </span>
+                                            </div>
+
+                                            {/* Savings info */}
+                                            {offer.savedMoney > 0 && (
+                                                <div className='flex items-center gap-1.5 text-green-600 text-sm font-medium'>
+                                                    <Percent size={14} />
+                                                    <span>وفر {offer.savedMoney.toLocaleString()} دج</span>
+                                                </div>
+                                            )}
+
+                                            {/* Price per item hint */}
+                                            <div className='text-xs text-gray-500 mt-1'>
+                                                {'≈ ' + pricePerItem} دج للقطعة
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
                         {/* Checkout Form */}
                         <div className="w-full">
@@ -181,6 +281,7 @@ function ProductPage({ params }) {
                                 productPrice={PriceWithDiscount}
                                 productId={product.id}
                                 colors={product.colors}
+                                selectedOffer={selectedOffer}
                             />
                         </div>
                     </div>

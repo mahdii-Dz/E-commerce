@@ -55,6 +55,11 @@ export default function EditProductPage() {
   const fileInputRef = useRef(null);
   const [pendingUploadIndex, setPendingUploadIndex] = useState(null);
 
+  // Offers state
+  const [offers, setOffers] = useState([]);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offerForm, setOfferForm] = useState({ quantity: '', price: '', savedMoney: 0 });
+
   // Combobox anchor for categories
   const categoryAnchor = useComboboxAnchor();
 
@@ -98,6 +103,11 @@ export default function EditProductPage() {
         // Populate colors if they exist
         if (data.colors && Array.isArray(data.colors)) {
           setColors(data.colors);
+        }
+
+        // Populate offers if they exist
+        if (data.offers && Array.isArray(data.offers)) {
+          setOffers(data.offers);
         }
 
         // Populate images if they exist
@@ -164,6 +174,57 @@ export default function EditProductPage() {
 
   const handleRemoveColor = (index) => {
     setColors(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Offer management
+  const openOfferModal = () => {
+    setOfferForm({ quantity: '', price: '', savedMoney: 0 });
+    setShowOfferModal(true);
+  };
+
+  const closeOfferModal = () => {
+    setShowOfferModal(false);
+    setOfferForm({ quantity: '', price: '', savedMoney: 0 });
+  };
+
+  const handleOfferInputChange = (field, value) => {
+    if (field === 'quantity' || field === 'price') {
+      const numValue = parseFloat(value) || 0;
+      setOfferForm(prev => {
+        const newForm = { ...prev, [field]: numValue };
+        // Calculate saved money if we have both quantity and product price
+        if (field === 'quantity' || field === 'price') {
+          const regularTotal = (newForm.quantity || 0) * parseFloat(formData.price || 0);
+          const offerTotal = newForm.price || 0;
+          newForm.savedMoney = Math.max(0, regularTotal - offerTotal);
+        }
+        return newForm;
+      });
+    }
+  };
+
+  const handleAddOffer = () => {
+    if (!offerForm.quantity || offerForm.quantity <= 0) {
+      showToast("الرجاء إدخال كمية صالحة", "error");
+      return;
+    }
+    if (!offerForm.price || offerForm.price <= 0) {
+      showToast("الرجاء إدخال سعر صالح", "error");
+      return;
+    }
+
+    const newOffer = {
+      quantity: parseInt(offerForm.quantity),
+      price: parseFloat(offerForm.price),
+      savedMoney: Math.round(offerForm.savedMoney)
+    };
+
+    setOffers(prev => [...prev, newOffer]);
+    closeOfferModal();
+  };
+
+  const handleRemoveOffer = (index) => {
+    setOffers(prev => prev.filter((_, i) => i !== index));
   };
 
   const uploadImage = async (file, index) => {
@@ -304,6 +365,7 @@ export default function EditProductPage() {
         images: images.map(img => img.url),
         thumbnail: getThumbnailUrl(images[0]?.url),
         colors: colors, // Array of objects { name, hex }
+        offers: offers, // Array of { quantity, price, savedMoney }
       });
 
       showToast("Product updated successfully!", "success");
@@ -419,6 +481,73 @@ export default function EditProductPage() {
                   className="flex-1 px-4 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-xl transition-colors font-medium"
                 >
                   Add Color
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Offer Add Modal */}
+      {showOfferModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">Add Offer</h3>
+              <button
+                onClick={closeOfferModal}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={offerForm.quantity}
+                  onChange={(e) => handleOfferInputChange('quantity', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FA3145] text-gray-800"
+                  placeholder="e.g., 2"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Total Price (DA) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={offerForm.price}
+                  onChange={(e) => handleOfferInputChange('price', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FA3145] text-gray-800"
+                  placeholder="e.g., 5000"
+                />
+              </div>
+
+              {offerForm.savedMoney > 0 && (
+                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-green-700 font-medium text-sm">
+                    Savings: {offerForm.savedMoney} DA
+                  </p>
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={closeOfferModal}
+                  className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddOffer}
+                  className="flex-1 px-4 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-xl transition-colors font-medium"
+                >
+                  Add Offer
                 </button>
               </div>
             </div>
@@ -618,6 +747,46 @@ export default function EditProductPage() {
                     />
                     {color.name}
                   </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Offers Section */}
+          <div className="flex flex-col gap-3 w-[671px]">
+            <div className="flex items-center justify-between">
+              <label className="text-lg font-semibold text-black">Offers (عروض):</label>
+              <button
+                onClick={openOfferModal}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <Plus size={18} />
+                <span>Add Offer</span>
+              </button>
+            </div>
+
+            {offers.length > 0 && (
+              <div className="flex flex-col gap-2">
+                {offers.map((offer, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
+                    <div>
+                      <p className="font-medium text-gray-800">
+                        اشتري {offer.quantity} بسعر {offer.price} DA
+                      </p>
+                      {offer.savedMoney > 0 && (
+                        <p className="text-sm text-green-600">وفر {offer.savedMoney} DA</p>
+                      )}
+                    </div>
+                    {!isSubmitting && (
+                      <button
+                        onClick={() => handleRemoveOffer(idx)}
+                        className="p-1 hover:bg-gray-200 rounded-full transition-colors"
+                      >
+                        <X size={18} className="text-red-500" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
