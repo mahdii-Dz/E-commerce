@@ -966,3 +966,181 @@ export const deleteBanner = async (req, res) => {
         });
     }
 };
+
+// ==================== REVIEWS CONTROLLERS ====================
+
+export const GetProductReviews = async (req, res) => {
+  try {
+    const { productId } = req.params;
+
+    // Validate productId
+    const productIdNum = parseInt(productId, 10);
+    if (!productIdNum || productIdNum <= 0) {
+      return res.status(400).json({ error: "Invalid product ID" });
+    }
+
+    // Fetch all reviews for the product, newest first
+    const [rows] = await pool.query(
+      `SELECT id, product_id, customer_name, review_text, stars, image_url, is_admin, created_at
+       FROM reviews
+       WHERE product_id = ?
+       ORDER BY created_at DESC`,
+      [productIdNum]
+    );
+
+    // Format dates for JSON
+    const reviews = rows.map(review => ({
+      ...review,
+      created_at: review.created_at,
+      is_admin: Boolean(review.is_admin)
+    }));
+
+    return res.status(200).json({
+      success: true,
+      reviews,
+      total: reviews.length
+    });
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const AddUserReview = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { customer_name, review_text, stars } = req.body;
+
+    // Validation
+    const productIdNum = parseInt(productId, 10);
+    if (!productIdNum || productIdNum <= 0) {
+      return res.status(400).json({ error: "Invalid product ID" });
+    }
+
+    if (!customer_name || typeof customer_name !== "string" || customer_name.trim().length === 0) {
+      return res.status(400).json({ error: "Customer name is required" });
+    }
+
+    if (!review_text || typeof review_text !== "string" || review_text.trim().length === 0) {
+      return res.status(400).json({ error: "Review text is required" });
+    }
+
+    const starsNum = parseInt(stars, 10);
+    if (!starsNum || starsNum < 1 || starsNum > 5) {
+      return res.status(400).json({ error: "Stars must be between 1 and 5" });
+    }
+
+    // Verify product exists
+    const [productCheck] = await pool.query(
+      "SELECT id FROM products WHERE id = ?",
+      [productIdNum]
+    );
+    if (productCheck.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Insert review
+    const [result] = await pool.query(
+      `INSERT INTO reviews (product_id, customer_name, review_text, stars, image_url, is_admin)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        productIdNum,
+        customer_name.trim(),
+        review_text.trim(),
+        starsNum,
+        null, // image_url = null for user reviews
+        false // is_admin = false
+      ]
+    );
+
+    if (result.affectedRows === 1) {
+      // Fetch the newly created review
+      const [newReviewRows] = await pool.query(
+        "SELECT * FROM reviews WHERE id = ?",
+        [result.insertId]
+      );
+      const newReview = newReviewRows[0];
+
+      return res.status(201).json({
+        success: true,
+        message: "Review added successfully",
+        review: newReview
+      });
+    }
+
+    return res.status(500).json({ error: "Failed to add review" });
+  } catch (error) {
+    console.error("Error adding user review:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const AddAdminReview = async (req, res) => {
+  let connection;
+  try {
+    const { productId } = req.params;
+    const { customer_name, review_text, stars, image_url } = req.body;
+
+    // Validation
+    const productIdNum = parseInt(productId, 10);
+    if (!productIdNum || productIdNum <= 0) {
+      return res.status(400).json({ error: "Invalid product ID" });
+    }
+
+    if (!customer_name || typeof customer_name !== "string" || customer_name.trim().length === 0) {
+      return res.status(400).json({ error: "Customer name is required" });
+    }
+
+    if (!review_text || typeof review_text !== "string" || review_text.trim().length === 0) {
+      return res.status(400).json({ error: "Review text is required" });
+    }
+
+    const starsNum = parseInt(stars, 10);
+    if (!starsNum || starsNum < 1 || starsNum > 5) {
+      return res.status(400).json({ error: "Stars must be between 1 and 5" });
+    }
+
+    // Verify product exists
+    const [productCheck] = await pool.query(
+      "SELECT id FROM products WHERE id = ?",
+      [productIdNum]
+    );
+    if (productCheck.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Insert admin review
+    const [result] = await pool.query(
+      `INSERT INTO reviews (product_id, customer_name, review_text, stars, image_url, is_admin)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        productIdNum,
+        customer_name.trim(),
+        review_text.trim(),
+        starsNum,
+        image_url || null,
+        true // is_admin = true
+      ]
+    );
+
+    if (result.affectedRows === 1) {
+      // Fetch the newly created review
+      const [newReviewRows] = await pool.query(
+        "SELECT * FROM reviews WHERE id = ?",
+        [result.insertId]
+      );
+      const newReview = newReviewRows[0];
+
+      return res.status(201).json({
+        success: true,
+        message: "Admin review added successfully",
+        review: newReview
+      });
+    }
+
+    return res.status(500).json({ error: "Failed to add admin review" });
+  } catch (error) {
+    console.error("Error adding admin review:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
