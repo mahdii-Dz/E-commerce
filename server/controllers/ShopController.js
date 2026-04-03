@@ -971,10 +971,10 @@ export const deleteBanner = async (req, res) => {
 
 export const GetProductReviews = async (req, res) => {
   try {
-    const { productId } = req.params;
+    const { id } = req.params;
 
     // Validate productId
-    const productIdNum = parseInt(productId, 10);
+    const productIdNum = parseInt(id, 10);
     if (!productIdNum || productIdNum <= 0) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
@@ -1008,7 +1008,7 @@ export const GetProductReviews = async (req, res) => {
 
 export const AddUserReview = async (req, res) => {
   try {
-    const { productId } = req.params;
+    const { id } = req.params;
     const { customer_name, review_text, stars } = req.body;
 
     // Validation
@@ -1078,7 +1078,7 @@ export const AddUserReview = async (req, res) => {
 export const AddAdminReview = async (req, res) => {
   let connection;
   try {
-    const { productId } = req.params;
+    const { id } = req.params;
     const { customer_name, review_text, stars, image_url } = req.body;
 
     // Validation
