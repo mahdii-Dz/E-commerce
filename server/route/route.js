@@ -1,5 +1,5 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, getBanners, updateBanners, GetProductReviews, AddUserReview, AddAdminReview } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, getBanners, updateBanners, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview } from '../controllers/ShopController.js';
 import { verifyAdminSession } from '../middleware/sessionAuth.js';
 
 const router = express.Router();
@@ -27,6 +27,7 @@ router.post('/add-category', verifyAdminSession, AddCategory);
 router.post('/add-product', verifyAdminSession, AddProduct);
 router.put('/update-product/:id', verifyAdminSession, UpdateProduct);
 router.post('/add-product/:id/review/admin', verifyAdminSession, AddAdminReview);
+router.delete('/reviews/:id', verifyAdminSession, DeleteReview);
 router.put('/accept-order/:id', verifyAdminSession, AcceptOrder);
 router.put('/reject-order/:id', verifyAdminSession, RejectOrder);
 router.put('/update-order/:id', verifyAdminSession, UpdateOrder);

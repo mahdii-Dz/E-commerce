@@ -1144,3 +1144,42 @@ export const AddAdminReview = async (req, res) => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+export const DeleteReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reviewIdNum = parseInt(id, 10);
+
+    if (!reviewIdNum || reviewIdNum <= 0) {
+      return res.status(400).json({ error: "Invalid review ID" });
+    }
+
+    // First check if review exists
+    const [existing] = await pool.query(
+      "SELECT id FROM reviews WHERE id = ?",
+      [reviewIdNum]
+    );
+
+    if (existing.length === 0) {
+      return res.status(404).json({ error: "Review not found" });
+    }
+
+    // Delete the review
+    const [result] = await pool.query(
+      "DELETE FROM reviews WHERE id = ?",
+      [reviewIdNum]
+    );
+
+    if (result.affectedRows === 1) {
+      return res.status(200).json({
+        success: true,
+        message: "Review deleted successfully"
+      });
+    } else {
+      return res.status(500).json({ error: "Failed to delete review" });
+    }
+  } catch (error) {
+    console.error("Error deleting review:", error);
+    return handleDbError(res, error, "deleting review");
+  }
+};

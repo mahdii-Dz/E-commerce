@@ -14,7 +14,17 @@
       "Bash(find 'D:/web develepment/e-commerce/server' -name *.js -type f)",
       "Bash(find client/app/api/admin -name *.js -o -name *.jsx)",
       "Bash(cd /d/web develepment/e-commerce)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(node migration-add-offer-order-items.mjs)",
+      "Bash(node migration-add-reviews-table.mjs)",
+      "Bash(npx next:*)",
+      "Bash(node:*)",
+      "Bash(curl -s http://localhost:5000/api/shop/get-products)",
+      "Bash(curl -s https://e-commerce-0d85.onrender.com/api/shop/get-products)",
+      "Bash(pkill -f \"node index.js\")",
+      "Bash(npm start:*)",
+      "Bash(curl -s \"http://localhost:5000/api/shop/get-product/30001/reviews\")",
+      "Bash(curl:*)"
     ]
   },
   "allowedTools": [
