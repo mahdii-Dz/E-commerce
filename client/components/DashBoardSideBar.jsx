@@ -4,7 +4,8 @@ import {
   LayoutGrid,
   Package,
   ShoppingCart,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Star
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -14,7 +15,8 @@ const menuItemsData = [
   { icon: LayoutGrid, label: "Dashboard", href: "/admin/dashboard" },
   { icon: Package, label: "All Products", href: "/admin/all-products" },
   { icon: ShoppingCart, label: "Orders", href: "/admin/orders" },
-  { icon: ImageIcon, label: "Extra", href: "/admin/extra" }
+  { icon: ImageIcon, label: "Extra", href: "/admin/extra" },
+  { icon: Star, label: "Reviews", href: "/admin/reviews" }
 ];
 
 export const DashBoardSideBar = () => {

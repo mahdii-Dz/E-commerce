@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/combobox";
 import axios from "axios";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
+import AdminTestimonialForm from "@/components/AdminTestimonialForm";
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -920,6 +921,14 @@ export default function EditProductPage() {
             </button>
           </div>
         </div>
+
+        {/* Admin Testimonial Section */}
+        {product && (
+          <div className="mt-8">
+            <h2 className="text-xl font-bold text-black mb-4">إدارة الشهادات الإدارية</h2>
+            <AdminTestimonialForm productId={product.id} />
+          </div>
+        )}
       </div>
     </div>
   );

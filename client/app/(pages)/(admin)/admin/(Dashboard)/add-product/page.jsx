@@ -20,11 +20,13 @@ import {
 } from "@/components/ui/combobox";
 import axios from "axios";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
+import AdminTestimonialForm from "@/components/AdminTestimonialForm";
 
 export default function AddProductPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [createdProductId, setCreatedProductId] = useState(null);
   const { data: categories, isLoading: loading, error } = useFetchSingleProduct('/api/shop/categories');
   
   const [formData, setFormData] = useState({
@@ -285,10 +287,7 @@ export default function AddProductPage() {
       });
 
       showToast("Product added successfully!", "success");
-
-      setTimeout(() => {
-        router.push("/admin/all-products");
-      }, 1500);
+      setCreatedProductId(response.data.id);
 
     } catch (error) {
       console.error("Submit failed:", error);
@@ -790,6 +789,25 @@ export default function AddProductPage() {
             </button>
           </div>
         </div>
+
+        {/* Admin Testimonial for new product */}
+        {createdProductId && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-black">أضف شهادة إدارية لهذا المنتج</h2>
+              <button
+                onClick={() => {
+                  setCreatedProductId(null);
+                  router.push("/admin/all-products");
+                }}
+                className="text-sm text-gray-500 hover:text-primary transition-colors"
+              >
+                تخطي والعودة للقائمة
+              </button>
+            </div>
+            <AdminTestimonialForm productId={createdProductId} />
+          </div>
+        )}
       </div>
     </div>
   );

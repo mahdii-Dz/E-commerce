@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import Loader from '@/components/Loader';
 import RenderProducts from '@/components/RenderProducts';
 import { useFetchSingleProduct } from '@/components/useFetchSingleProduct';
+import ReviewsSection from '@/components/ReviewsSection';
 import { ArrowRight, Check, Minus, Percent, Plus, ShoppingCart, Sparkles, Tag, Van, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
@@ -335,7 +336,12 @@ function ProductPage({ params }) {
                         </div>
                     </div>
 
-                    
+        
+                </section>
+
+                {/* Reviews Section */}
+                <section className='reviews-section w-full mb-12 lg:mb-16 px-0 lg:px-0'>
+                  <ReviewsSection productId={product.id} />
                 </section>
 
                 {/* Related Products Section */}
