@@ -1012,7 +1012,7 @@ export const AddUserReview = async (req, res) => {
     const { customer_name, review_text, stars } = req.body;
 
     // Validation
-    const productIdNum = parseInt(productId, 10);
+    const productIdNum = parseInt(id, 10);
     if (!productIdNum || productIdNum <= 0) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
@@ -1082,7 +1082,7 @@ export const AddAdminReview = async (req, res) => {
     const { customer_name, review_text, stars, image_url } = req.body;
 
     // Validation
-    const productIdNum = parseInt(productId, 10);
+    const productIdNum = parseInt(id, 10);
     if (!productIdNum || productIdNum <= 0) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
