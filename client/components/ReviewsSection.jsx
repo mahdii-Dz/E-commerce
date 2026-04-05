@@ -208,64 +208,6 @@ export default function ReviewsSection({ productId }) {
         </div>
       </div>
 
-      {/* Write a Review Form */}
-      <div className='bg-white rounded-xl border-2 border-stroke p-6 mb-8'>
-        <h3 className='text-lg font-semibold mb-4 flex items-center gap-2'>
-          <MessageSquare size={20} />
-          اكتب مراجعة
-        </h3>
-
-        <form onSubmit={handleSubmit} className='space-y-4'>
-          <div>
-            <label htmlFor='customer_name' className='block text-sm font-medium mb-1'>
-              اسمك <span className='text-red-500'>*</span>
-            </label>
-            <Input
-              id='customer_name'
-              type='text'
-              value={formData.customer_name}
-              onChange={(e) => handleInputChange('customer_name', e.target.value)}
-              placeholder='أدخل اسمك'
-              required
-            />
-          </div>
-
-          <div>
-            <label className='block text-sm font-medium mb-1'>
-              التقييم <span className='text-red-500'>*</span>
-            </label>
-            <StarRating
-              rating={formData.stars}
-              onRatingChange={(stars) => handleInputChange('stars', stars)}
-              interactive={true}
-              size='lg'
-            />
-          </div>
-
-          <div>
-            <label htmlFor='review_text' className='block text-sm font-medium mb-1'>
-              مراجعتك <span className='text-red-500'>*</span>
-            </label>
-            <Textarea
-              id='review_text'
-              value={formData.review_text}
-              onChange={(e) => handleInputChange('review_text', e.target.value)}
-              placeholder='اكتب مراجعتك هنا...'
-              rows={4}
-              required
-            />
-          </div>
-
-          <Button
-            type='submit'
-            disabled={submitting}
-            className='w-full md:w-auto'
-          >
-            {submitting ? 'جاري الإرسال...' : 'إرسال المراجعة'}
-          </Button>
-        </form>
-      </div>
-
       {/* Reviews List */}
       <div className='space-y-4'>
         <h3 className='text-lg font-semibold mb-4'>
@@ -373,6 +315,64 @@ export default function ReviewsSection({ productId }) {
             )}
           </>
         )}
+      </div>
+
+      {/* Write a Review Form */}
+      <div className='bg-white rounded-xl border-2 border-stroke p-6 my-8'>
+        <h3 className='text-lg font-semibold mb-4 flex items-center gap-2'>
+          <MessageSquare size={20} />
+          اكتب مراجعة
+        </h3>
+
+        <form onSubmit={handleSubmit} className='space-y-4'>
+          <div>
+            <label htmlFor='customer_name' className='block text-sm font-medium mb-1'>
+              اسمك <span className='text-red-500'>*</span>
+            </label>
+            <Input
+              id='customer_name'
+              type='text'
+              value={formData.customer_name}
+              onChange={(e) => handleInputChange('customer_name', e.target.value)}
+              placeholder='أدخل اسمك'
+              required
+            />
+          </div>
+
+          <div>
+            <label className='block text-sm font-medium mb-1'>
+              التقييم <span className='text-red-500'>*</span>
+            </label>
+            <StarRating
+              rating={formData.stars}
+              onRatingChange={(stars) => handleInputChange('stars', stars)}
+              interactive={true}
+              size='lg'
+            />
+          </div>
+
+          <div>
+            <label htmlFor='review_text' className='block text-sm font-medium mb-1'>
+              مراجعتك <span className='text-red-500'>*</span>
+            </label>
+            <Textarea
+              id='review_text'
+              value={formData.review_text}
+              onChange={(e) => handleInputChange('review_text', e.target.value)}
+              placeholder='اكتب مراجعتك هنا...'
+              rows={4}
+              required
+            />
+          </div>
+
+          <Button
+            type='submit'
+            disabled={submitting}
+            className='w-full md:w-auto'
+          >
+            {submitting ? 'جاري الإرسال...' : 'إرسال المراجعة'}
+          </Button>
+        </form>
       </div>
     </section>
   );

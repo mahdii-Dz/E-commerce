@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -9,8 +9,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { wilayaData } from '@/lib/wilayaData';
-import { Minus, Plus } from 'lucide-react';
+import { wilayaDataWithStopDesk as wilayaData } from '@/lib/wilayaDataWithStopDesk';
+import { getStopDeskCommunesByWilayaCode } from '@/lib/stopDeskFilter';
+import { Minus, Plus, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 
@@ -44,9 +45,9 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     // Color quantities: key = color.hex, value = quantity (number)
     const [colorQuantities, setColorQuantities] = useState({});
     const [deliveryPrice, setDeliveryPrice] = useState(0);
-    const [showConfirmation, setShowConfirmation] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
     const [submitError, setSubmitError] = useState(''); // for validation errors
+    const successModalRef = useRef(null);
 
     // Initialize colorQuantities when colors change
     useEffect(() => {
@@ -72,6 +73,25 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         setSubmitError('');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedOffer, colors]);
+
+    // Click outside to close success modal
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (successModalRef.current && !successModalRef.current.contains(event.target)) {
+                setShowSuccess(false);
+            }
+        };
+
+        if (showSuccess) {
+            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('touchstart', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [showSuccess]);
 
     // Effective price based on selected offer
     const effectivePrice = useMemo(() => {
@@ -101,19 +121,60 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     const router = useRouter();
 
     // Get communes for selected wilaya name
-    const communes = useMemo(() => {
+    const allCommunes = useMemo(() => {
         const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
         return code ? wilayaData[code]?.municipalities || [] : [];
     }, [formData.wilaya]);
+
+    // Filter communes based on delivery type
+    const communes = useMemo(() => {
+        if (formData.delivery === 'stopDesk') {
+            // For stopDesk, only show communes that have stop desk service
+            const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
+            if (!code) return [];
+            return getStopDeskCommunesByWilayaCode(code);
+        }
+        // For domicile, show all communes
+        return allCommunes;
+    }, [formData.wilaya, formData.delivery, allCommunes]);
+
+    // Filter wilayas based on delivery type
+    const filteredWilayas = useMemo(() => {
+        if (formData.delivery === 'stopDesk') {
+            // For stopDesk, only show wilayas that have stop desk service
+            return Object.entries(wilayaData).filter(([code, data]) => data.hasStopDesk);
+        }
+        // For domicile, show all wilayas
+        return Object.entries(wilayaData);
+    }, [formData.delivery]);
+
+    // Reset baladiya if the current wilaya is not in the filtered list
+    useEffect(() => {
+        const currentWilayaExists = Object.values(wilayaData).some(
+            w => w.name === formData.wilaya && (formData.delivery !== 'stopDesk' || w.hasStopDesk)
+        );
+        if (!currentWilayaExists && formData.wilaya !== '') {
+            // Reset to first available wilaya
+            const firstWilaya = filteredWilayas[0];
+            if (firstWilaya) {
+                handleWilayaChange(firstWilaya[1].name);
+            } else {
+                setFormData(prev => ({ ...prev, wilaya: '', baladiya: '' }));
+            }
+        }
+    }, [formData.delivery, formData.wilaya, filteredWilayas]);
 
     // Auto-select first commune when wilaya changes
     const handleWilayaChange = (value) => {
         const code = Object.keys(wilayaData).find(key => wilayaData[key].name === value);
         if (!code) return;
 
-        const data = wilayaData[code];
-        const newCommunes = data?.municipalities || [];
-        const newBaladiya = newCommunes.length > 0 ? newCommunes[0] : '';
+        // Use the filtered communes based on delivery type
+        const filteredCommunes = formData.delivery === 'stopDesk'
+            ? getStopDeskCommunesByWilayaCode(code)
+            : (wilayaData[code]?.municipalities || []);
+
+        const newBaladiya = filteredCommunes.length > 0 ? filteredCommunes[0] : '';
 
         setFormData(prev => ({
             ...prev,
@@ -125,7 +186,10 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     // Update delivery price when wilaya name or delivery type changes
     useEffect(() => {
         const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
-        if (!code) return;
+        if (!code) {
+            setDeliveryPrice(0);
+            return;
+        }
 
         const wilayaInfo = wilayaData[code];
 
@@ -151,7 +215,6 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     const mutation = useMutation({
         mutationFn: submitOrder,
         onSuccess: () => {
-            setShowConfirmation(false);
             setShowSuccess(true);
             // Reset color quantities
             if (colors && colors.length > 0) {
@@ -162,16 +225,12 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         },
         onError: (error) => {
             alert('Order failed: ' + error.message);
-            setShowConfirmation(false);
         },
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        setShowConfirmation(true);
-    };
 
-    const handleConfirm = () => {
         // Validation: if offer selected, total must match exactly
         if (selectedOffer && totalAllocated !== selectedOffer.quantity) {
             setSubmitError(`ءارشلا ضرع ةراتخملا ةيمكلا قباطت نأ بجي (المطلوب: ${selectedOffer.quantity}، الحالي: ${totalAllocated})`);
@@ -193,25 +252,37 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 offer_text: selectedOffer ? `${selectedOffer.quantity} for ${selectedOffer.price} DA` : null
             }));
 
+        // For stopDesk delivery, if no baladiya is selected (no communes available), use wilaya name
+        const baladiya = formData.delivery === 'stopDesk' && !formData.baladiya
+            ? formData.wilaya
+            : formData.baladiya;
+
         const orderData = {
             first_name: formData.firstName,
             last_name: formData.lastName,
             phone: formData.phoneNumber,
             wilaya: formData.wilaya,
             wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya),
-            baladiya: formData.baladiya,
+            baladiya,
             delivery_type: formData.delivery,
             delivery_Price: deliveryPrice,
             items,
         };
         mutation.mutate(orderData);
     };
-    const handleBack = () => {
-        setShowConfirmation(false);
+
+    const handleCloseModal = () => {
+        setShowSuccess(false);
+        // Reset color quantities
+        if (colors && colors.length > 0) {
+            const reset = {};
+            colors.forEach(c => { reset[c.hex] = 0; });
+            setColorQuantities(reset);
+        }
     };
 
-    const handleSuccessContinue = () => {
-        setTimeout(() => { setShowSuccess(false); }, [500]);
+    const handleContinueShopping = () => {
+        setShowSuccess(false);
         // Reset color quantities
         if (colors && colors.length > 0) {
             const reset = {};
@@ -221,86 +292,38 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         router.push('/');
     };
 
-    // Order wilaya entries by numeric code (ascending) for the dropdown
-    const orderedWilayas = useMemo(() => {
-        return Object.entries(wilayaData)
-            .sort(([codeA], [codeB]) => parseInt(codeA, 10) - parseInt(codeB, 10));
-    }, []);
+    // Order filtered wilayas by numeric code (ascending) for the dropdown
+    const orderedFilteredWilayas = useMemo(() => {
+        return filteredWilayas.sort(([codeA], [codeB]) => parseInt(codeA, 10) - parseInt(codeB, 10));
+    }, [filteredWilayas]);
 
     if (showSuccess) {
         return (
-            <div className="flex flex-col w-full items-center justify-center gap-6 px-6 py-8 bg-white rounded-xl border-2 border-stroke">
-                <div className="text-center">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                    </div>
-                    <h2 className="text-2xl font-bold text-green-600 mb-2">تم تأكيد الطلب!</h2>
-                    <p className="text-gray-600 mb-6">شكراً لك على الشراء. تم تقديم طلبك بنجاح.</p>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                <div ref={successModalRef} className="flex flex-col w-full max-w-md mx-4 items-center justify-center gap-6 px-6 py-8 bg-white rounded-xl border-2 border-stroke shadow-2xl relative">
+                    {/* Close button (X) */}
                     <button
-                        onClick={handleSuccessContinue}
-                        className="w-[200px] cursor-pointer h-11 bg-primary text-white rounded-xl hover:opacity-90 transition-opacity font-medium text-sm"
+                        type="button"
+                        onClick={handleCloseModal}
+                        className="absolute top-4 left-4 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        aria-label="إغلاق"
                     >
-                        الاستمرار في التسوق
+                        <X size={24} className="text-gray-500" />
                     </button>
-                </div>
-            </div>
-        );
-    }
 
-    if (showConfirmation) {
-        return (
-            <div className="flex flex-col w-full items-center justify-center gap-6 px-6 py-8 bg-white rounded-xl border-2 border-stroke">
-                <div className="text-center w-1/2">
-                    <h2 className="text-xl font-bold text-gray-800 mb-4">تأكيد طلبك</h2>
-                    <div className="bg-gray-50 p-4 rounded-lg mb-6 flex flex-col items-start w-full">
-                        <p className="font-medium text-gray-700 mb-2">التفاصيل:</p>
-                        <p className="text-gray-600">الاسم: {formData.firstName} {formData.lastName}</p>
-                        <p className="text-gray-600">الهاتف: {formData.phoneNumber}</p>
-                        <p className="text-gray-600">الولاية: {formData.wilaya}</p>
-                        <p className="text-gray-600">البلدية: {formData.baladiya}</p>
-                        <p className="text-gray-600">التوصيل: {formData.delivery === 'domicile' ? 'للمنزل' : 'استلام من المكتب'}</p>
-
-                        {/* Items list */}
-                        <div className="w-full mt-2 space-y-2">
-                            {colors.filter(c => (colorQuantities[c.hex] || 0) > 0).map(color => (
-                                <div key={color.hex} className="flex items-center gap-3 p-2 bg-white rounded-lg border border-gray-200">
-                                    <div
-                                        className="w-6 h-6 rounded-full border border-gray-300 shadow-sm"
-                                        style={{ backgroundColor: `#${color.hex}` }}
-                                    />
-                                    <div className="flex flex-col items-start flex-1">
-                                        <span className="font-medium text-gray-800">{color.name}</span>
-                                        <span className="text-xs text-gray-500">#{color.hex}</span>
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                        {colorQuantities[color.hex]} × {productPrice} دج = {colorQuantities[color.hex] * productPrice} دج
-                                    </div>
-                                </div>
-                            ))}
+                    <div className="text-center">
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
                         </div>
-
-                        <div className="w-full border-t border-gray-200 my-3"></div>
-                        <p className="text-gray-600">رسوم التوصيل: {deliveryPrice} دج</p>
-                        <p className="text-xl font-bold mt-2 text-primary">الإجمالي: {totalPrice} دج</p>
-                    </div>
-                    <div className="flex gap-4 justify-center">
+                        <h2 className="text-2xl font-bold text-green-600 mb-2">تم تأكيد الطلب!</h2>
+                        <p className="text-gray-600 mb-6">شكراً لك على الشراء. تم تقديم طلبك بنجاح.</p>
                         <button
-                            onClick={handleBack}
-                            className="w-[100px] cursor-pointer h-11 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition-opacity font-medium text-sm"
+                            onClick={handleContinueShopping}
+                            className="w-[200px] cursor-pointer h-11 bg-primary text-white rounded-xl hover:opacity-90 transition-opacity font-medium text-sm"
                         >
-                            رجوع
-                        </button>
-                        <button
-                            onClick={handleConfirm}
-                            disabled={mutation.isPending}
-                            className={`w-[100px] h-11 rounded-xl font-medium text-sm ${mutation.isPending
-                                ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                }`}
-                        >
-                            {mutation.isPending ? 'جاري التأكيد...' : 'تأكيد'}
+                            الاستمرار في التسوق
                         </button>
                     </div>
                 </div>
@@ -461,61 +484,6 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 </div>
             )}
 
-            {/* Wilaya */}
-            <div className="flex flex-col w-full">
-                <label htmlFor="wilaya" className="font-medium text-black text-base mb-2">
-                    الولاية *
-                </label>
-                <Select
-                    dir="rtl"
-                    value={formData.wilaya}
-                    onValueChange={handleWilayaChange}
-                >
-                    <SelectTrigger className="w-full h-11!">
-                        <SelectValue placeholder="اختر الولاية" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {orderedWilayas.map(([code, data]) => (
-                            <SelectItem
-                                key={code}
-                                value={data.name}
-                                className="text-right"
-                            >
-                                {code} - {data.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {/* Baladiya */}
-            <div className="flex flex-col w-full">
-                <label htmlFor="baladiya" className="font-medium text-black text-base mb-2">
-                    البلدية *
-                </label>
-                <Select
-                    dir="rtl"
-                    value={formData.baladiya}
-                    onValueChange={(value) => handleInputChange('baladiya', value)}
-                    disabled={!communes.length}
-                >
-                    <SelectTrigger className="w-full h-11!">
-                        <SelectValue placeholder="اختر البلدية" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {communes.map((commune, index) => (
-                            <SelectItem
-                                key={`${formData.wilaya}-${index}`}
-                                value={commune}
-                                className="text-right"
-                            >
-                                {commune}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-
             {/* Delivery Type */}
             <div className="flex flex-col w-full">
                 <label htmlFor="delivery" className="font-medium text-black text-base mb-2">
@@ -534,6 +502,71 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                         <SelectItem value="stopDesk" className="text-right">استلام من المكتب</SelectItem>
                     </SelectContent>
                 </Select>
+            </div>
+
+            {/* Wilaya */}
+            <div className="flex flex-col w-full">
+                <label htmlFor="wilaya" className="font-medium text-black text-base mb-2">
+                    الولاية *
+                </label>
+                <Select
+                    dir="rtl"
+                    value={formData.wilaya}
+                    onValueChange={handleWilayaChange}
+                >
+                    <SelectTrigger className="w-full h-11!">
+                        <SelectValue placeholder="اختر الولاية" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {orderedFilteredWilayas.map(([code, data]) => (
+                            <SelectItem
+                                key={code}
+                                value={data.name}
+                                className="text-right"
+                            >
+                                {String(code).padStart(2, '0')} - {data.name}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {/* Baladiya */}
+            <div className="flex flex-col w-full">
+                <label htmlFor="baladiya" className="font-medium text-black text-base mb-2">
+                    البلدية *
+                </label>
+                {formData.delivery === 'stopDesk' && communes.length === 0 && formData.wilaya && (
+                    <p className="text-sm text-gray-500 mb-2">
+                        لا توجد بلديات مع خدمة استلام من المكتب في هذه الولاية
+                    </p>
+                )}
+                <Select
+                    dir="rtl"
+                    value={formData.baladiya}
+                    onValueChange={(value) => handleInputChange('baladiya', value)}
+                    disabled={!communes.length}
+                >
+                    <SelectTrigger className="w-full h-11!">
+                        <SelectValue placeholder={communes.length === 0 ? "لا توجد بلديات متاحة" : "اختر البلدية"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {communes.map((commune, index) => (
+                            <SelectItem
+                                key={`${formData.wilaya}-${index}`}
+                                value={commune}
+                                className="text-right"
+                            >
+                                {commune}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                {formData.delivery === 'stopDesk' && communes.length === 0 && formData.wilaya && (
+                    <p className="text-xs text-gray-400 mt-1">
+                        سيتم استخدام اسم الولاية كبلدية للتوصيل
+                    </p>
+                )}
             </div>
 
             {/* Price Summary */}
