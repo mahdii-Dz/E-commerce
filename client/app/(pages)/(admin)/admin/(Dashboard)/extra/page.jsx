@@ -320,7 +320,7 @@ export default function BannerCategoriesPage() {
 
   if (categoriesLoading || isLoadingBanners) {
     return (
-      <div className="w-full pt-6 px-9 pb-16 ml-64 flex items-center justify-center min-h-[60vh]">
+      <div className="w-full pt-6 px-9 pb-16  flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 size={40} className="animate-spin text-[#FA3145]" />
           <p className="text-lg text-gray-600">Loading...</p>
@@ -330,7 +330,7 @@ export default function BannerCategoriesPage() {
   }
 
   return (
-    <div className="w-full pt-6 px-9 gap-6 pb-16 ml-64 relative">
+    <div className="w-full pt-6 px-9 gap-6 pb-16  relative">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg transition-all duration-300 ${toast.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
@@ -430,7 +430,7 @@ export default function BannerCategoriesPage() {
           </h1>
 
           {/* Images Section - Two separate banners side by side */}
-          <div className="flex items-center gap-8 self-stretch">
+          <div className="flex flex-col md:flex-row md:items-start gap-8 self-stretch">
             {/* Primary Banner - Large (REMOVED the overlay box) */}
             <div 
               onClick={() => !bannerImages[0].url && !isSubmitting && triggerUpload(0)}

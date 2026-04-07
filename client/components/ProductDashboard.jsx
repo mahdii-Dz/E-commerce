@@ -1,7 +1,7 @@
 "use client";
 
-import { useContext, useState, useMemo } from "react";
-import { Plus, Search, Filter, Edit, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useContext, useState, useMemo, Fragment } from "react";
+import { Plus, Search, Filter, Edit, ChevronLeft, ChevronRight, X, ChevronDown, Package, Percent, Tag, Hash } from "lucide-react";
 import { GlobalContext } from "@/app/context/Context";
 import Link from "next/link";
 import Image from "next/image";
@@ -26,6 +26,11 @@ export default function ProductDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterPopup, setShowFilterPopup] = useState(false);
+  const [expandedProductId, setExpandedProductId] = useState(null);
+
+  const toggleExpand = (productId) => {
+    setExpandedProductId(prev => prev === productId ? null : productId);
+  };
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -324,8 +329,8 @@ export default function ProductDashboard() {
         </div>
 
         {/* Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-200">
-          <table className="w-full">
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-4 text-left w-12">
@@ -337,56 +342,209 @@ export default function ProductDashboard() {
                   />
                 </th>
                 <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">ID</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Photo</th>
+                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden md:table-cell">Photo</th>
                 <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Name</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Type</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Price</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Stock</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Discount</th>
-                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 w-16">Action</th>
+                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden lg:table-cell">Type</th>
+                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden sm:table-cell">Price</th>
+                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden lg:table-cell">Stock</th>
+                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden lg:table-cell">Discount</th>
+                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 w-20">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {currentProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-4">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded border-gray-300 accent-[#FA3145] focus:ring-[#FA3145] cursor-pointer"
-                      checked={selectedProducts.includes(product.id)}
-                      onChange={() => toggleSelect(product.id)}
-                    />
-                  </td>
-                  <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                    #{product.id}
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
-                      {product.thumbnail ? (
-                        <Image src={product.thumbnail} alt={product.name} width={48} height={48} className="w-full h-full object-cover" loading="lazy" />
-                      ) : (
-                        <span className="text-gray-400 text-xs">IMG</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className="font-medium text-gray-900">{product.name}</span>
-                  </td>
-                  <td className="px-4 py-4">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${getBadgeStyle(product.type)}`}>
-                      {product.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-sm font-medium text-gray-900">{product.price}</td>
-                  <td className="px-4 py-4 text-sm text-gray-600">{product.stock}</td>
-                  <td className="px-4 py-4 text-sm text-gray-600">{product.discount_percentage}%</td>
-                  <td className="px-4 py-4 text-right">
-                    <Link href={`/admin/edit-product/${product.id}`} className="p-2 text-gray-400 hover:text-[#FA3145] hover:bg-red-50 rounded-lg transition-colors cursor-pointer">
-                      <Edit size={20} />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {currentProducts.map((product) => {
+                const isExpanded = expandedProductId === product.id;
+                return (
+                  <Fragment key={product.id}>
+                    <tr className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-4">
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-gray-300 accent-[#FA3145] focus:ring-[#FA3145] cursor-pointer"
+                          checked={selectedProducts.includes(product.id)}
+                          onChange={() => toggleSelect(product.id)}
+                        />
+                      </td>
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                        #{product.id}
+                      </td>
+                      {/* Photo - Always visible on desktop, hidden on mobile with expand */}
+                      <td className="px-4 py-4 hidden md:table-cell">
+                        <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                          {product.thumbnail ? (
+                            <Image src={product.thumbnail} alt={product.name} width={48} height={48} className="w-full h-full object-cover" loading="lazy" />
+                          ) : (
+                            <span className="text-gray-400 text-xs">IMG</span>
+                          )}
+                        </div>
+                      </td>
+                      {/* Name - Always visible */}
+                      <td className="px-4 py-4">
+                        <span className="font-medium text-gray-900">{product.name}</span>
+                      </td>
+                      {/* Type - Desktop only */}
+                      <td className="px-4 py-4 hidden lg:table-cell">
+                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${getBadgeStyle(product.type)}`}>
+                          {product.type}
+                        </span>
+                      </td>
+                      {/* Price - Always visible */}
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900 hidden sm:table-cell">{product.price} DA</td>
+                      {/* Stock - Desktop only */}
+                      <td className="px-4 py-4 text-sm text-gray-600 hidden lg:table-cell">{product.stock}</td>
+                      {/* Discount - Desktop only */}
+                      <td className="px-4 py-4 text-sm text-gray-600 hidden lg:table-cell">{product.discount_percentage}%</td>
+                      {/* Actions */}
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/admin/edit-product/${product.id}`} className="p-2 text-gray-400 hover:text-[#FA3145] hover:bg-red-50 rounded-lg transition-colors cursor-pointer hidden md:flex" title="Edit product">
+                            <Edit size={20} />
+                          </Link>
+                          {/* Expand button - visible on mobile/tablet, hidden on desktop where all info is shown */}
+                          <button
+                            onClick={() => toggleExpand(product.id)}
+                            className="p-2 text-gray-400 hover:text-[#FA3145] hover:bg-red-50 rounded-lg transition-colors cursor-pointer md:hidden"
+                            title={isExpanded ? "Hide details" : "Show details"}
+                          >
+                            <ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {/* Expanded row for mobile/tablet */}
+                    {isExpanded && (
+                      <tr className="md:hidden">
+                        <td colSpan={7} className="px-4 py-4 bg-gray-50">
+                          {/* Mobile expanded card */}
+                          <div className="space-y-4">
+                            {/* Photo */}
+                            <div className="flex items-center gap-4">
+                              <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                                {product.thumbnail ? (
+                                  <Image src={product.thumbnail} alt={product.name} width={64} height={64} className="w-full h-full object-cover" loading="lazy" />
+                                ) : (
+                                  <span className="text-gray-400 text-xs">IMG</span>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900">{product.name}</h4>
+                                <p className="text-sm text-gray-600">ID: #{product.id}</p>
+                              </div>
+                            </div>
+
+                            {/* Essential details */}
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <span className="text-gray-500">Price:</span>
+                                <span className="font-medium ml-2">{product.price} DA</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Stock:</span>
+                                <span className="font-medium ml-2">{product.stock}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Type:</span>
+                                <span className={`ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getBadgeStyle(product.type)}`}>
+                                  {product.type}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Discount:</span>
+                                <span className="font-medium ml-2">{product.discount_percentage}%</span>
+                              </div>
+                            </div>
+
+                            {/* Full details section */}
+                            <div className="space-y-4 pt-3 border-t border-gray-200">
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {/* Categories */}
+                                {product.categories && (
+                                  <div className="flex items-start gap-3">
+                                    <Hash className="w-5 h-5 text-gray-400 mt-0.5" />
+                                    <div>
+                                      <p className="text-xs text-gray-500">Categories</p>
+                                      <p className="text-sm font-medium text-gray-900">
+                                        {Array.isArray(product.categories)
+                                          ? product.categories.map(c => typeof c === 'object' ? c.name : c).join(', ')
+                                          : typeof product.categories === 'object' && product.categories.name
+                                            ? product.categories.name
+                                            : '-'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Description */}
+                                {product.description && (
+                                  <div className="md:col-span-2 lg:col-span-3">
+                                    <p className="text-xs text-gray-500 mb-1">Description</p>
+                                    <p className="text-sm text-gray-700">{product.description}</p>
+                                  </div>
+                                )}
+
+                                {/* Colors */}
+                                {product.colors && product.colors.length > 0 && (
+                                  <div className="md:col-span-2 lg:col-span-3">
+                                    <p className="text-xs text-gray-500 mb-2">Available Colors</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {product.colors.map((color, idx) => (
+                                        <span key={idx} className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-gray-200 rounded-full text-sm">
+                                          <div className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: `#${color.hex}` }}></div>
+                                          {color.name}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Offers */}
+                                {product.offers && product.offers.length > 0 && (
+                                  <div className="md:col-span-2 lg:col-span-3">
+                                    <p className="text-xs text-gray-500 mb-2">Special Offers</p>
+                                    <div className="space-y-2">
+                                      {product.offers.map((offer, idx) => (
+                                        <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3">
+                                          <p className="text-sm font-medium">Buy {offer.quantity} for {offer.price} DA</p>
+                                          {offer.savedMoney > 0 && (
+                                            <p className="text-xs text-green-600">Save {offer.savedMoney} DA</p>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Additional Images */}
+                                {product.images && product.images.length > 1 && (
+                                  <div className="md:col-span-2 lg:col-span-3">
+                                    <p className="text-xs text-gray-500 mb-2">Additional Images</p>
+                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                      {product.images.map((img, idx) => (
+                                        <Image key={idx} src={img} alt={`${product.name} ${idx + 1}`} width={64} height={64} className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0" />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Edit button in expanded view */}
+                            <div className="pt-3 border-t border-gray-200">
+                              <Link
+                                href={`/admin/edit-product/${product.id}`}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-[#FA3145] hover:bg-[#e02a3b] text-white text-sm font-medium rounded-lg transition-colors"
+                              >
+                                <Edit size={16} />
+                                Edit Product
+                              </Link>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

@@ -301,7 +301,7 @@ export default function AddProductPage() {
   const categoryItems = categories?.map(cat => cat.name) || [];
 
   return (
-    <div className="w-full pt-6 px-9 gap-6 pb-16 ml-64 relative">
+    <div className="w-full pt-6 px-9 gap-6 pb-16 relative">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg transition-all duration-300 ${toast.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
@@ -467,7 +467,7 @@ export default function AddProductPage() {
         <div className="flex gap-6">
           <div
             onClick={() => !images[0] && !isSubmitting && triggerUpload(0)}
-            className={`relative w-[494px] h-[415px] bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden group ${!isSubmitting ? "cursor-pointer hover:bg-gray-300" : "cursor-not-allowed opacity-50"} transition-colors`}
+            className={`relative w-full max-w-[494px] aspect-[494/415] bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden group ${!isSubmitting ? "cursor-pointer hover:bg-gray-300" : "cursor-not-allowed opacity-50"} transition-colors`}
           >
             {uploadingIndex === 0 ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100">
@@ -499,12 +499,12 @@ export default function AddProductPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-5 gap-4 content-start">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 content-start">
             {gridItems.slice(1).map((item) => (
               <div
                 key={item.index}
                 onClick={() => !item.hasImage && !item.isUploading && !isSubmitting && triggerUpload(item.index)}
-                className={`relative w-[108px] h-[108px] rounded-xl flex items-center justify-center overflow-hidden transition-colors group ${isSubmitting ? "cursor-not-allowed opacity-50" : item.hasImage ? "bg-gray-100" : "bg-gray-200 hover:bg-gray-300 cursor-pointer"}`}
+                className={`relative w-full aspect-square rounded-xl flex items-center justify-center overflow-hidden transition-colors group ${isSubmitting ? "cursor-not-allowed opacity-50" : item.hasImage ? "bg-gray-100" : "bg-gray-200 hover:bg-gray-300 cursor-pointer"}`}
               >
                 {item.isUploading ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100">
@@ -535,8 +535,8 @@ export default function AddProductPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-6 w-[915px]">
-          <div className="flex flex-col gap-3 w-[671px]">
+        <div className="flex flex-col gap-6 w-full max-w-[915px]">
+          <div className="flex flex-col gap-3 w-full">
             <label className="text-lg font-semibold text-black">Title: <span className="text-red-500">*</span></label>
             <textarea
               value={formData.title}
@@ -548,7 +548,7 @@ export default function AddProductPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-3 w-[178px]">
+          <div className="flex flex-col gap-3 w-full max-w-[178px]">
             <label className="text-lg font-semibold text-black">Quantity</label>
             <div className="relative flex items-center h-[50px] px-5 bg-white border border-gray-200 rounded-xl">
               <input
@@ -571,7 +571,7 @@ export default function AddProductPage() {
           </div>
 
           {/* Colors Section */}
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full">
             <label className="text-lg font-semibold text-black">Colors:</label>
             <div className="flex flex-wrap gap-3">
               {/* Existing colors */}
@@ -622,7 +622,7 @@ export default function AddProductPage() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full">
             <label className="text-lg font-semibold text-black">Description:</label>
             <textarea
               value={formData.description}
@@ -635,7 +635,7 @@ export default function AddProductPage() {
           </div>
 
           {/* Multiple Category Selection with Combobox */}
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full">
             <label className="text-lg font-semibold text-black">Categories: <span className="text-red-500">*</span></label>
             {loading ? (
               <div className="w-full h-14 bg-gray-100 rounded-xl flex items-center px-5 text-gray-500">
@@ -679,7 +679,7 @@ export default function AddProductPage() {
           </div>
 
           {/* Offers Section */}
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full">
             <div className="flex items-center justify-between">
               <label className="text-lg font-semibold text-black">Offers (عروض):</label>
               <button
@@ -718,7 +718,7 @@ export default function AddProductPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-6 w-[671px]">
+          <div className="flex items-center gap-6 w-full">
             <div className="flex flex-col gap-3 flex-1">
               <label className="text-lg font-semibold text-black">Price: <span className="text-red-500">*</span></label>
               <input
@@ -747,7 +747,7 @@ export default function AddProductPage() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full">
             <label className="text-lg font-semibold text-black">Type:</label>
             <Select 
               value={formData.type} 

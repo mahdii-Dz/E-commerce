@@ -289,7 +289,7 @@ export default function AdminReviewsPage() {
   }
 
   return (
-    <div className='w-full pt-6 px-9 gap-6 pb-16 ml-64 relative' dir='rtl'>
+    <div className='w-full pt-6 px-9 gap-6 pb-16 relative' dir='rtl'>
       {/* Header */}
       <div className='flex items-center justify-between mb-6'>
         <div>

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Search, Filter, Check, X, ChevronLeft, ChevronRight, Loader2, Edit } from 'lucide-react';
+import { Search, Filter, Check, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp } from 'lucide-react';
 import axios from 'axios';
 import { wilayaData } from '@/lib/wilayaData';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -51,12 +52,28 @@ export default function OrdersPage() {
     baladiya: "",
   });
 
+  // Mobile card expansion state
+  const [expandedOrders, setExpandedOrders] = useState(new Set());
+
   // Show toast helper
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => {
       setToast({ show: false, message: '', type: 'success' });
     }, 3000);
+  };
+
+  // Toggle order card expansion (mobile)
+  const toggleOrderExpansion = (orderId) => {
+    setExpandedOrders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(orderId)) {
+        newSet.delete(orderId);
+      } else {
+        newSet.add(orderId);
+      }
+      return newSet;
+    });
   };
 
   // Fetch orders from API
@@ -349,7 +366,7 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <div className="w-full ml-64 pt-6 px-9 pb-16 flex items-center justify-center h-96">
+      <div className="w-full  pt-6 px-9 pb-16 flex items-center justify-center h-96">
         <p className="text-gray-500">Loading orders...</p>
       </div>
     );
@@ -357,7 +374,7 @@ export default function OrdersPage() {
 
   if (error) {
     return (
-      <div className="w-full ml-64 pt-6 px-9 pb-16 flex items-center justify-center h-96">
+      <div className="w-full  pt-6 px-9 pb-16 flex items-center justify-center h-96">
         <p className="text-[#FA3145]">{error?.message || error}</p>
       </div>
     );
@@ -365,14 +382,14 @@ export default function OrdersPage() {
 
   if (!orders || orders.length === 0) {
     return (
-      <div className="w-full ml-64 pt-6 px-9 pb-16 flex items-center justify-center h-96">
+      <div className="w-full  pt-6 px-9 pb-16 flex items-center justify-center h-96">
         <p className="text-gray-500">No orders available</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full ml-64 pt-6 px-9 pb-16 relative">
+    <div className="w-full pt-6 px-9 pb-16 relative">
       {/* Toast Notification */}
       {toast.show && (
         <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-lg shadow-lg transition-all duration-300 transform translate-y-0 ${toast.type === 'success'
@@ -520,146 +537,329 @@ export default function OrdersPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-hidden rounded-xl border border-gray-200">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">ID</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Full Name</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Phone</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Location</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Delivery</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Products</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Qty</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Total</th>
-                <th className="px-4 py-4 text-center text-sm font-semibold text-gray-700 w-32">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {currentOrders.map((order) => {
-                const isAccepting = processingOrders.accepting.has(order.order_id);
-                const isRejecting = processingOrders.rejecting.has(order.order_id);
-                const isProcessing = isAccepting || isRejecting;
+        {/* Responsive Content Container */}
+        <div>
+          {/* Desktop Table - visible on md and up */}
+          <div className="hidden md:block overflow-hidden rounded-xl border border-gray-200">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">ID</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Full Name</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Phone</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Location</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Delivery</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Products</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Qty</th>
+                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Total</th>
+                  <th className="px-4 py-4 text-center text-sm font-semibold text-gray-700 w-32">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {currentOrders.map((order) => {
+                  const isAccepting = processingOrders.accepting.has(order.order_id);
+                  const isRejecting = processingOrders.rejecting.has(order.order_id);
+                  const isProcessing = isAccepting || isRejecting;
 
-                return (
-                  <tr key={order.order_id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-4 text-sm font-medium text-gray-900">
-                      #{order.order_id}
-                    </td>
-                    <td className="px-4 py-4">
-                      <span className="font-medium text-gray-900">
-                        {order.first_name} {order.last_name}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">{order.phone}</td>
-                    <td className="px-4 py-4 text-sm text-gray-600">
-                      <span className="text-xs font-medium">{order.address}</span>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">
-                      <span className="text-xs">
-                        {order.delivery_type},
-                        <span className="text-[#FA3145] font-medium">
-                          {order.delivery_Price}
-                        </span>{" "}
-                        DA
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">
-                      {order.items && order.items.length > 0 ? (
-                        <div className="flex flex-col gap-2">
-                          {order.items.map((item, idx) => (
-                            <div key={`${item.product_id}-${idx}`} className="text-sm break-words max-w-[250px]">
-                              <span className="font-medium">
-                                {item.product_name}
-                                {item.offer_text && <span> - عرض: {item.offer_text}</span>}
-                              </span>
-                              {item.colors && item.colors.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mt-1">
-                                  {item.colors.map((c, ci) => (
-                                    <span key={ci} className="inline-flex items-center gap-1">
-                                      <div
-                                        className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
-                                        style={{ backgroundColor: `#${c.color_hex}` }}
-                                      />
-                                      <span>{c.color_name} ({c.quantity})</span>
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                  return (
+                    <tr key={order.order_id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                        #{order.order_id}
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="font-medium text-gray-900">
+                          {order.first_name} {order.last_name}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600">{order.phone}</td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        <span className="text-xs font-medium">{order.address}</span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        <span className="text-xs">
+                          {order.delivery_type},
+                          <span className="text-[#FA3145] font-medium">
+                            {order.delivery_Price}
+                          </span>{" "}
+                          DA
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        {order.items && order.items.length > 0 ? (
+                          <div className="flex flex-col gap-2">
+                            {order.items.map((item, idx) => (
+                              <div key={`${item.product_id}-${idx}`} className="text-sm break-words max-w-[250px]">
+                                <span className="font-medium">
+                                  {item.product_name}
+                                  {item.offer_text && <span> - عرض: {item.offer_text}</span>}
+                                </span>
+                                {item.colors && item.colors.length > 0 && (
+                                  <div className="flex flex-wrap gap-2 mt-1">
+                                    {item.colors.map((c, ci) => (
+                                      <span key={ci} className="inline-flex items-center gap-1">
+                                        <div
+                                          className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0"
+                                          style={{ backgroundColor: `#${c.color_hex}` }}
+                                        />
+                                        <span>{c.color_name} ({c.quantity})</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-600">
+                        {Array.isArray(order.items)
+                          ? order.items.reduce((sum, item) => sum + item.quantity, 0)
+                          : order.quantity}
+                      </td>
+                      <td className="px-4 py-4 text-sm font-bold text-gray-900">
+                        {Array.isArray(order.items)
+                          ? (parseFloat(order.totalPrice) || 0).toFixed(2)
+                          : (parseFloat(order.fullPrice) || 0).toFixed(2)} DA
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {/* Edit Button */}
+                          <button
+                            onClick={() => handleEdit(order)}
+                            className="w-8 h-8 flex justify-center items-center rounded-full border-2 border-blue-500 hover:bg-blue-50 cursor-pointer"
+                            title="Edit Order"
+                            disabled={isProcessing}
+                          >
+                            <Edit className="w-4 h-4 text-blue-500" />
+                          </button>
+
+                          {/* Accept Button with Loading State */}
+                          <button
+                            className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${isAccepting
+                                ? "border-green-400 bg-green-50 cursor-wait"
+                                : isProcessing
+                                  ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
+                                  : "border-[#42fa31] hover:bg-green-50 cursor-pointer"
+                              }`}
+                            onClick={() => handleAccept(order.order_id)}
+                            disabled={isProcessing}
+                            title={isAccepting ? "Processing..." : "Accept Order"}
+                          >
+                            {isAccepting ? (
+                              <Loader2 className="w-4 h-4 text-green-500 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4 text-[#42fa31]" strokeWidth={3} />
+                            )}
+                          </button>
+
+                          {/* Reject Button with Loading State */}
+                          <button
+                            className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${isRejecting
+                                ? "border-red-400 bg-red-50 cursor-wait"
+                                : isProcessing
+                                  ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
+                                  : "border-[#FA3145] hover:bg-red-50 cursor-pointer"
+                              }`}
+                            onClick={() => handleReject(order.order_id)}
+                            disabled={isProcessing}
+                            title={isRejecting ? "Processing..." : "Reject Order"}
+                          >
+                            {isRejecting ? (
+                              <Loader2 className="w-4 h-4 text-red-500 animate-spin" />
+                            ) : (
+                              <X className="w-4 h-4 text-[#FA3145]" strokeWidth={3} />
+                            )}
+                          </button>
                         </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-600">
-                      {Array.isArray(order.items)
-                        ? order.items.reduce((sum, item) => sum + item.quantity, 0)
-                        : order.quantity}
-                    </td>
-                    <td className="px-4 py-4 text-sm font-bold text-gray-900">
-                      {Array.isArray(order.items)
-                        ? (parseFloat(order.totalPrice) || 0).toFixed(2)
-                        : (parseFloat(order.fullPrice) || 0).toFixed(2)} DA
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {/* Edit Button */}
-                        <button
-                          onClick={() => handleEdit(order)}
-                          className="w-8 h-8 flex justify-center items-center rounded-full border-2 border-blue-500 hover:bg-blue-50 cursor-pointer"
-                          title="Edit Order"
-                          disabled={isProcessing}
-                        >
-                          <Edit className="w-4 h-4 text-blue-500" />
-                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-                        {/* Accept Button with Loading State */}
-                        <button
-                          className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${isAccepting
-                              ? "border-green-400 bg-green-50 cursor-wait"
-                              : isProcessing
-                                ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
-                                : "border-[#42fa31] hover:bg-green-50 cursor-pointer"
-                            }`}
-                          onClick={() => handleAccept(order.order_id)}
-                          disabled={isProcessing}
-                          title={isAccepting ? "Processing..." : "Accept Order"}
-                        >
-                          {isAccepting ? (
-                            <Loader2 className="w-4 h-4 text-green-500 animate-spin" />
-                          ) : (
-                            <Check className="w-4 h-4 text-[#42fa31]" strokeWidth={3} />
-                          )}
-                        </button>
+          {/* Mobile Cards - visible only on mobile */}
+          <div className="md:hidden space-y-4">
+            {currentOrders.map((order) => {
+              const isAccepting = processingOrders.accepting.has(order.order_id);
+              const isRejecting = processingOrders.rejecting.has(order.order_id);
+              const isProcessing = isAccepting || isRejecting;
 
-                        {/* Reject Button with Loading State */}
-                        <button
-                          className={`w-8 h-8 flex justify-center items-center rounded-full border-2 transition-all duration-200 ${isRejecting
-                              ? "border-red-400 bg-red-50 cursor-wait"
-                              : isProcessing
-                                ? "border-gray-300 bg-gray-100 cursor-not-allowed opacity-50"
-                                : "border-[#FA3145] hover:bg-red-50 cursor-pointer"
-                            }`}
-                          onClick={() => handleReject(order.order_id)}
-                          disabled={isProcessing}
-                          title={isRejecting ? "Processing..." : "Reject Order"}
-                        >
-                          {isRejecting ? (
-                            <Loader2 className="w-4 h-4 text-red-500 animate-spin" />
-                          ) : (
-                            <X className="w-4 h-4 text-[#FA3145]" strokeWidth={3} />
-                          )}
-                        </button>
+              return (
+                <Card key={order.order_id} className="bg-white border-2 border-stroke">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <CardTitle className="text-base font-semibold text-gray-900">
+                          #{order.order_id}
+                        </CardTitle>
+                        <span className="text-sm font-bold text-gray-900">
+                          {Array.isArray(order.items)
+                            ? (parseFloat(order.totalPrice) || 0).toFixed(2)
+                            : (parseFloat(order.fullPrice) || 0).toFixed(2)} DA
+                        </span>
                       </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      <button
+                        onClick={() => toggleOrderExpansion(order.order_id)}
+                        className="p-3 hover:bg-gray-100 rounded-full transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        aria-label={expandedOrders.has(order.order_id) ? "Collapse details" : "Expand details"}
+                      >
+                        {expandedOrders.has(order.order_id) ? (
+                          <ChevronUp className="w-5 h-5 text-gray-600" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-gray-600" />
+                        )}
+                      </button>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="pt-0 space-y-4">
+                    {/* Summary line - always visible */}
+                    <div className="flex items-center justify-between text-sm">
+                      <div>
+                        <span className="font-medium text-gray-900">
+                          {order.first_name} {order.last_name}
+                        </span>
+                        {order.delivery_type && (
+                          <span className="text-gray-600 mr-2">
+                            · {order.delivery_type === 'domicile' ? 'توصيل للمنزل' : 'استلام من المكتب'}
+                          </span>
+                        )}
+                      </div>
+                      {order.delivery_Price && (
+                        <span className="text-[#FA3145] font-medium">
+                          +{order.delivery_Price} DA
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Expandable Details */}
+                    {expandedOrders.has(order.order_id) && (
+                      <div className="border-t border-gray-200 pt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        {/* Customer Contact */}
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="text-gray-600 min-w-[80px]">Phone:</span>
+                            <span className="text-gray-900">{order.phone || '-'}</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="text-gray-600 min-w-[80px]">Address:</span>
+                            <span className="text-gray-900">{order.address || '-'}</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="text-gray-600 min-w-[80px]">Wilaya:</span>
+                            <span className="text-gray-900">{order.wilaya || '-'}</span>
+                          </div>
+                          <div className="flex items-start gap-2 text-sm">
+                            <span className="text-gray-600 min-w-[80px]">Baladiya:</span>
+                            <span className="text-gray-900">{order.baladiya || '-'}</span>
+                          </div>
+                        </div>
+
+                        {/* Products List */}
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-semibold text-gray-900">Products</h4>
+                          {order.items && order.items.length > 0 ? (
+                            <div className="space-y-3">
+                              {order.items.map((item, idx) => (
+                                <div key={`${item.product_id}-${idx}`} className="bg-gray-50 rounded-lg p-3">
+                                  <div className="font-medium text-sm text-gray-900 mb-2">
+                                    {item.product_name}
+                                    {item.offer_text && (
+                                      <span className="text-xs text-gray-600 block">عرض: {item.offer_text}</span>
+                                    )}
+                                  </div>
+                                  {item.colors && item.colors.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-2">
+                                      {item.colors.map((c, ci) => (
+                                        <div key={ci} className="flex items-center gap-1.5 bg-white rounded-full pl-1 pr-2 py-0.5 border border-gray-200">
+                                          <div
+                                            className="w-4 h-4 rounded-full border border-gray-300"
+                                            style={{ backgroundColor: `#${c.color_hex}` }}
+                                          />
+                                          <span className="text-xs text-gray-700">
+                                            {c.color_name} ({c.quantity})
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center justify-between text-xs text-gray-600">
+                                    <span>Quantity: {item.quantity}</span>
+                                    <span className="font-semibold text-gray-900">
+                                      {Number(item.fullPrice || item.price_per_unit * item.quantity).toFixed(2)} DA
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-400">No items</p>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-1 pt-2 border-t border-gray-200">
+                          <button
+                            onClick={() => handleEdit(order)}
+                            className="flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-3 rounded-lg border-2 border-blue-500 hover:bg-blue-50 transition-colors text-xs md:text-sm font-medium text-blue-600 touch-manipulation min-h-[44px]"
+                            disabled={processingOrders.accepting.has(order.order_id) || processingOrders.rejecting.has(order.order_id)}
+                          >
+                            <Edit className="w-4 h-4" />
+                            <span className="hidden sm:inline">Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleAccept(order.order_id)}
+                            disabled={processingOrders.accepting.has(order.order_id) || processingOrders.rejecting.has(order.order_id)}
+                            className={`flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-3 rounded-lg border-2 transition-all text-xs md:text-sm font-medium touch-manipulation min-h-[44px] ${
+                              processingOrders.accepting.has(order.order_id)
+                                ? "border-green-400 bg-green-50 cursor-wait text-green-600"
+                                : "border-[#42fa31] hover:bg-green-50 text-green-600"
+                            }`}
+                          >
+                            {processingOrders.accepting.has(order.order_id) ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4" strokeWidth={3} />
+                                <span className="hidden sm:inline">Accept</span>
+                              </>
+                            )}
+                          </button>
+                          <button
+                            onClick={() => handleReject(order.order_id)}
+                            disabled={processingOrders.accepting.has(order.order_id) || processingOrders.rejecting.has(order.order_id)}
+                            className={`flex-1 flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-3 rounded-lg border-2 transition-all text-xs md:text-sm font-medium touch-manipulation min-h-[44px] ${
+                              processingOrders.rejecting.has(order.order_id)
+                                ? "border-red-400 bg-red-50 cursor-wait text-red-600"
+                                : "border-[#FA3145] hover:bg-red-50 text-red-600"
+                            }`}
+                          >
+                            {processingOrders.rejecting.has(order.order_id) ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <X className="w-4 h-4" strokeWidth={3} />
+                                <span className="hidden sm:inline">Reject</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+            {currentOrders.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-500">No orders match your filters</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Pagination Footer */}

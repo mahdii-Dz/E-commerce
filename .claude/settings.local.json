@@ -24,7 +24,8 @@
       "Bash(pkill -f \"node index.js\")",
       "Bash(npm start:*)",
       "Bash(curl -s \"http://localhost:5000/api/shop/get-product/30001/reviews\")",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Read(//tmp/**)"
     ]
   },
   "allowedTools": [
