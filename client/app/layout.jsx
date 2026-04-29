@@ -22,7 +22,7 @@ export default function RootLayout({ children }) {
     <html lang="en" data-scroll-behavior="smooth">
        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       <body
-        className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto overflow-x-hidden`}
+        className={`${RobotoSans.variable}  antialiased bg-background w-full h-auto `}
       >
         <Providers>
           <Context>

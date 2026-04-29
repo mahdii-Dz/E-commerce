@@ -18,7 +18,7 @@ export default async function Home() {
   const banners = await getBanners();
 
   return (
-    <div className="w-full h-auto overflow-x-hidden">
+    <div className="w-full h-auto ">
     <Suspense fallback={<HomeClient banners={banners} categories={null} />}>
       <CategoriesLoader banners={banners} />
     </Suspense>
