@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 /client/node_modules
+/client/.env.sentry-build-plugin
 /server/node_modules
 /.pnp
 .pnp.*
