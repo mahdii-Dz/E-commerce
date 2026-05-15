@@ -4,6 +4,7 @@ import { verifyAdminSession } from '../middleware/sessionAuth.js';
 
 const router = express.Router();
 
+
 // Public GET routes - no authentication required
 router.get('/get-categories', GetCategories);
 router.get('/get-products', GetProducts);
@@ -20,35 +21,20 @@ router.post('/add-order', AddOrder);
 
 // Protected GET routes - require admin session (expose sensitive data)
 router.get('/get-orders', verifyAdminSession, GetOrders);
-router.get('/get-stats', verifyAdminSession, GetDashboardStats);
+router.get('/get-stats', verifyAdminSession,GetDashboardStats);
 
 // Protected write routes - require admin session
 router.post('/add-category', verifyAdminSession, AddCategory);
 router.post('/add-product', verifyAdminSession, AddProduct);
-router.put('/update-product/:id', verifyAdminSession, UpdateProduct);
-router.post('/add-product/:id/review/admin', verifyAdminSession, AddAdminReview);
+router.put('/update-product/:id', verifyAdminSession,UpdateProduct);
+router.post('/add-product/:id/review/admin', verifyAdminSession,AddAdminReview);
 router.delete('/reviews/:id', verifyAdminSession, DeleteReview);
 router.put('/accept-order/:id', verifyAdminSession, AcceptOrder);
 router.put('/reject-order/:id', verifyAdminSession, RejectOrder);
 router.put('/update-order/:id', verifyAdminSession, UpdateOrder);
 router.put('/update-banners', verifyAdminSession, updateBanners);
-router.delete('/delete-product/:id', verifyAdminSession, DeleteProduct);
-router.delete('/delete-category/:id', verifyAdminSession, DeleteCategory);
-
-//////////////////////////////////////////////////////////////////////////////////////
-
-// router.get('/get-orders',  GetOrders);
-// router.get('/get-stats',  GetDashboardStats);
-
-// // Protected write routes - require admin session
-// router.post('/add-category',  AddCategory);
-// router.post('/add-product', AddProduct);
-// router.put('/update-product/:id',  UpdateProduct);
-// router.put('/accept-order/:id',  AcceptOrder);
-// router.put('/reject-order/:id',  RejectOrder);
-// router.put('/update-banners',  updateBanners);
-// router.delete('/delete-product/:id',  DeleteProduct);
-// router.delete('/delete-category/:id',  DeleteCategory);
+router.delete('/delete-product/:id', verifyAdminSession,DeleteProduct);
+router.delete('/delete-category/:id', verifyAdminSession,DeleteCategory);
 
 
 
