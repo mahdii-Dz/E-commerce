@@ -1,12 +1,24 @@
+// index.js - Add this at the VERY TOP, before any other middleware
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv'
 import router from './route/route.js';
 import CloudinaryRouter from './controllers/routeUpload.js';
-dotenv.config()
-const app = express()
+import { httpServerHandler } from 'cloudflare:node';
+import { executeQuery } from './db.js';
 
-// Middleware
+const app = express();
+
+// Simple health check with NO database
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+
+// Rest of your middleware
 app.use(
   cors({
     origin: ["https://e-commerce-tarek.netlify.app", "http://localhost:3000"],
@@ -15,13 +27,9 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-app.use(express.json())
+app.use(express.json());
 
-app.use('/api/shop',router)
-app.use('/cloudinary', CloudinaryRouter)
-app.listen(5000, () => {
-    console.log('Server is running on port 5000');
-});
+app.use('/api/shop', router);
+app.use('/cloudinary', CloudinaryRouter);
 
-
-
+export default httpServerHandler(app.listen(3000));

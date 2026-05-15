@@ -1,40 +1,18 @@
-import mysql from "mysql2/promise";
-import dotenv from "dotenv";
+// controllers/ShopController.js
+import { query, execute } from '../db.js';
 
-dotenv.config();
+// Helper function for safe JSON parsing
+const safeJsonParse = (str, defaultValue = null) => {
+  if (!str) return defaultValue;
+  try {
+    return typeof str === 'string' ? JSON.parse(str) : str;
+  } catch (e) {
+    console.error('JSON parse error:', e);
+    return defaultValue;
+  }
+};
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-  port: process.env.DB_PORT || 3306,
-  ssl: {
-    rejectUnauthorized: true,
-  },
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
-});
-
-pool.getConnection()
-  .then((connection) => {
-    console.log("Connected to MySQL database successfully!");
-    connection.release();
-  })
-  .catch((err) => {
-    console.error("Failed to connect to MySQL:", err);
-    process.exit(1);
-  });
-
-process.on("SIGTERM", async () => {
-  console.log("SIGTERM received, closing pool...");
-  await pool.end();
-  process.exit(0);
-});
-
+// Helper function to validate ID
 const validateId = (id) => {
   const num = parseInt(id, 10);
   return !isNaN(num) && num > 0 ? num : null;
@@ -45,6 +23,22 @@ const handleDbError = (res, error, context) => {
   return res.status(500).json({ error: "Internal Server Error" });
 };
 
+// ==================== CATEGORY CONTROLLERS ====================
+
+export const GetCategories = async (req, res) => {
+  try {
+    const rows = await query("SELECT * FROM categories ORDER BY id");
+    
+    if (!rows || !Array.isArray(rows)) {
+      return res.status(200).json([]);
+    }
+    
+    return res.status(200).json(rows);
+  } catch (error) {
+    return handleDbError(res, error, 'fetching categories');
+  }
+};
+
 export const AddCategory = async (req, res) => {
   try {
     const { name } = req.body;
@@ -53,18 +47,26 @@ export const AddCategory = async (req, res) => {
       return res.status(400).json({ error: "Category name is required" });
     }
 
-    const [result] = await pool.query(
+    const result = await execute(
       "INSERT INTO categories (name) VALUES (?)",
       [name.trim()]
     );
 
-    if (result.affectedRows === 1) {
-      return res.status(201).json({ 
-        message: "Category added successfully",
-        categoryId: result.insertId 
-      });
+    let categoryId = result.insertId;
+
+    if (!categoryId || categoryId === 0) {
+      const lastIdResult = await query('SELECT LAST_INSERT_ID() as id');
+      categoryId = lastIdResult && lastIdResult[0] ? lastIdResult[0].id : 0;
     }
-    return res.status(400).json({ error: "Failed to add category" });
+
+    if (!categoryId || categoryId === 0) {
+      return res.status(500).json({ error: "Failed to retrieve category ID" });
+    }
+
+    return res.status(201).json({ 
+      message: "Category added successfully",
+      categoryId: categoryId 
+    });
   } catch (error) {
     if (error.code === "ER_DUP_ENTRY") {
       return res.status(409).json({ error: "Category already exists" });
@@ -73,303 +75,23 @@ export const AddCategory = async (req, res) => {
   }
 };
 
-export const AddProduct = async (req, res) => {
-  let connection;
-  try {
-    const {
-      name,
-      description,
-      price,
-      stock,
-      categoryIds,
-      type,
-      images,
-      discount_percentage,
-      thumbnail,
-      colors,
-      offers,
-    } = req.body;
-
-    if (!name || typeof name !== "string" || name.trim().length === 0) {
-      return res.status(400).json({ error: "Product name is required" });
-    }
-    if (!price || isNaN(price) || price <= 0) {
-      return res.status(400).json({ error: "Valid price is required" });
-    }
-    if (!Array.isArray(categoryIds)) {
-      return res.status(400).json({ error: "categoryIds must be an array" });
-    }
-
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
-
-    const [productResult] = await connection.query(
-      `INSERT INTO products (
-        name, description, price, stock, type, images,
-        thumbnail, discount_percentage, colors, offers
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        name.trim(),
-        description || null,
-        price,
-        stock || 0,
-        type || null,
-        JSON.stringify(images || []),
-        thumbnail || null,
-        discount_percentage || 0,
-        colors ? JSON.stringify(colors) : null,
-        offers ? JSON.stringify(offers) : null,
-      ]
-    );
-
-    const productId = productResult.insertId;
-
-    if (categoryIds.length > 0) {
-      const validCategoryIds = categoryIds
-        .map(id => parseInt(id, 10))
-        .filter(id => !isNaN(id) && id > 0);
-
-      if (validCategoryIds.length > 0) {
-        const categoryLinks = validCategoryIds.map((catId) => [productId, catId]);
-        await connection.query(
-          "INSERT INTO product_categories (product_id, category_id) VALUES ?",
-          [categoryLinks]
-        );
-      }
-    }
-
-    await connection.commit();
-
-    return res.status(201).json({
-      message: "Product created successfully",
-      productId,
-    });
-  } catch (error) {
-    if (connection) await connection.rollback();
-    return handleDbError(res, error, "creating product");
-  } finally {
-    if (connection) connection.release();
-  }
-};
-
-export const AddOrder = async (req, res) => {
-  let connection;
-  try {
-    const {
-      first_name,
-      last_name,
-      phone,
-      wilaya,
-      wilaya_code,
-      baladiya,
-      delivery_type,
-      delivery_Price,
-      items,
-    } = req.body;
-
-    if (!first_name || !last_name || !phone || !wilaya || !baladiya) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ error: "Items array is required and cannot be empty" });
-    }
-    // Validate each item
-    for (const item of items) {
-      if (!item.product_id || !item.quantity || !item.price_per_unit) {
-        return res.status(400).json({ error: "Each item must have product_id, quantity, and price_per_unit" });
-      }
-    }
-
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
-
-    // Insert order_info
-    const [orderInfo] = await connection.query(
-      `INSERT INTO order_info
-       (first_name, last_name, phone, wilaya, baladiya,
-        delivery_type, delivery_Price, wilaya_code)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        first_name.trim(),
-        last_name.trim(),
-        phone,
-        wilaya,
-        baladiya,
-        delivery_type,
-        delivery_Price || 0,
-        wilaya_code
-      ]
-    );
-
-    // Insert multiple order_items with color info and offer_text
-    const orderItemsValues = items.map(item => [
-      orderInfo.insertId,
-      item.product_id,
-      item.quantity,
-      item.price_per_unit,
-      item.color_name || null,
-      item.color_hex || null,
-      item.offer_text || null
-    ]);
-
-    const [orderItemResult] = await connection.query(
-      `INSERT INTO order_items
-       (order_id, product_id, quantity, price_per_unit, color_name, color_hex, offer_text)
-       VALUES ?`,
-      [orderItemsValues]
-    );
-
-    if (orderInfo.affectedRows === 1 && orderItemResult.affectedRows === items.length) {
-      await connection.commit();
-      return res.status(201).json({
-        message: "Order created successfully",
-        orderId: orderInfo.insertId
-      });
-    } else {
-      await connection.rollback();
-      return res.status(400).json({ error: "Failed to create order" });
-    }
-  } catch (error) {
-    if (connection) await connection.rollback();
-    return handleDbError(res, error, "creating order");
-  } finally {
-    if (connection) connection.release();
-  }
-};
-
-export const UpdateProduct = async (req, res) => {
-  let connection;
-  try {
-    const id = validateId(req.params.id);
-    if (!id) return res.status(400).json({ error: "Invalid product ID" });
-
-    const {
-      name,
-      description,
-      price,
-      stock,
-      discount_percentage,
-      images,
-      thumbnail,
-      type,
-      categoryIds,
-      colors,
-      offers,
-    } = req.body;
-
-    connection = await pool.getConnection();
-    await connection.beginTransaction();
-
-    const [result] = await connection.query(
-      `UPDATE products
-       SET name = ?, description = ?, price = ?, stock = ?,
-           discount_percentage = ?, images = ?, thumbnail = ?,
-           type = ?, colors = ?, offers = ?
-       WHERE id = ?`,
-      [
-        name?.trim(),
-        description || null,
-        price,
-        stock,
-        discount_percentage || 0,
-        JSON.stringify(images || []),
-        thumbnail || null,
-        type || null,
-        colors ? JSON.stringify(colors) : null,
-        offers ? JSON.stringify(offers) : null,
-        id,
-      ]
-    );
-
-    if (result.affectedRows === 0) {
-      await connection.rollback();
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    if (categoryIds && Array.isArray(categoryIds)) {
-      await connection.query(
-        "DELETE FROM product_categories WHERE product_id = ?",
-        [id]
-      );
-
-      const validIds = categoryIds
-        .map(cid => parseInt(cid, 10))
-        .filter(cid => !isNaN(cid) && cid > 0);
-
-      if (validIds.length > 0) {
-        const links = validIds.map((cid) => [id, cid]);
-        await connection.query(
-          "INSERT INTO product_categories (product_id, category_id) VALUES ?",
-          [links]
-        );
-      }
-    }
-
-    await connection.commit();
-    return res.status(200).json({
-      success: true,
-      message: "Product updated successfully",
-    });
-  } catch (error) {
-    if (connection) await connection.rollback();
-    return handleDbError(res, error, "updating product");
-  } finally {
-    if (connection) connection.release();
-  }
-};
-
-export const DeleteProduct = async (req, res) => {
-  let connection;
-  try {
-    const id = validateId(req.params.id);
-    if (!id) return res.status(400).json({ error: "Invalid product ID" });
-
-    connection = await pool.getConnection();
-    try {
-      await connection.beginTransaction();
-      
-      await connection.query(
-        "DELETE FROM product_categories WHERE product_id = ?",
-        [id]
-      );
-      
-      const [result] = await connection.query(
-        "DELETE FROM products WHERE id = ?",
-        [id]
-      );
-
-      if (result.affectedRows === 0) {
-        await connection.rollback();
-        return res.status(404).json({ error: "Product not found" });
-      }
-
-      await connection.commit();
-      return res.status(201).json({ message: "Product deleted successfully" });
-    } catch (err) {
-      await connection.rollback();
-      throw err;
-    } finally {
-      connection.release();
-    }
-  } catch (error) {
-    return handleDbError(res, error, "deleting product");
-  }
-};
-
 export const DeleteCategory = async (req, res) => {
   try {
     const id = validateId(req.params.id);
     if (!id) return res.status(400).json({ error: "Invalid category ID" });
 
-    const [result] = await pool.query(
+    // Verify exists first
+    const check = await query("SELECT id FROM categories WHERE id = ?", [id]);
+    if (!check || check.length === 0) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    await execute(
       "DELETE FROM categories WHERE id = ?",
       [id]
     );
 
-    if (result.affectedRows === 1) {
-      return res.status(201).json({ message: "Category deleted successfully" });
-    }
-    return res.status(404).json({ error: "Category not found" });
+    return res.status(200).json({ message: "Category deleted successfully" });
   } catch (error) {
     if (error.code === "ER_ROW_IS_REFERENCED_2") {
       return res.status(409).json({ 
@@ -380,18 +102,11 @@ export const DeleteCategory = async (req, res) => {
   }
 };
 
-export const GetCategories = async (req, res) => {
-  try {
-    const [row] = await pool.query("SELECT * FROM categories");
-    return res.status(200).json(row);
-  } catch (error) {
-    return handleDbError(res, error, "fetching categories");
-  }
-};
+// ==================== PRODUCT CONTROLLERS ====================
 
 export const GetProducts = async (req, res) => {
   try {
-    const [rows] = await pool.query(`
+    const rows = await query(`
       SELECT
         p.id,
         p.name,
@@ -406,6 +121,7 @@ export const GetProducts = async (req, res) => {
         p.created_at,
         p.type,
         p.offers,
+        p.colors,
         c.id AS category_id,
         c.name AS category_name
       FROM products p
@@ -413,6 +129,10 @@ export const GetProducts = async (req, res) => {
       LEFT JOIN categories c ON pc.category_id = c.id
       ORDER BY p.id
     `);
+
+    if (!rows || !Array.isArray(rows)) {
+      return res.status(200).json([]);
+    }
 
     const productsMap = new Map();
 
@@ -423,17 +143,18 @@ export const GetProducts = async (req, res) => {
         productsMap.set(productId, {
           id: row.id,
           name: row.name,
-          discount_percentage: row.discount_percentage,
+          discount_percentage: row.discount_percentage || 0,
           description: row.description,
-          price: row.price,
-          stock: row.stock,
+          price: parseFloat(row.price) || 0,
+          stock: parseInt(row.stock) || 0,
           image_url: row.image_url,
-          images: row.images,
+          images: safeJsonParse(row.images, []),
           thumbnail: row.thumbnail,
-          is_active: row.is_active,
+          is_active: row.is_active === 1,
           created_at: row.created_at,
           type: row.type,
-          offers: row.offers ? (typeof row.offers === 'string' ? JSON.parse(row.offers) : row.offers) : null,
+          colors: safeJsonParse(row.colors, null),
+          offers: safeJsonParse(row.offers, null),
           categories: [],
         });
       }
@@ -447,7 +168,6 @@ export const GetProducts = async (req, res) => {
     }
 
     const products = Array.from(productsMap.values());
-
     return res.status(200).json(products);
   } catch (error) {
     return handleDbError(res, error, "fetching products");
@@ -457,8 +177,13 @@ export const GetProducts = async (req, res) => {
 export const GetProductById = async (req, res) => {
   try {
     const { id } = req.params;
-    const [rows] = await pool.query(
-      `
+    const productIdNum = validateId(id);
+    
+    if (!productIdNum) {
+      return res.status(400).json({ error: "Invalid product ID" });
+    }
+
+    const rows = await query(`
       SELECT
         p.id,
         p.name,
@@ -480,9 +205,11 @@ export const GetProductById = async (req, res) => {
       LEFT JOIN product_categories pc ON p.id = pc.product_id
       LEFT JOIN categories c ON pc.category_id = c.id
       WHERE p.id = ?
-    `,
-      [id],
-    );
+    `, [productIdNum]);
+
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
 
     const productMap = new Map();
 
@@ -493,18 +220,18 @@ export const GetProductById = async (req, res) => {
         productMap.set(productId, {
           id: row.id,
           name: row.name,
-          discount_percentage: row.discount_percentage,
+          discount_percentage: row.discount_percentage || 0,
           description: row.description,
-          price: row.price,
-          stock: row.stock,
+          price: parseFloat(row.price) || 0,
+          stock: parseInt(row.stock) || 0,
           image_url: row.image_url,
           thumbnail: row.thumbnail,
-          images: row.images,
-          is_active: row.is_active,
+          images: safeJsonParse(row.images, []),
+          is_active: row.is_active === 1,
           created_at: row.created_at,
           type: row.type,
-          colors: row.colors,
-          offers: row.offers ? (typeof row.offers === 'string' ? JSON.parse(row.offers) : row.offers) : null,
+          colors: safeJsonParse(row.colors, null),
+          offers: safeJsonParse(row.offers, null),
           categories: [],
         });
       }
@@ -517,20 +244,23 @@ export const GetProductById = async (req, res) => {
       }
     }
 
-    const [product] = Array.from(productMap.values());
-
+    const product = Array.from(productMap.values())[0];
     return res.status(200).json(product);
   } catch (error) {
-    console.error("Error fetching product:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "fetching product");
   }
 };
 
 export const GetProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const [rows] = await pool.query(
-      `
+    const categoryIdNum = validateId(categoryId);
+    
+    if (!categoryIdNum) {
+      return res.status(400).json({ error: "Invalid category ID" });
+    }
+
+    const rows = await query(`
       SELECT
         p.id,
         p.name,
@@ -547,14 +277,16 @@ export const GetProductsByCategory = async (req, res) => {
         p.offers,
         c.id AS category_id,
         c.name AS category_name
-        FROM products p
-        INNER JOIN product_categories pc ON p.id = pc.product_id
-        INNER JOIN categories c ON pc.category_id = c.id
-        WHERE c.id = ?
-        LIMIT 4
-    `,
-      [categoryId],
-    );
+      FROM products p
+      INNER JOIN product_categories pc ON p.id = pc.product_id
+      INNER JOIN categories c ON pc.category_id = c.id
+      WHERE c.id = ?
+      LIMIT 4
+    `, [categoryIdNum]);
+
+    if (!rows || !Array.isArray(rows)) {
+      return res.status(200).json([]);
+    }
 
     const productMap = new Map();
 
@@ -565,17 +297,17 @@ export const GetProductsByCategory = async (req, res) => {
         productMap.set(productId, {
           id: row.id,
           name: row.name,
-          discount_percentage: row.discount_percentage,
+          discount_percentage: row.discount_percentage || 0,
           description: row.description,
-          price: row.price,
-          stock: row.stock,
+          price: parseFloat(row.price) || 0,
+          stock: parseInt(row.stock) || 0,
           image_url: row.image_url,
           thumbnail: row.thumbnail,
-          images: row.images,
-          is_active: row.is_active,
+          images: safeJsonParse(row.images, []),
+          is_active: row.is_active === 1,
           created_at: row.created_at,
           type: row.type,
-          offers: row.offers ? (typeof row.offers === 'string' ? JSON.parse(row.offers) : row.offers) : null,
+          offers: safeJsonParse(row.offers, null),
           categories: [],
         });
       }
@@ -589,79 +321,292 @@ export const GetProductsByCategory = async (req, res) => {
     }
 
     const products = Array.from(productMap.values());
-
     return res.status(200).json(products);
   } catch (error) {
-    console.error("Error fetching products:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "fetching products by category");
   }
 };
 
-export const GetDashboardStats = async (req, res) => {
+export const AddProduct = async (req, res) => {
   try {
-    const [totalProductsRow] = await pool.query(
-      "SELECT COUNT(*) AS total_products FROM products",
-    );
-    const [totalOrdersRow] = await pool.query(
-      "SELECT COUNT(*) AS total_orders FROM order_info",
-    );
-    const [totalSoldProductsRow] =
-      await pool.query(`SELECT SUM(oi.quantity) AS total_sold_products
-      FROM order_items oi
-      JOIN order_info o ON oi.order_id = o.id
-      WHERE o.status = 'completed'`);
-    const [BarChart] = await pool.query(`
-      SELECT created_at , quantity
-      FROM order_info
-      JOIN order_items ON order_info.id = order_items.order_id
-      WHERE order_info.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-      `);
-    const [CategoryStats] = await pool.query(`
-      SELECT 
-        pc.category_id,
-        c.name as category_name,
-        SUM(oi.quantity) as total_quantity_sold
-      FROM order_items oi
-      JOIN product_categories pc ON oi.product_id = pc.product_id
-      LEFT JOIN categories c ON pc.category_id = c.id
-      GROUP BY pc.category_id, c.name`);
-    const [wilayaStats] = await pool.query(`
-      SELECT wilaya, COUNT(*) AS totalOrders
-      FROM order_info
-      GROUP BY wilaya
-      ORDER BY totalOrders DESC
-      limit 10;
-    `);
+    const {
+      name,
+      description,
+      price,
+      stock,
+      categoryIds,
+      type,
+      images,
+      discount_percentage,
+      thumbnail,
+      colors,
+      offers,
+    } = req.body;
 
-    const dailyTotals = Object.entries(
-      BarChart.reduce((acc, order) => {
-        const day = new Date(order.created_at).toISOString().split("T")[0];
-        acc[day] = (acc[day] || 0) + order.quantity;
-        return acc;
-      }, {}),
-    ).map(([day, total]) => ({ day, total }));
-    const totalProducts = totalProductsRow[0].total_products;
-    const totalOrders = totalOrdersRow[0].total_orders;
-    const totalSoldProducts = totalSoldProductsRow[0].total_sold_products || 0;
+    // Validation
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return res.status(400).json({ error: "Product name is required" });
+    }
+    if (!price || isNaN(price) || price <= 0) {
+      return res.status(400).json({ error: "Valid price is required" });
+    }
+    if (!Array.isArray(categoryIds)) {
+      return res.status(400).json({ error: "categoryIds must be an array" });
+    }
 
-    return res.status(200).json({
-      totalProducts,
-      totalOrders,
-      totalSoldProducts,
-      dailyTotals,
-      CategoryStats,
-      wilayaStats,
+    // Insert product
+    const productResult = await execute(
+      `INSERT INTO products (
+        name, description, price, stock, type, images,
+        thumbnail, discount_percentage, colors, offers
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name.trim(),
+        description || null,
+        price,
+        stock || 0,
+        type || null,
+        JSON.stringify(images || []),
+        thumbnail || null,
+        discount_percentage || 0,
+        colors ? JSON.stringify(colors) : null,
+        offers ? JSON.stringify(offers) : null,
+      ]
+    );
+
+    let productId = productResult.insertId;
+
+    // If insertId is 0 or missing, fetch it using LAST_INSERT_ID()
+    if (!productId || productId === 0) {
+      const lastIdResult = await query('SELECT LAST_INSERT_ID() as id');
+      productId = lastIdResult && lastIdResult[0] ? lastIdResult[0].id : 0;
+    }
+    
+    if (!productId || productId === 0) {
+      return res.status(500).json({ error: "Failed to retrieve product ID" });
+    }
+
+    // Insert category relationships
+    if (categoryIds.length > 0) {
+      const validCategoryIds = categoryIds
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id) && id > 0);
+
+      if (validCategoryIds.length > 0) {
+        for (const catId of validCategoryIds) {
+          await execute(
+            "INSERT INTO product_categories (product_id, category_id) VALUES (?, ?)",
+            [productId, catId]
+          );
+        }
+      }
+    }
+
+    return res.status(201).json({
+      message: "Product created successfully",
+      productId: productId,
     });
   } catch (error) {
-    console.error("Error fetching dashboard stats:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "creating product");
+  }
+};
+export const UpdateProduct = async (req, res) => {
+  try {
+    const id = validateId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid product ID" });
+
+    const {
+      name,
+      description,
+      price,
+      stock,
+      discount_percentage,
+      images,
+      thumbnail,
+      type,
+      categoryIds,
+      colors,
+      offers,
+    } = req.body;
+
+    // Verify product exists first
+    const productCheck = await query(
+      "SELECT id FROM products WHERE id = ?",
+      [id]
+    );
+    
+    if (!productCheck || productCheck.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Update product — if no error, it succeeded
+    await execute(
+      `UPDATE products
+       SET name = ?, description = ?, price = ?, stock = ?,
+           discount_percentage = ?, images = ?, thumbnail = ?,
+           type = ?, colors = ?, offers = ?
+       WHERE id = ?`,
+      [
+        name?.trim(),
+        description || null,
+        price,
+        stock,
+        discount_percentage || 0,
+        JSON.stringify(images || []),
+        thumbnail || null,
+        type || null,
+        colors ? JSON.stringify(colors) : null,
+        offers ? JSON.stringify(offers) : null,
+        id,
+      ]
+    );
+
+    // Update categories if provided
+    if (categoryIds && Array.isArray(categoryIds)) {
+      // Delete existing categories
+      await execute(
+        "DELETE FROM product_categories WHERE product_id = ?",
+        [id]
+      );
+
+      const validIds = categoryIds
+        .map(cid => parseInt(cid, 10))
+        .filter(cid => !isNaN(cid) && cid > 0);
+
+      if (validIds.length > 0) {
+        for (const catId of validIds) {
+          await execute(
+            "INSERT INTO product_categories (product_id, category_id) VALUES (?, ?)",
+            [id, catId]
+          );
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Product updated successfully",
+    });
+  } catch (error) {
+    return handleDbError(res, error, "updating product");
+  }
+};
+
+export const DeleteProduct = async (req, res) => {
+  try {
+    const id = validateId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid product ID" });
+
+    // Verify product exists first
+    const check = await query("SELECT id FROM products WHERE id = ?", [id]);
+    if (!check || check.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    // Delete category relationships first
+    await execute(
+      "DELETE FROM product_categories WHERE product_id = ?",
+      [id]
+    );
+    
+    // Delete product — if no error, it succeeded
+    await execute(
+      "DELETE FROM products WHERE id = ?",
+      [id]
+    );
+
+    return res.status(200).json({ message: "Product deleted successfully" });
+  } catch (error) {
+    return handleDbError(res, error, "deleting product");
+  }
+};
+
+// ==================== ORDER CONTROLLERS ====================
+
+export const AddOrder = async (req, res) => {
+  try {
+    const {
+      first_name,
+      last_name,
+      phone,
+      wilaya,
+      wilaya_code,
+      baladiya,
+      delivery_type,
+      delivery_Price,
+      items,
+    } = req.body;
+
+    if (!first_name || !last_name || !phone || !wilaya || !baladiya) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "Items array is required and cannot be empty" });
+    }
+    
+    for (const item of items) {
+      if (!item.product_id || !item.quantity || !item.price_per_unit) {
+        return res.status(400).json({ error: "Each item must have product_id, quantity, and price_per_unit" });
+      }
+    }
+
+    const orderInfo = await execute(
+      `INSERT INTO order_info
+       (first_name, last_name, phone, wilaya, baladiya,
+        delivery_type, delivery_Price, wilaya_code)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        first_name.trim(),
+        last_name.trim(),
+        phone,
+        wilaya,
+        baladiya,
+        delivery_type,
+        delivery_Price || 0,
+        wilaya_code
+      ]
+    );
+
+    let orderId = orderInfo.insertId;
+    
+    if (!orderId || orderId === 0) {
+      const lastIdResult = await query('SELECT LAST_INSERT_ID() as id');
+      orderId = lastIdResult && lastIdResult[0] ? lastIdResult[0].id : 0;
+    }
+    
+    if (!orderId || orderId === 0) {
+      return res.status(500).json({ error: "Failed to retrieve order ID" });
+    }
+
+    for (const item of items) {
+      await execute(
+        `INSERT INTO order_items
+         (order_id, product_id, quantity, price_per_unit, color_name, color_hex, offer_text)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          item.product_id,
+          item.quantity,
+          item.price_per_unit,
+          item.color_name || null,
+          item.color_hex || null,
+          item.offer_text || null
+        ]
+      );
+    }
+
+    return res.status(201).json({
+      message: "Order created successfully",
+      orderId: orderId
+    });
+  } catch (error) {
+    return handleDbError(res, error, "creating order");
   }
 };
 
 export const GetOrders = async (req, res) => {
   try {
-    // Fetch raw order items with product details and colors from order_items
-    const [rows] = await pool.query(`
+    const rows = await query(`
       SELECT
         o.id AS order_id,
         o.first_name,
@@ -673,6 +618,7 @@ export const GetOrders = async (req, res) => {
         o.wilaya_code,
         o.delivery_type,
         o.delivery_Price,
+        o.status,
         oi.quantity,
         oi.color_name,
         oi.color_hex,
@@ -684,12 +630,15 @@ export const GetOrders = async (req, res) => {
       FROM
         order_info o
         JOIN order_items oi ON o.id = oi.order_id
-        JOIN products p ON oi.product_id = p.id
-      WHERE o.status = 'pending'
-      ORDER BY o.id ASC
+        JOIN products p ON oi.product_id = p.id 
+        WHERE o.status = 'pending'
+      ORDER BY o.id DESC
     `);
 
-    // Group rows by order_id, then by product_id + offer_text
+    if (!rows || !Array.isArray(rows)) {
+      return res.status(200).json([]);
+    }
+
     const ordersMap = new Map();
 
     for (const row of rows) {
@@ -707,15 +656,15 @@ export const GetOrders = async (req, res) => {
           wilaya_code: row.wilaya_code,
           delivery_type: row.delivery_type,
           delivery_Price: Number(row.delivery_Price) || 0,
+          status: row.status,
           items: [],
           totalPrice: 0
         });
       }
 
       const order = ordersMap.get(orderId);
-      const groupKey = `${row.product_id}|${row.offer_text || ''}`;
-
-      // Find or create grouped item
+      
+      // Find or create item
       let item = order.items.find(i => i.product_id === row.product_id && i.offer_text === (row.offer_text || ''));
       if (!item) {
         item = {
@@ -730,13 +679,11 @@ export const GetOrders = async (req, res) => {
         order.items.push(item);
       }
 
-      // Accumulate quantity and fullPrice - ensure numeric addition
       const qty = Number(row.quantity) || 0;
       const fullPrice = Number(row.fullPrice) || 0;
       item.quantity += qty;
       item.fullPrice += fullPrice;
 
-      // Add color entry
       item.colors.push({
         color_name: row.color_name,
         color_hex: row.color_hex,
@@ -744,24 +691,28 @@ export const GetOrders = async (req, res) => {
       });
     }
 
-    // Add delivery price to total for each order
+    // Calculate total price for each order
     for (const order of ordersMap.values()) {
       const subtotal = order.items.reduce((sum, item) => sum + Number(item.fullPrice), 0);
       order.totalPrice = subtotal + Number(order.delivery_Price || 0);
     }
 
     const groupedOrders = Array.from(ordersMap.values());
-
     return res.status(200).json(groupedOrders);
   } catch (error) {
-    console.error("Error fetching orders:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "fetching orders");
   }
 };
 
 export const UpdateOrder = async (req, res) => {
   try {
     const { id } = req.params;
+    const orderId = validateId(id);
+
+    if (!orderId) {
+      return res.status(400).json({ error: "Invalid order ID" });
+    }
+
     const {
       first_name,
       last_name,
@@ -773,30 +724,28 @@ export const UpdateOrder = async (req, res) => {
       wilaya_code
     } = req.body;
 
-    if (!id) {
-      return res.status(400).json({ error: "Order ID is required" });
-    }
-
-    // Optional: Validate that order exists and is pending
-    const [orderCheck] = await pool.query(
+    // Check if order exists and is pending
+    const orderCheck = await query(
       "SELECT status FROM order_info WHERE id = ?",
-      [id]
+      [orderId]
     );
-    if (orderCheck.length === 0) {
+
+    if (!orderCheck || orderCheck.length === 0) {
       return res.status(404).json({ error: "Order not found" });
     }
-    // Only allow editing pending orders
+
     if (orderCheck[0].status !== 'pending') {
       return res.status(403).json({ error: "Only pending orders can be edited" });
     }
+
+    // Build update query dynamically
+    const updates = [];
+    const values = [];
 
     const allowedFields = [
       'first_name', 'last_name', 'phone', 'wilaya',
       'baladiya', 'delivery_type', 'delivery_Price', 'wilaya_code'
     ];
-
-    const updates = [];
-    const values = [];
 
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -810,161 +759,173 @@ export const UpdateOrder = async (req, res) => {
       return res.status(400).json({ error: "No fields to update" });
     }
 
-    values.push(id);
+    values.push(orderId);
 
-    const [result] = await pool.query(
+    // Execute update — if no error, it succeeded
+    await execute(
       `UPDATE order_info SET ${updates.join(', ')} WHERE id = ?`,
       values
     );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
     return res.status(200).json({ message: "Order updated successfully" });
   } catch (error) {
-    console.error("Error updating order:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "updating order");
   }
 };
 
 export const AcceptOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const [row] = await pool.query(
-      "UPDATE order_info SET status = 'accepted' WHERE id = ?",
-      [id],
-    );
-    if (row.affectedRows === 1) {
-      return res.status(200).json({ message: "Order accepted successfully" });
-    } else {
-      return res.status(400).json({ error: "Failed to accept order" });
+    const orderId = validateId(id);
+
+    if (!orderId) {
+      return res.status(400).json({ error: "Invalid order ID" });
     }
+
+    // Verify order exists and get current status
+    const orderCheck = await query(
+      "SELECT id, status FROM order_info WHERE id = ?",
+      [orderId]
+    );
+
+    if (!orderCheck || orderCheck.length === 0) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Prevent re-accepting already accepted orders
+    if (orderCheck[0].status === 'accepted') {
+      return res.status(409).json({ error: "Order is already accepted" });
+    }
+
+    await execute(
+      "UPDATE order_info SET status = 'accepted' WHERE id = ?",
+      [orderId]
+    );
+
+    return res.status(200).json({ message: "Order accepted successfully" });
   } catch (error) {
-    console.error("Error accepting order:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "accepting order");
   }
 };
 
 export const RejectOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const [row] = await pool.query(
-      "UPDATE order_info SET status = 'rejected' WHERE id = ?",
-      [id],
-    );
-    if (row.affectedRows === 1) {
-      return res.status(200).json({ message: "Order rejected successfully" });
-    } else {
-      return res.status(400).json({ error: "Failed to reject order" });
+    const orderId = validateId(id);
+
+    if (!orderId) {
+      return res.status(400).json({ error: "Invalid order ID" });
     }
+
+    // Verify order exists first
+    const orderCheck = await query(
+      "SELECT id, status FROM order_info WHERE id = ?",
+      [orderId]
+    );
+
+    if (!orderCheck || orderCheck.length === 0) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const currentStatus = orderCheck[0].status;
+    
+    // Prevent rejecting already rejected orders
+    if (currentStatus === 'rejected') {
+      return res.status(409).json({ error: "Order is already rejected" });
+    }
+
+    await execute(
+      "UPDATE order_info SET status = 'rejected' WHERE id = ?",
+      [orderId]
+    );
+
+    return res.status(200).json({ message: "Order rejected successfully" });
   } catch (error) {
-    console.error("Error rejecting order:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "rejecting order");
   }
 };
 
-export const getBanners = async (req, res) => {
-    try {
-        const [banners] = await pool.query(
-            'SELECT * FROM banners ORDER BY position ASC'
-        );
+// ==================== BANNER CONTROLLERS ====================
 
-        return res.status(200).json({
-            success: true,
-            banners: banners || []
-        });
-    } catch (error) {
-        console.error('Error fetching banners:', error);
-        return res.status(500).json({
-            success: false,
-            error: 'Failed to fetch banners'
-        });
-    }
+export const getBanners = async (req, res) => {
+  try {
+    const banners = await query('SELECT * FROM banners ORDER BY position ASC');
+    
+    return res.status(200).json({
+      success: true,
+      banners: banners || []
+    });
+  } catch (error) {
+    return handleDbError(res, error, 'fetching banners');
+  }
 };
 
 export const updateBanners = async (req, res) => {
-    let connection;
-    try {
-        await connection.beginTransaction();
+  try {
+    const { banners } = req.body;
 
-        const { banners } = req.body;
-
-        if (!banners || !Array.isArray(banners)) {
-            await connection.rollback();
-            return res.status(400).json({
-                success: false,
-                error: 'Banners array is required'
-            });
-        }
-
-        for (const banner of banners) {
-            if (banner.position === undefined || banner.position === null || !banner.url) {
-                await connection.rollback();
-                return res.status(400).json({
-                    success: false,
-                    error: 'Each banner must have position and url'
-                });
-            }
-        }
-
-        for (const banner of banners) {
-            await connection.query(
-                `INSERT INTO banners (position, url, public_id) 
-                 VALUES (?, ?, ?) 
-                 ON DUPLICATE KEY UPDATE 
-                 url = VALUES(url),
-                 public_id = VALUES(public_id)`,
-                [banner.position, banner.url, banner.publicId || null]
-            );
-        }
-
-        await connection.commit();
-
-        return res.status(200).json({
-            success: true,
-            message: 'Banners saved successfully',
-            banners: banners
-        });
-    } catch (error) {
-        await connection.rollback();
-        console.error('Error updating banners:', error);
-        return res.status(500).json({
-            success: false,
-            error: 'Failed to update banners'
-        });
-    } finally {
-        connection.release();
+    if (!banners || !Array.isArray(banners)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Banners array is required'
+      });
     }
+
+    for (const banner of banners) {
+      if (banner.position === undefined || banner.position === null || !banner.url) {
+        return res.status(400).json({
+          success: false,
+          error: 'Each banner must have position and url'
+        });
+      }
+    }
+
+    for (const banner of banners) {
+      await execute(
+        `INSERT INTO banners (position, url, public_id) 
+         VALUES (?, ?, ?) 
+         ON DUPLICATE KEY UPDATE 
+         url = VALUES(url),
+         public_id = VALUES(public_id)`,
+        [banner.position, banner.url, banner.publicId || null]
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Banners saved successfully',
+      banners: banners
+    });
+  } catch (error) {
+    return handleDbError(res, error, 'updating banners');
+  }
 };
 
 export const deleteBanner = async (req, res) => {
-    try {
-        const { position } = req.params;
+  try {
+    const { position } = req.params;
 
-        const [result] = await pool.query(
-            'DELETE FROM banners WHERE position = ?',
-            [position]
-        );
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Banner not found'
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: 'Banner deleted successfully'
-        });
-    } catch (error) {
-        console.error('Error deleting banner:', error);
-        return res.status(500).json({
-            success: false,
-            error: 'Failed to delete banner'
-        });
+    // Verify banner exists first
+    const check = await query("SELECT position FROM banners WHERE position = ?", [position]);
+    if (!check || check.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Banner not found'
+      });
     }
+
+    await execute(
+      'DELETE FROM banners WHERE position = ?',
+      [position]
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Banner deleted successfully'
+    });
+  } catch (error) {
+    return handleDbError(res, error, 'deleting banner');
+  }
 };
 
 // ==================== REVIEWS CONTROLLERS ====================
@@ -972,15 +933,13 @@ export const deleteBanner = async (req, res) => {
 export const GetProductReviews = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Validate productId
-    const productIdNum = parseInt(id, 10);
-    if (!productIdNum || productIdNum <= 0) {
+    const productIdNum = validateId(id);
+    
+    if (!productIdNum) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
 
-    // Fetch all reviews for the product, newest first
-    const [rows] = await pool.query(
+    const rows = await query(
       `SELECT id, product_id, customer_name, review_text, stars, image_url, is_admin, created_at
        FROM reviews
        WHERE product_id = ?
@@ -988,8 +947,7 @@ export const GetProductReviews = async (req, res) => {
       [productIdNum]
     );
 
-    // Format dates for JSON
-    const reviews = rows.map(review => ({
+    const reviews = (rows || []).map(review => ({
       ...review,
       created_at: review.created_at,
       is_admin: Boolean(review.is_admin)
@@ -1001,8 +959,7 @@ export const GetProductReviews = async (req, res) => {
       total: reviews.length
     });
   } catch (error) {
-    console.error("Error fetching reviews:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "fetching reviews");
   }
 };
 
@@ -1011,9 +968,8 @@ export const AddUserReview = async (req, res) => {
     const { id } = req.params;
     const { customer_name, review_text, stars } = req.body;
 
-    // Validation
-    const productIdNum = parseInt(id, 10);
-    if (!productIdNum || productIdNum <= 0) {
+    const productIdNum = validateId(id);
+    if (!productIdNum) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
 
@@ -1031,16 +987,16 @@ export const AddUserReview = async (req, res) => {
     }
 
     // Verify product exists
-    const [productCheck] = await pool.query(
+    const productCheck = await query(
       "SELECT id FROM products WHERE id = ?",
       [productIdNum]
     );
-    if (productCheck.length === 0) {
+    
+    if (!productCheck || productCheck.length === 0) {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    // Insert review
-    const [result] = await pool.query(
+    const result = await execute(
       `INSERT INTO reviews (product_id, customer_name, review_text, stars, image_url, is_admin)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -1048,42 +1004,46 @@ export const AddUserReview = async (req, res) => {
         customer_name.trim(),
         review_text.trim(),
         starsNum,
-        null, // image_url = null for user reviews
-        false // is_admin = false
+        null,
+        false
       ]
     );
 
-    if (result.affectedRows === 1) {
-      // Fetch the newly created review
-      const [newReviewRows] = await pool.query(
-        "SELECT * FROM reviews WHERE id = ?",
-        [result.insertId]
-      );
-      const newReview = newReviewRows[0];
+    let reviewId = result.insertId;
 
-      return res.status(201).json({
-        success: true,
-        message: "Review added successfully",
-        review: newReview
-      });
+    // Fallback for TiDB Serverless
+    if (!reviewId || reviewId === 0) {
+      const lastIdResult = await query('SELECT LAST_INSERT_ID() as id');
+      reviewId = lastIdResult && lastIdResult[0] ? lastIdResult[0].id : 0;
     }
 
-    return res.status(500).json({ error: "Failed to add review" });
+    if (!reviewId || reviewId === 0) {
+      return res.status(500).json({ error: "Failed to retrieve review ID" });
+    }
+
+    const newReviewRows = await query(
+      "SELECT * FROM reviews WHERE id = ?",
+      [reviewId]
+    );
+    const newReview = newReviewRows[0];
+
+    return res.status(201).json({
+      success: true,
+      message: "Review added successfully",
+      review: newReview
+    });
   } catch (error) {
-    console.error("Error adding user review:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "adding user review");
   }
 };
 
 export const AddAdminReview = async (req, res) => {
-  let connection;
   try {
     const { id } = req.params;
     const { customer_name, review_text, stars, image_url } = req.body;
 
-    // Validation
-    const productIdNum = parseInt(id, 10);
-    if (!productIdNum || productIdNum <= 0) {
+    const productIdNum = validateId(id);
+    if (!productIdNum) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
 
@@ -1101,16 +1061,16 @@ export const AddAdminReview = async (req, res) => {
     }
 
     // Verify product exists
-    const [productCheck] = await pool.query(
+    const productCheck = await query(
       "SELECT id FROM products WHERE id = ?",
       [productIdNum]
     );
-    if (productCheck.length === 0) {
+    
+    if (!productCheck || productCheck.length === 0) {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    // Insert admin review
-    const [result] = await pool.query(
+    const result = await execute(
       `INSERT INTO reviews (product_id, customer_name, review_text, stars, image_url, is_admin)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
@@ -1119,67 +1079,145 @@ export const AddAdminReview = async (req, res) => {
         review_text.trim(),
         starsNum,
         image_url || null,
-        true // is_admin = true
+        true
       ]
     );
 
-    if (result.affectedRows === 1) {
-      // Fetch the newly created review
-      const [newReviewRows] = await pool.query(
-        "SELECT * FROM reviews WHERE id = ?",
-        [result.insertId]
-      );
-      const newReview = newReviewRows[0];
+    let reviewId = result.insertId;
 
-      return res.status(201).json({
-        success: true,
-        message: "Admin review added successfully",
-        review: newReview
-      });
+    // Fallback for TiDB Serverless
+    if (!reviewId || reviewId === 0) {
+      const lastIdResult = await query('SELECT LAST_INSERT_ID() as id');
+      reviewId = lastIdResult && lastIdResult[0] ? lastIdResult[0].id : 0;
     }
 
-    return res.status(500).json({ error: "Failed to add admin review" });
+    if (!reviewId || reviewId === 0) {
+      return res.status(500).json({ error: "Failed to retrieve review ID" });
+    }
+
+    const newReviewRows = await query(
+      "SELECT * FROM reviews WHERE id = ?",
+      [reviewId]
+    );
+    const newReview = newReviewRows[0];
+
+    return res.status(201).json({
+      success: true,
+      message: "Admin review added successfully",
+      review: newReview
+    });
   } catch (error) {
-    console.error("Error adding admin review:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    return handleDbError(res, error, "adding admin review");
   }
 };
 
 export const DeleteReview = async (req, res) => {
   try {
     const { id } = req.params;
-    const reviewIdNum = parseInt(id, 10);
+    const reviewIdNum = validateId(id);
 
-    if (!reviewIdNum || reviewIdNum <= 0) {
+    if (!reviewIdNum) {
       return res.status(400).json({ error: "Invalid review ID" });
     }
 
-    // First check if review exists
-    const [existing] = await pool.query(
+    // Check if review exists
+    const existing = await query(
       "SELECT id FROM reviews WHERE id = ?",
       [reviewIdNum]
     );
 
-    if (existing.length === 0) {
+    if (!existing || existing.length === 0) {
       return res.status(404).json({ error: "Review not found" });
     }
 
-    // Delete the review
-    const [result] = await pool.query(
+    // Delete — if no error, it succeeded
+    await execute(
       "DELETE FROM reviews WHERE id = ?",
       [reviewIdNum]
     );
 
-    if (result.affectedRows === 1) {
-      return res.status(200).json({
-        success: true,
-        message: "Review deleted successfully"
-      });
-    } else {
-      return res.status(500).json({ error: "Failed to delete review" });
-    }
+    return res.status(200).json({
+      success: true,
+      message: "Review deleted successfully"
+    });
   } catch (error) {
-    console.error("Error deleting review:", error);
     return handleDbError(res, error, "deleting review");
+  }
+};
+
+// ==================== DASHBOARD CONTROLLERS ====================
+
+export const GetDashboardStats = async (req, res) => {
+  try {
+    // Get total products
+    const totalProductsResult = await query(
+      "SELECT COUNT(*) AS total_products FROM products"
+    );
+    
+    // Get total orders
+    const totalOrdersResult = await query(
+      "SELECT COUNT(*) AS total_orders FROM order_info"
+    );
+    
+    // Get total sold products
+    const totalSoldProductsResult = await query(
+      `SELECT SUM(oi.quantity) AS total_sold_products
+       FROM order_items oi
+       JOIN order_info o ON oi.order_id = o.id
+       WHERE o.status = 'completed'`
+    );
+    
+    // Get bar chart data
+    const barChartData = await query(`
+      SELECT created_at, quantity
+      FROM order_info
+      JOIN order_items ON order_info.id = order_items.order_id
+      WHERE order_info.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+    `);
+    
+    // Get category stats
+    const categoryStats = await query(`
+      SELECT 
+        pc.category_id,
+        c.name as category_name,
+        SUM(oi.quantity) as total_quantity_sold
+      FROM order_items oi
+      JOIN product_categories pc ON oi.product_id = pc.product_id
+      LEFT JOIN categories c ON pc.category_id = c.id
+      GROUP BY pc.category_id, c.name
+    `);
+    
+    // Get wilaya stats
+    const wilayaStats = await query(`
+      SELECT wilaya, COUNT(*) AS totalOrders
+      FROM order_info
+      GROUP BY wilaya
+      ORDER BY totalOrders DESC
+      LIMIT 10
+    `);
+
+    // Process daily totals
+    const dailyTotals = Object.entries(
+      (barChartData || []).reduce((acc, order) => {
+        const day = new Date(order.created_at).toISOString().split("T")[0];
+        acc[day] = (acc[day] || 0) + (order.quantity || 0);
+        return acc;
+      }, {})
+    ).map(([day, total]) => ({ day, total }));
+    
+    const totalProducts = totalProductsResult?.[0]?.total_products || 0;
+    const totalOrders = totalOrdersResult?.[0]?.total_orders || 0;
+    const totalSoldProducts = totalSoldProductsResult?.[0]?.total_sold_products || 0;
+
+    return res.status(200).json({
+      totalProducts,
+      totalOrders,
+      totalSoldProducts,
+      dailyTotals,
+      CategoryStats: categoryStats || [],
+      wilayaStats: wilayaStats || [],
+    });
+  } catch (error) {
+    return handleDbError(res, error, "fetching dashboard stats");
   }
 };
