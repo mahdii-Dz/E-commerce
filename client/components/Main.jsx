@@ -10,7 +10,9 @@ function Main({ Banners, onOpenCategorySidebar }) {
   const { Products, Promotions } = useContext(GlobalContext)
   const NewestProducts = Products && Products.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4)
 
-  const sortedBanners = Banners?.sort((a, b) => a.position - b.position) || []
+  const sortedBanners = Array.isArray(Banners)
+    ? [...Banners].sort((a, b) => a.position - b.position)
+    : [];
   const mainBanner = sortedBanners[0]
   const sideBanner = sortedBanners[1]
 
@@ -26,16 +28,17 @@ function Main({ Banners, onOpenCategorySidebar }) {
       </button>
 
       {/* Banners */}
-      <div className='w-full flex flex-col lg:flex-row items-center gap-4 lg:h-90 overflow-hidden'>
-        <div className='w-full lg:w-3/4 h-64 lg:h-full overflow-clip rounded-xl bg-stroke relative'>
-          {mainBanner ? (
+      <div className='w-full flex flex-col lg:flex-row items-stretch gap-4 overflow-hidden'>
+        <div className='w-full lg:w-3/4 h-64 lg:h-96 rounded-xl bg-stroke relative overflow-hidden'>
+          {mainBanner && mainBanner.url ? (
             <Image 
               src={mainBanner.url.trim()} 
               alt="الإعلان الرئيسي" 
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 75vw"
-              className="object-cover cursor-pointer hover:scale-110 transition-transform duration-300" 
+              className="object-cover cursor-pointer hover:scale-110 transition-transform duration-300"
+              quality={85}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
@@ -44,14 +47,15 @@ function Main({ Banners, onOpenCategorySidebar }) {
           )}
         </div>
         
-        <div className='w-full lg:w-1/4 h-64 lg:h-90 hidden lg:block rounded-xl overflow-clip cursor-pointer relative'>
-          {sideBanner ? (
+        <div className='w-full lg:w-1/4 h-64 lg:h-96 hidden lg:block rounded-xl cursor-pointer relative overflow-hidden'>
+          {sideBanner && sideBanner.url ? (
             <Image 
               src={sideBanner.url.trim()} 
               alt="إعلان جانبي" 
               fill
               sizes="(max-width: 1024px) 100vw, 25vw"
-              className="object-cover hover:scale-110 transition-transform duration-300" 
+              className="object-cover hover:scale-110 transition-transform duration-300"
+              quality={85}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-primary text-white font-semibold text-xl">

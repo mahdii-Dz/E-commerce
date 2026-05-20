@@ -16,18 +16,18 @@ export default function HomeClient({ banners, categories }) {
   return (
     <>
       <NavBar onOpenCategorySidebar={openCategorySidebar} />
-      
+
       <div className="pt-24 lg:pt-32">
         <div className="flex flex-col lg:flex-row gap-6 px-4 lg:px-20">
-          
-          <SideBar 
-            category={categories || []} 
+
+          <SideBar
+            category={categories || []}
             isLoadingCategories={isLoadingCategories}
             isOpen={isCategorySidebarOpen}
             onClose={closeCategorySidebar}
             />
-          <Main 
-            Banners={banners.banners || []} 
+          <Main
+            Banners={banners}
             onOpenCategorySidebar={openCategorySidebar}
           />
         </div>
