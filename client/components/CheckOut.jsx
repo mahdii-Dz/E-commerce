@@ -230,6 +230,13 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setSubmitError('');
+
+        const firstName = formData.firstName?.trim() || '';
+        const lastName = formData.lastName?.trim() || '';
+        const phoneNumber = formData.phoneNumber?.trim() || '';
+        const wilaya = formData.wilaya?.trim() || '';
+        const baladiyaValue = formData.baladiya?.trim() || '';
 
         // Validation: if offer selected, total must match exactly
         if (selectedOffer && totalAllocated !== selectedOffer.quantity) {
@@ -237,20 +244,62 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             return;
         }
 
+        // Validation: required fields
+        if (!firstName) {
+            setSubmitError('الاسم الأول مطلوب');
+            return;
+        }
+        if (!lastName) {
+            setSubmitError('اللقب مطلوب');
+            return;
+        }
+        if (!phoneNumber) {
+            setSubmitError('رقم الهاتف مطلوب');
+            return;
+        }
+
+        // Simple phone validation: allow digits and optional leading +, require at least 8 digits
+        const digitsOnly = phoneNumber.replace(/[^\d]/g, '');
+        if (digitsOnly.length < 8) {
+            setSubmitError('رقم الهاتف غير صحيح');
+            return;
+        }
+
+        if (!wilaya) {
+            setSubmitError('الولاية مطلوبة');
+            return;
+        }
+
+        if (!colors || colors.length === 0 || colors.every(c => (colorQuantities[c.hex] || 0) === 0)) {
+            setSubmitError('يرجى اختيار الكمية قبل إتمام الطلب');
+            return;
+        }
+
+        // Delivery-specific baladiya validation
+        const requiresBaladiya =
+            formData.delivery === 'domicile' || (formData.delivery === 'stopDesk' && communes.length > 0);
+
+        if (requiresBaladiya && !baladiyaValue) {
+            setSubmitError('البلدية مطلوبة');
+            return;
+        }
+
         // Build items array from colorQuantities with quantity > 0
         const items = colors
-            .filter(c => {
-                const qty = colorQuantities[c.hex] || 0;
-                return qty > 0;
-            })
-            .map(c => ({
+            .filter((c) => (colorQuantities[c.hex] || 0) > 0)
+            .map((c) => ({
                 product_id: productId,
                 quantity: colorQuantities[c.hex],
                 price_per_unit: effectivePrice,
                 color_name: c.name,
                 color_hex: c.hex,
-                offer_text: selectedOffer ? `${selectedOffer.quantity} for ${selectedOffer.price} DA` : null
+                offer_text: selectedOffer ? `${selectedOffer.quantity} for ${selectedOffer.price} DA` : null,
             }));
+
+        if (items.length === 0) {
+            setSubmitError('يرجى اختيار الكمية قبل إتمام الطلب');
+            return;
+        }
 
         // For stopDesk delivery, if no baladiya is selected (no communes available), use wilaya name
         const baladiya = formData.delivery === 'stopDesk' && !formData.baladiya
@@ -258,11 +307,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             : formData.baladiya;
 
         const orderData = {
-            first_name: formData.firstName,
-            last_name: formData.lastName,
-            phone: formData.phoneNumber,
-            wilaya: formData.wilaya,
-            wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya),
+            first_name: firstName,
+            last_name: lastName,
+            phone: phoneNumber,
+            wilaya: wilaya,
+            wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === wilaya),
             baladiya,
             delivery_type: formData.delivery,
             delivery_Price: deliveryPrice,
@@ -337,6 +386,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             onSubmit={handleSubmit}
             className="flex flex-col w-full items-center self-center mt-4 justify-center gap-6 lg:px-12 md:px-8 sm:px-4 px-2 py-8 bg-white rounded-xl border-2 border-stroke"
         >
+            {!!submitError && (
+                <div className="w-full p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm text-right">{submitError}</p>
+                </div>
+            )}
             {/* First & Last Name */}
             <div className="flex w-full items-center gap-6">
                 <div className="flex flex-col w-full">
@@ -584,11 +638,28 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             {/* Submit Button */}
             <button
                 type="submit"
-                disabled={(colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) || !!quantityError}
-                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${(colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) || !!quantityError
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-primary text-white hover:opacity-90 cursor-pointer'
-                    }`}
+                disabled={
+                    (colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) ||
+                    !!quantityError ||
+                    !formData.firstName.trim() ||
+                    !formData.lastName.trim() ||
+                    !formData.phoneNumber.trim() ||
+                    !formData.wilaya.trim() ||
+                    (formData.delivery === 'domicile' ? !formData.baladiya.trim() : false) ||
+                    (formData.delivery === 'stopDesk' && communes.length > 0 ? !formData.baladiya.trim() : false)
+                }
+                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${
+                    (colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) ||
+                    !!quantityError ||
+                    !formData.firstName.trim() ||
+                    !formData.lastName.trim() ||
+                    !formData.phoneNumber.trim() ||
+                    !formData.wilaya.trim() ||
+                    (formData.delivery === 'domicile' ? !formData.baladiya.trim() : false) ||
+                    (formData.delivery === 'stopDesk' && communes.length > 0 ? !formData.baladiya.trim() : false)
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-primary text-white hover:opacity-90 cursor-pointer'
+                }`}
             >
                 إتمام الطلب
             </button>

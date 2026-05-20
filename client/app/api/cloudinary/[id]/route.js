@@ -7,9 +7,9 @@ export async function DELETE(request, { params }) {
   if (auth.error) return auth.error;
 
   try {
-    const { publicId } = await params;
+    const { id } = await params;
     const headers = { cookie: request.headers.get('cookie') };
-    const data = await proxyRequest('DELETE', `/cloudinary/delete/${publicId}`, null, headers);
+    const data = await proxyRequest('DELETE', `/cloudinary/delete/${id}`, null, headers);
     return NextResponse.json(data);
   } catch (error) {
     console.error('Cloudinary upload error:', error.message);

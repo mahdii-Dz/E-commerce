@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,7 +28,7 @@ export default function AddProductPage() {
   const [toast, setToast] = useState(null);
   const [createdProductId, setCreatedProductId] = useState(null);
   const { data: categories, isLoading: loading, error } = useFetchSingleProduct('/api/shop/categories');
-  
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -38,12 +38,12 @@ export default function AddProductPage() {
     quantity: "",
     type: "",
   });
-  
+
   // Colors state - array of objects { name: string, hex: string }
   const [colors, setColors] = useState([]);
   const [showColorModal, setShowColorModal] = useState(false);
   const [colorForm, setColorForm] = useState({ name: "", hex: "#000000" });
-  
+
   const [images, setImages] = useState([]);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [uploadingIndex, setUploadingIndex] = useState(null);
@@ -55,6 +55,12 @@ export default function AddProductPage() {
   const [offers, setOffers] = useState([]);
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerForm, setOfferForm] = useState({ quantity: '', price: '', savedMoney: 0 });
+
+
+  useEffect(() => {
+    const imageUrl = images[0]?.url || "";
+    setThumbnailUrl(imageUrl.replace('/upload/', '/upload/w_300,h_300,c_fill,f_auto,q_auto/'));
+  }, [images, setImages])
 
   // Combobox anchor for categories
   const categoryAnchor = useComboboxAnchor();
@@ -91,10 +97,10 @@ export default function AddProductPage() {
       showToast("Please enter a color name", "error");
       return;
     }
-    
+
     // Remove # from hex if present for storage
     const hexValue = colorForm.hex.replace("#", "");
-    
+
     setColors(prev => [...prev, { name: colorForm.name.trim(), hex: hexValue }]);
     closeColorModal();
   };
@@ -176,15 +182,17 @@ export default function AddProductPage() {
         }
       );
 
-      const imageUrl = response.data.data.url;
+      const imageUrl = response.data.data.url; 
+
       const publicId = response.data.data.public_id;
-      setThumbnailUrl(imageUrl.replace('/upload/', '/upload/w_300,h_300,c_fill,f_auto,q_auto/'));
+
 
       setImages(prev => {
         const newImages = [...prev];
         newImages[index] = { url: imageUrl, file, publicId };
         return newImages;
       });
+
 
     } catch (error) {
       console.error("Upload failed:", error);
@@ -238,7 +246,7 @@ export default function AddProductPage() {
     }
 
     try {
-      const res = await axios.delete(`/api/cloudinary/${publicId}`);
+      const res = await axios.delete(`/api/cloudinary/${encodeURIComponent(publicId)}`);
       if (res.data.result === 'ok' || res.status === 200 || res.data.success) {
         setImages(prev => prev.filter((_, i) => i !== index));
       }
@@ -316,14 +324,14 @@ export default function AddProductPage() {
           <div className="bg-white rounded-2xl p-6 w-96 shadow-xl">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-semibold text-gray-900">Add Color</h3>
-              <button 
+              <button
                 onClick={closeColorModal}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors"
               >
                 <X size={20} className="text-gray-500" />
               </button>
             </div>
-            
+
             <div className="flex flex-col gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Color Name *</label>
@@ -336,7 +344,7 @@ export default function AddProductPage() {
                   autoFocus
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Color</label>
                 <div className="flex items-center gap-3">
@@ -349,7 +357,7 @@ export default function AddProductPage() {
                   <span className="text-sm text-gray-500 font-mono">{colorForm.hex}</span>
                 </div>
               </div>
-              
+
               <div className="flex gap-3 mt-4">
                 <button
                   onClick={closeColorModal}
@@ -460,7 +468,7 @@ export default function AddProductPage() {
             <ArrowLeft size={20} className="text-black" />
           </button>
         </Link>
-        
+
       </header>
 
       <div className="flex flex-col gap-10">
@@ -592,7 +600,7 @@ export default function AddProductPage() {
                   )}
                 </div>
               ))}
-              
+
               {/* Add color button - circular with plus icon */}
               <button
                 onClick={openColorModal}
@@ -602,17 +610,17 @@ export default function AddProductPage() {
                 <Plus size={24} className="text-gray-400 group-hover:text-[#FA3145]" />
               </button>
             </div>
-            
+
             {/* Color names list */}
             {colors.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
                 {colors.map((color, index) => (
-                  <span 
-                    key={index} 
+                  <span
+                    key={index}
                     className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700"
                   >
-                    <span 
-                      className="w-3 h-3 rounded-full" 
+                    <span
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: `#${color.hex}` }}
                     />
                     {color.name}
@@ -749,9 +757,9 @@ export default function AddProductPage() {
 
           <div className="flex flex-col gap-3 w-full">
             <label className="text-lg font-semibold text-black">Type:</label>
-            <Select 
-              value={formData.type} 
-              onValueChange={(value) => handleChange("type", value)}  
+            <Select
+              value={formData.type}
+              onValueChange={(value) => handleChange("type", value)}
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full h-14! bg-white rounded-xl border-gray-200 disabled:bg-gray-100">
