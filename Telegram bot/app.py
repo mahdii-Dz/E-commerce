@@ -510,25 +510,62 @@ async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
 # ===== BOT FUNCTION =====
 
 def run_bot():
-    """Run the Telegram bot"""
+    """Run the Telegram bot - Python 3.11 compatible"""
+    import asyncio
+    
+    # Create a new event loop for this thread (required for Python 3.11+)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
     # Create application
-    app = Application.builder().token(BOT_TOKEN).build()
+    application = Application.builder().token(BOT_TOKEN).build()
     
     # Add command handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CommandHandler("pending", pending_command))
-    app.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("status", status_command))
+    application.add_handler(CommandHandler("pending", pending_command))
+    application.add_handler(CallbackQueryHandler(button_callback))
     
-    # Add background job
-    job_queue = app.job_queue
+    # Add background job to check for new orders
+    job_queue = application.job_queue
     if job_queue:
         job_queue.run_repeating(check_new_orders, interval=10, first=1)
         print("✅ Background job scheduled (every 10 seconds)")
+    else:
+        print("⚠️ Job queue not available - order checking will use polling instead")
+        # Fallback: run order checking in a separate thread
+        import threading
+        def background_check():
+            import asyncio
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            new_loop.run_until_complete(check_new_orders_continuous(application))
+        
+        def check_new_orders_continuous(app):
+            import asyncio
+            async def continuous_check():
+                while True:
+                    await check_new_orders(app)
+                    await asyncio.sleep(10)
+            return continuous_check()
+        
+        threading.Thread(target=background_check, daemon=True).start()
     
     print(f"✅ Bot running with {len(AUTHORIZED_ADMINS)} admin(s)")
-    app.run_polling(allowed_updates=['message', 'callback_query'])
+    
+    # Run the bot using asyncio properly
+    try:
+        loop.run_until_complete(
+            application.run_polling(
+                allowed_updates=['message', 'callback_query'],
+                drop_pending_updates=True
+            )
+        )
+    except Exception as e:
+        print(f"❌ Bot error: {e}")
+    finally:
+        loop.close()
 
 def run_flask():
     """Run Flask for health checks"""
