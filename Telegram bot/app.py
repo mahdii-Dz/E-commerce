@@ -30,13 +30,12 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_IDS_ENV = os.getenv("ADMIN_IDS", "")
 AUTHORIZED_ADMINS = [aid.strip() for aid in ADMIN_IDS_ENV.split(",") if aid.strip()]
 
-# ===== DATABASE CONFIGURATION WITH SSL =====
-temp_cert_file = None  # Global to keep reference
+# ===== DATABASE CONFIGURATION =====
+# TiDB Serverless requires TLS. System CA certificates work because 
+# Let's Encrypt ISRG Root X1 is already in your system's trust store.
 
 def get_db_connection_config():
-    """Create DB config with SSL certificate from environment variable"""
-    global temp_cert_file
-    
+    """Create DB config with SSL using system CA certificates"""
     config = {
         'host': os.getenv("DB_HOST"),
         'port': int(os.getenv("DB_PORT", 4000)),
@@ -47,25 +46,13 @@ def get_db_connection_config():
         'autocommit': True,
     }
     
-    # Check if we have CA certificate in environment variable
-    ca_cert_content = os.getenv("DB_CA_CERT")
+    # Enable SSL with hostname verification
+    # This uses the system's default CA certificate bundle
+    config['ssl'] = {'check_hostname': True}
     
-    if ca_cert_content and ca_cert_content.strip():
-        try:
-            # Write certificate to a temporary file
-            temp_cert_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.pem')
-            temp_cert_file.write(ca_cert_content)
-            temp_cert_file.flush()  # Ensure content is written
-            temp_cert_file.close()
-            
-            config['ssl'] = {'ca': temp_cert_file.name}
-            print("✅ SSL certificate loaded from environment variable")
-        except Exception as e:
-            print(f"⚠️ Failed to create SSL certificate file: {e}")
-    else:
-        print("⚠️ No SSL certificate found in DB_CA_CERT. Connection may fail if SSL is required.")
-    
+    print("✅ SSL enabled using system CA certificates")
     return config
+
 
 # Print config for debugging (hide sensitive data)
 print(f"🤖 Starting Order Bot...")
@@ -73,7 +60,6 @@ print(f"BOT_TOKEN loaded: {'✅ Yes' if BOT_TOKEN else '❌ NO!'}")
 print(f"ADMIN_IDS loaded: {AUTHORIZED_ADMINS}")
 print(f"DB_HOST: {os.getenv('DB_HOST')}")
 print(f"DB_NAME: {os.getenv('DB_NAME')}")
-print(f"DB_CA_CERT loaded: {'✅ Yes' if os.getenv('DB_CA_CERT') else '❌ NO!'}")
 
 # ===== VALIDATE CONFIGURATION =====
 if not BOT_TOKEN:
@@ -87,15 +73,6 @@ if not AUTHORIZED_ADMINS or AUTHORIZED_ADMINS == ['']:
 if not os.getenv("DB_HOST") or not os.getenv("DB_NAME"):
     print("❌ ERROR: Database credentials not found!")
     exit(1)
-
-# Track processed orders
-processed_order_ids: Set[int] = set()
-order_actioned_by: Dict[int, Dict[str, str]] = {}
-
-# Connection pool
-connection_pool = None
-
-# ===== DATABASE FUNCTIONS =====
 
 def init_db_pool():
     """Initialize database connection pool"""
