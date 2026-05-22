@@ -4,13 +4,12 @@ load_dotenv()
 
 # ===== REST OF IMPORTS =====
 import os
-import asyncio
+import threading
 from datetime import datetime
 from typing import Optional, Dict, Any, Set, List
 import pymysql
 from dbutils.pooled_db import PooledDB
 from flask import Flask
-import threading
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
@@ -311,6 +310,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(f"❌ Order #{order_id} REJECTED!")
         else:
             await query.edit_message_text(f"❌ Failed to reject Order #{order_id}")
+    
+    elif action == "view":
+        await query.answer(f"Order #{order_id} details")
 
 async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
     global processed_order_ids
@@ -337,17 +339,14 @@ async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
                         print(f"Failed to send to {admin_id}: {e}")
                 
                 processed_order_ids.add(order_id)
-                await asyncio.sleep(0.5)
-        
-        if len(processed_order_ids) > 1000:
-            processed_order_ids.clear()
+                
     except Exception as e:
         print(f"Error checking orders: {e}")
 
 # ===== MAIN =====
 
-async def main():
-    """Main async function to run the bot"""
+def main():
+    """Main function to run the bot"""
     print("🚀 Starting bot...")
     
     # Initialize database
@@ -371,8 +370,8 @@ async def main():
     
     print(f"✅ Bot running with {len(AUTHORIZED_ADMINS)} admin(s)")
     
-    # Start the bot
-    await app.run_polling()
+    # Start the bot - this handles its own event loop
+    app.run_polling()
 
 def run_flask():
     """Run Flask in a separate thread"""
@@ -386,4 +385,4 @@ if __name__ == "__main__":
     print("🚀 Flask health check server started")
     
     # Run the bot in the main thread
-    asyncio.run(main())
+    main()
