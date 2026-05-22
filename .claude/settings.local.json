@@ -25,7 +25,15 @@
       "Bash(npm start:*)",
       "Bash(curl -s \"http://localhost:5000/api/shop/get-product/30001/reviews\")",
       "Bash(curl:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "PowerShell(ls $HOME\\\\.claude\\\\skills)",
+      "PowerShell(git clone --single-branch --depth 1 https://github.com/garrytan/gstack.git $HOME\\\\.claude\\\\skills\\\\gstack)",
+      "PowerShell(cd $HOME\\\\.claude\\\\skills\\\\gstack)",
+      "PowerShell(.\\\\setup)",
+      "PowerShell(ls *)",
+      "PowerShell(& $HOME\\\\.claude\\\\skills\\\\gstack\\\\setup)",
+      "PowerShell(skill list *)",
+      "Skill(plan-design-review)"
     ]
   },
   "allowedTools": [
