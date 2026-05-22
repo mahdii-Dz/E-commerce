@@ -5,6 +5,7 @@ load_dotenv()
 # ===== REST OF IMPORTS =====
 import asyncio
 import os
+import tempfile
 import threading
 from datetime import datetime
 from typing import Optional, Dict, Any, Set, List
@@ -29,34 +30,61 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 ADMIN_IDS_ENV = os.getenv("ADMIN_IDS", "")
 AUTHORIZED_ADMINS = [aid.strip() for aid in ADMIN_IDS_ENV.split(",") if aid.strip()]
 
-# Database Configuration
-DB_CONFIG = {
-    'host': os.getenv("DB_HOST"),
-    'port': int(os.getenv("DB_PORT", 4000)),
-    'user': os.getenv("DB_USER"),
-    'password': os.getenv("DB_PASSWORD"),
-    'database': os.getenv("DB_NAME"),
-    'charset': 'utf8mb4',
-    'autocommit': True,
-}
+# ===== DATABASE CONFIGURATION WITH SSL =====
+temp_cert_file = None  # Global to keep reference
 
-# Print config for debugging
+def get_db_connection_config():
+    """Create DB config with SSL certificate from environment variable"""
+    global temp_cert_file
+    
+    config = {
+        'host': os.getenv("DB_HOST"),
+        'port': int(os.getenv("DB_PORT", 4000)),
+        'user': os.getenv("DB_USER"),
+        'password': os.getenv("DB_PASSWORD"),
+        'database': os.getenv("DB_NAME"),
+        'charset': 'utf8mb4',
+        'autocommit': True,
+    }
+    
+    # Check if we have CA certificate in environment variable
+    ca_cert_content = os.getenv("DB_CA_CERT")
+    
+    if ca_cert_content and ca_cert_content.strip():
+        try:
+            # Write certificate to a temporary file
+            temp_cert_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.pem')
+            temp_cert_file.write(ca_cert_content)
+            temp_cert_file.flush()  # Ensure content is written
+            temp_cert_file.close()
+            
+            config['ssl'] = {'ca': temp_cert_file.name}
+            print("✅ SSL certificate loaded from environment variable")
+        except Exception as e:
+            print(f"⚠️ Failed to create SSL certificate file: {e}")
+    else:
+        print("⚠️ No SSL certificate found in DB_CA_CERT. Connection may fail if SSL is required.")
+    
+    return config
+
+# Print config for debugging (hide sensitive data)
 print(f"🤖 Starting Order Bot...")
 print(f"BOT_TOKEN loaded: {'✅ Yes' if BOT_TOKEN else '❌ NO!'}")
 print(f"ADMIN_IDS loaded: {AUTHORIZED_ADMINS}")
-print(f"DB_HOST: {DB_CONFIG['host']}")
-print(f"DB_NAME: {DB_CONFIG['database']}")
+print(f"DB_HOST: {os.getenv('DB_HOST')}")
+print(f"DB_NAME: {os.getenv('DB_NAME')}")
+print(f"DB_CA_CERT loaded: {'✅ Yes' if os.getenv('DB_CA_CERT') else '❌ NO!'}")
 
 # ===== VALIDATE CONFIGURATION =====
 if not BOT_TOKEN:
     print("❌ ERROR: BOT_TOKEN not found in environment variables!")
     exit(1)
 
-if not AUTHORIZED_ADMINS:
+if not AUTHORIZED_ADMINS or AUTHORIZED_ADMINS == ['']:
     print("❌ ERROR: ADMIN_IDS not found in environment variables!")
     exit(1)
 
-if not DB_CONFIG['host'] or not DB_CONFIG['database']:
+if not os.getenv("DB_HOST") or not os.getenv("DB_NAME"):
     print("❌ ERROR: Database credentials not found!")
     exit(1)
 
@@ -73,25 +101,36 @@ def init_db_pool():
     """Initialize database connection pool"""
     global connection_pool
     try:
+        db_config = get_db_connection_config()
+        
         connection_pool = PooledDB(
             creator=pymysql,
             maxconnections=5,
             mincached=2,
             maxcached=5,
             blocking=True,
-            host=DB_CONFIG['host'],
-            port=DB_CONFIG['port'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password'],
-            database=DB_CONFIG['database'],
-            charset=DB_CONFIG['charset'],
-            autocommit=DB_CONFIG['autocommit']
+            **db_config
         )
-        print("✅ Database connection pool initialized")
+        
+        # Test the connection
+        test_conn = connection_pool.connection()
+        test_conn.close()
+        
+        print("✅ Database connection pool initialized and tested")
         return True
     except Exception as e:
         print(f"❌ Failed to initialize database pool: {e}")
         return False
+
+def cleanup_ssl_cert():
+    """Clean up temporary SSL certificate file"""
+    global temp_cert_file
+    if temp_cert_file and os.path.exists(temp_cert_file.name):
+        try:
+            os.unlink(temp_cert_file.name)
+            print("✅ Temporary SSL certificate cleaned up")
+        except Exception as e:
+            print(f"⚠️ Failed to clean up SSL certificate: {e}")
 
 def get_db_connection():
     """Get connection from pool"""
@@ -339,8 +378,8 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conn.close()
         else:
             db_status = "❌ Failed"
-    except:
-        db_status = "❌ Error"
+    except Exception as e:
+        db_status = f"❌ Error: {str(e)[:50]}"
     
     await update.message.reply_text(
         f"📊 **Bot Status**\n\n"
@@ -516,20 +555,31 @@ def run_bot():
 
 def run_flask():
     """Run Flask for health checks"""
-    port = int(os.getenv("PORT", 8080))
+    port = int(os.getenv("PORT", 10000))
     flask_app.run(host='0.0.0.0', port=port)
 
 # ===== MAIN =====
 
 if __name__ == "__main__":
+    print("🚀 Starting Order Bot...")
+    
     # Initialize database
     if not init_db_pool():
-        print("❌ Failed to connect to database. Check your environment variables.")
+        print("❌ FATAL: Failed to connect to database.")
+        print("Please check your database credentials and SSL certificate.")
+        cleanup_ssl_cert()
         exit(1)
     
-    # Run both bot and Flask in separate threads
+    # Start the bot thread
+    print("🔄 Starting Telegram bot thread...")
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
+    print("✅ Bot thread started.")
     
-    print("🚀 Starting Flask health check server...")
-    run_flask()
+    # Run Flask (this blocks)
+    print(f"🚀 Starting Flask health check server on port {os.getenv('PORT', 10000)}...")
+    try:
+        run_flask()
+    finally:
+        # Clean up temporary SSL certificate when shutting down
+        cleanup_ssl_cert()
