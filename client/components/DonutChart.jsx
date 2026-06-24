@@ -38,8 +38,8 @@ export function ChartPieDonut({
     error = null,
     dataKey = "total_quantity_sold",
     nameKey = "category_name",
-    title = "Category Distribution",
-    description = "Sales by category"
+    title = "احصائيات الفئة",
+    description = "المبيعات لكل فئة"
 }) {
     const processedData = useMemo(() => {
         if (!Array.isArray(chartData) || chartData.length === 0) return [];

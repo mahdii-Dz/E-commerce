@@ -13,30 +13,30 @@ function Dashboard() {
 
   return (
     <main className='w-full pt-6 px-9 flex flex-col gap-6 pb-16'>
-      <h1 className='text-3xl font-bold'>Dashboard</h1>
+      <h1 className='text-3xl font-bold'>لوحة التحكم</h1>
       <div className='flex flex-col md:flex-row items-start gap-6 md:gap-9'>
         <div className='bg-white border-2 w-full md:w-1/6 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
-          <p className='text-sm font-medium text-secondary'>Total products</p>
+          <p className='text-sm font-medium text-secondary'>إجمالي المنتجات</p>
           {
             totalProducts != null && totalProducts !== undefined ? (
               <h2 className='text-[28px] font-semibold text-primary'>{totalProducts}</h2>
             ) : (
-              <p className='text-sm font-medium text-primary h-10.5 pt-4 '>loading...</p>
+              <p className='text-sm font-medium text-primary h-10.5 pt-4 '>جار التحميل...</p>
             )
           }
         </div>
         <div className='bg-white border-2 w-full md:w-1/6 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
-          <p className='text-sm font-medium text-secondary'>Total Sold Products</p>
+          <p className='text-sm font-medium text-secondary'>إجمالي المنتجات المباعة</p>
           {
             totalSoldProducts != null && totalSoldProducts !== undefined ? (
               <h2 className='text-[28px] font-semibold text-primary'>{totalSoldProducts}</h2>
             ) : (
-              <p className='text-sm font-medium text-primary h-10.5 pt-4 '>loading...</p>
+              <p className='text-sm font-medium text-primary h-10.5 pt-4 '>جار التحميل...</p>
             )
           }
         </div>
         <div className='bg-white border-2 w-full md:w-1/6 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
-          <p className='text-sm font-medium text-secondary'>Total Orders</p>
+          <p className='text-sm font-medium text-secondary'>إجمالي الطلبات</p>
           {
             totalOrders != null && totalOrders !== undefined ? (
               <h2 className='text-[28px] font-semibold text-primary'>{totalOrders}</h2>

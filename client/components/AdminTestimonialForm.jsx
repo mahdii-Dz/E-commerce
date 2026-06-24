@@ -317,7 +317,7 @@ export default function AdminTestimonialForm({ productId }) {
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="animate-spin ml-2" size={16} />
+              <Loader2 className="animate-spin mr-2" size={16} />
               جاري الإرسال...
             </>
           ) : (

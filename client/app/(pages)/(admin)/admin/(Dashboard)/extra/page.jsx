@@ -323,7 +323,7 @@ export default function BannerCategoriesPage() {
       <div className="w-full pt-6 px-9 pb-16  flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 size={40} className="animate-spin text-[#FA3145]" />
-          <p className="text-lg text-gray-600">Loading...</p>
+          <p className="text-lg text-gray-600">جار التحميل...</p>
         </div>
       </div>
     );
@@ -344,7 +344,7 @@ export default function BannerCategoriesPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-6 w-96 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Add New Category</h3>
+              <h3 className="text-lg font-semibold text-gray-900">إضافة تصنيف جديد</h3>
               <button 
                 onClick={() => setShowAddCategoryModal(false)}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -355,12 +355,12 @@ export default function BannerCategoriesPage() {
             
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">اسم التصنيف *</label>
                 <input
                   type="text"
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="e.g., Electronics"
+                  placeholder="مثال: إلكترونيات"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FA3145] text-gray-800"
                   autoFocus
                   onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
@@ -372,7 +372,7 @@ export default function BannerCategoriesPage() {
                   onClick={() => setShowAddCategoryModal(false)}
                   className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
                 >
-                  Cancel
+                  إلغاء
                 </button>
                 <button
                   onClick={handleAddCategory}
@@ -384,7 +384,7 @@ export default function BannerCategoriesPage() {
                   ) : (
                     <>
                       <Plus size={18} />
-                      Add
+                      إضافة
                     </>
                   )}
                 </button>
@@ -399,7 +399,7 @@ export default function BannerCategoriesPage() {
         <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4">
             <Loader2 size={40} className="animate-spin text-[#FA3145]" />
-            <p className="text-lg font-medium text-gray-700">Saving changes...</p>
+            <p className="text-lg font-medium text-gray-700">جاري حفظ التغييرات...</p>
           </div>
         </div>
       )}
@@ -426,7 +426,7 @@ export default function BannerCategoriesPage() {
         {/* Banner Section */}
         <div className="flex flex-col items-start gap-12 self-stretch">
           <h1 className="text-3xl font-semibold text-black font-roboto">
-            Banner
+            البانر
           </h1>
 
           {/* Images Section - Two separate banners side by side */}
@@ -467,8 +467,8 @@ export default function BannerCategoriesPage() {
                   <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md">
                     <ImageIcon size={32} className="text-gray-400" />
                   </div>
-                  <span className="text-sm text-gray-500">Add Main Banner</span>
-                  <span className="text-xs text-gray-400">676 x 383 recommended</span>
+                  <span className="text-sm text-gray-500">إضافة البانر الرئيسي</span>
+                  <span className="text-xs text-gray-400">676 × 383 (مستحسن)</span>
                 </div>
               )}
             </div>
@@ -508,8 +508,8 @@ export default function BannerCategoriesPage() {
                   <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md">
                     <ImageIcon size={32} className="text-gray-400" />
                   </div>
-                  <span className="text-sm text-gray-500">Add Secondary Banner</span>
-                  <span className="text-xs text-gray-400">326 x 383 recommended</span>
+                  <span className="text-sm text-gray-500">إضافة البانر الثانوي</span>
+                  <span className="text-xs text-gray-400">326 × 383 (مستحسن)</span>
                 </div>
               )}
             </div>
@@ -526,7 +526,7 @@ export default function BannerCategoriesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Category ..."
+                placeholder="بحث عن تصنيف..."
                 className="w-full text-base text-gray-500 bg-transparent focus:outline-none font-roboto"
               />
               <Search size={20} className="text-gray-500" />
@@ -539,7 +539,7 @@ export default function BannerCategoriesPage() {
               className="h-11 flex justify-center items-center gap-2 px-6 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm whitespace-nowrap"
             >
               <Plus size={16} />
-              Add Category
+              إضافة تصنيف
             </button>
           </div>
 
@@ -547,7 +547,7 @@ export default function BannerCategoriesPage() {
           <div className="flex flex-col items-start gap-3 self-stretch w-full">
             {filteredCategories.length === 0 ? (
               <div className="w-full py-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                {searchQuery ? "No categories found matching your search" : "No categories yet. Add your first category!"}
+                {searchQuery ? "لا توجد تصنيفات تطابق بحثك" : "لا توجد تصنيفات بعد. أضف أول تصنيف!"}
               </div>
             ) : (
               filteredCategories.map((category, index) => (
@@ -579,7 +579,7 @@ export default function BannerCategoriesPage() {
             disabled={isSubmitting}
             className="px-8 py-3 bg-white border border-gray-200 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Cancel
+            إلغاء
           </button>
           <button
             onClick={handleConfirm}
@@ -589,10 +589,10 @@ export default function BannerCategoriesPage() {
             {isSubmitting ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                Saving...
+                جاري الحفظ...
               </>
             ) : (
-              "Confirm"
+              "تأكيد"
             )}
           </button>
         </div>

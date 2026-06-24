@@ -289,21 +289,21 @@ export default function AdminReviewsPage() {
   }
 
   return (
-    <div className='w-full pt-6 px-9 gap-6 pb-16 relative' dir='rtl'>
+    <div className='w-full pt-6 px-9 gap-6 pb-16 relative'>
       {/* Header */}
       <div className='flex items-center justify-between mb-6'>
         <div>
-          <h1 className='text-xl lg:text-2xl font-bold'>Admin Testimonials</h1>
+          <h1 className='text-xl lg:text-2xl font-bold'>شهادات المدير</h1>
           <p className='text-secondary text-sm mt-1'>
-            Add testimonial reviews with images for products
+            إضافة شهادات تقييم مع صور للمنتجات
           </p>
         </div>
         <Button
           variant="outline"
           onClick={() => router.back()}
         >
-          <ArrowRight size={16} className="rotate-180" />
-          Back
+          <ArrowRight size={16} />
+          رجوع
         </Button>
       </div>
 
@@ -330,14 +330,14 @@ export default function AdminReviewsPage() {
           <div className='bg-white rounded-xl border-2 border-stroke p-6'>
             <h2 className='text-lg font-semibold mb-6 flex items-center gap-2'>
               <Star size={20} />
-              Add Admin Testimonial
+              إضافة شهادة إدارية
             </h2>
 
             <form onSubmit={handleSubmit} className='space-y-6'>
               {/* Product Selection */}
               <div>
                 <label htmlFor='productId' className='block text-sm font-medium mb-2'>
-                  Product <span className='text-red-500'>*</span>
+                  المنتج <span className='text-red-500'>*</span>
                 </label>
                 <select
                   id='productId'
@@ -346,7 +346,7 @@ export default function AdminReviewsPage() {
                   className='w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
                   required
                 >
-                  <option value="">Select a product...</option>
+                  <option value="">اختر منتج...</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
                       {product.name} - {product.price} دج
@@ -358,14 +358,14 @@ export default function AdminReviewsPage() {
               {/* Customer Name */}
               <div>
                 <label htmlFor='customerName' className='block text-sm font-medium mb-2'>
-                  Customer Name <span className='text-red-500'>*</span>
+                  اسم العميل <span className='text-red-500'>*</span>
                 </label>
                 <Input
                   id='customerName'
                   type='text'
                   value={formData.customerName}
                   onChange={(e) => handleInputChange('customerName', e.target.value)}
-                  placeholder='Enter customer name (e.g., Ahmed, Fatima)'
+                  placeholder='أدخل اسم العميل (مثال: أحمد، فاطمة)'
                   required
                 />
               </div>
@@ -373,7 +373,7 @@ export default function AdminReviewsPage() {
               {/* Rating */}
               <div>
                 <label className='block text-sm font-medium mb-2'>
-                  Star Rating <span className='text-red-500'>*</span>
+                  التقييم بالنجوم <span className='text-red-500'>*</span>
                 </label>
                 <StarRating
                   rating={formData.stars}
@@ -386,13 +386,13 @@ export default function AdminReviewsPage() {
               {/* Review Text */}
               <div>
                 <label htmlFor='reviewText' className='block text-sm font-medium mb-2'>
-                  Testimonial Text <span className='text-red-500'>*</span>
+                  نص الشهادة <span className='text-red-500'>*</span>
                 </label>
                 <Textarea
                   id='reviewText'
                   value={formData.reviewText}
                   onChange={(e) => handleInputChange('reviewText', e.target.value)}
-                  placeholder='Write the customer testimonial here...'
+                  placeholder='اكتب نص شهادة العميل هنا...'
                   rows={5}
                   required
                 />
@@ -401,7 +401,7 @@ export default function AdminReviewsPage() {
               {/* Image Upload */}
               <div>
                 <label className='block text-sm font-medium mb-2'>
-                  Testimonial Screenshot (Optional)
+                  صورة الشهادة (اختياري)
                 </label>
                 <div className='border-2 border-dashed border-stroke rounded-lg p-6 text-center'>
                   {imageUrl ? (
@@ -421,14 +421,14 @@ export default function AdminReviewsPage() {
                         onClick={handleRemoveImage}
                         size="sm"
                       >
-                        Remove Image
+                        إزالة الصورة
                       </Button>
                     </div>
                   ) : (
                     <div className='space-y-4'>
                       <div className='flex items-center justify-center gap-2 text-secondary cursor-pointer hover:text-primary' onClick={triggerUpload}>
                         <ImageIcon size={24} />
-                        <span>Click to upload an image</span>
+                        <span>انقر لرفع صورة</span>
                       </div>
                       <input
                         ref={fileInputRef}
@@ -438,7 +438,7 @@ export default function AdminReviewsPage() {
                         className="hidden"
                       />
                       <p className='text-xs text-secondary'>
-                        Upload a screenshot of the customer testimonial or relevant image
+                        ارفع لقطة شاشة لشهادة العميل أو صورة ذات صلة
                       </p>
                     </div>
                   )}
@@ -465,11 +465,11 @@ export default function AdminReviewsPage() {
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="animate-spin ml-2" size={16} />
-                    Submitting...
+                    <Loader2 className="animate-spin mr-2" size={16} />
+                    جاري الإرسال...
                   </>
                 ) : (
-                  'Add Testimonial'
+                  'إضافة الشهادة'
                 )}
               </Button>
             </form>
@@ -479,33 +479,33 @@ export default function AdminReviewsPage() {
         {/* Info Column */}
         <div className='lg:col-span-1 space-y-6'>
           <div className='bg-white rounded-xl border-2 border-stroke p-6'>
-            <h3 className='font-semibold mb-4'>Tips</h3>
+            <h3 className='font-semibold mb-4'>نصائح</h3>
             <ul className='space-y-3 text-sm text-secondary'>
               <li>
-                <strong>Product:</strong> Select the product this testimonial belongs to
+                <strong>المنتج:</strong> اختر المنتج الذي تنتمي إليه هذه الشهادة
               </li>
               <li>
-                <strong>Customer Name:</strong> Enter the customer's name (or use pseudo-anonymous like "Ahmed K.")
+                <strong>اسم العميل:</strong> أدخل اسم العميل (أو استخدم اسمًا مستعارًا مثل "أحمد ك.")
               </li>
               <li>
-                <strong>Rating:</strong> Select how many stars this testimonial should show
+                <strong>التقييم:</strong> اختر عدد النجوم التي تظهر لهذه الشهادة
               </li>
               <li>
-                <strong>Image:</strong> Upload a screenshot or photo related to the testimonial (optional)
+                <strong>الصورة:</strong> ارفع لقطة شاشة أو صورة متعلقة بالشهادة (اختياري)
               </li>
             </ul>
           </div>
 
           <div className='bg-primary/5 rounded-xl border-2 border-primary p-6'>
-            <h3 className='font-semibold mb-4 text-primary'>Note</h3>
+            <h3 className='font-semibold mb-4 text-primary'>ملاحظة</h3>
             <p className='text-sm text-secondary'>
-              Admin testimonials are displayed with a special badge in the reviews section and will appear above customer reviews. They also have the option to include an image.
+              يتم عرض شهادات المدير مع شارة خاصة في قسم التقييمات وتظهر فوق تقييمات العملاء. كما يمكن إضافة صورة لها.
             </p>
           </div>
 
           {/* Current products count */}
           <div className='bg-gray-50 rounded-xl border border-stroke p-6'>
-            <div className='text-sm text-secondary mb-1'>Available Products</div>
+            <div className='text-sm text-secondary mb-1'>المنتجات المتاحة</div>
             <div className='text-2xl font-bold'>{products.length}</div>
           </div>
         </div>
@@ -514,7 +514,7 @@ export default function AdminReviewsPage() {
       {/* Reviews Management Section */}
       {formData.productId && (
         <div className='mt-8'>
-          <h2 className='text-xl font-bold mb-4'>Reviews for Selected Product</h2>
+          <h2 className='text-xl font-bold mb-4'>تقييمات المنتج المحدد</h2>
 
           {reviewsLoading ? (
             <div className='flex items-center justify-center py-12'>
@@ -526,7 +526,7 @@ export default function AdminReviewsPage() {
             </div>
           ) : reviews.length === 0 ? (
             <div className='p-6 bg-gray-50 border border-gray-200 rounded-lg text-center text-secondary'>
-              No reviews for this product yet.
+              لا توجد تقييمات لهذا المنتج بعد.
             </div>
           ) : (
             <div className='space-y-4'>
@@ -538,7 +538,7 @@ export default function AdminReviewsPage() {
                         <span className='font-semibold text-lg'>{review.customer_name}</span>
                         {review.is_admin && (
                           <span className='text-xs bg-primary text-white px-2 py-0.5 rounded-full flex items-center gap-1'>
-                            Admin
+                            مدير
                           </span>
                         )}
                         <span className='text-sm text-secondary'>
@@ -569,7 +569,7 @@ export default function AdminReviewsPage() {
                       className='flex items-center gap-1'
                     >
                       <Trash2 size={16} />
-                      Delete
+                      حذف
                     </Button>
                   </div>
                 </div>

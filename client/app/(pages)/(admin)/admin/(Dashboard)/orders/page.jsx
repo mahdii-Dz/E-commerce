@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ITEMS_PER_PAGE = 10;
 
-const FILTER_TYPES = ["All", "domicile", "stopDesk"];
+const FILTER_TYPES = ["الكل", "توصيل للمنزل", "استلام من المكتب"];
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -367,7 +367,7 @@ export default function OrdersPage() {
   if (loading) {
     return (
       <div className="w-full  pt-6 px-9 pb-16 flex items-center justify-center h-96">
-        <p className="text-gray-500">Loading orders...</p>
+        <p className="text-gray-500">جار تحميل الطلبات...</p>
       </div>
     );
   }
@@ -383,7 +383,7 @@ export default function OrdersPage() {
   if (!orders || orders.length === 0) {
     return (
       <div className="w-full  pt-6 px-9 pb-16 flex items-center justify-center h-96">
-        <p className="text-gray-500">No orders available</p>
+        <p className="text-gray-500">لا توجد طلبات متاحة</p>
       </div>
     );
   }
@@ -405,7 +405,7 @@ export default function OrdersPage() {
             <span className="font-medium">{toast.message}</span>
             <button
               onClick={() => setToast({ show: false, message: '', type: 'success' })}
-              className="ml-2 hover:opacity-80"
+              className="mr-2 hover:opacity-80"
             >
               <X className="w-4 h-4" />
             </button>
@@ -415,22 +415,22 @@ export default function OrdersPage() {
 
       {/* Header */}
       <header className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-semibold text-black tracking-tight">
-          All Orders
-        </h1>
+          <h1 className="text-3xl font-semibold text-black tracking-tight">
+            جميع الطلبات
+          </h1>
       </header>
 
       <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full">
         {/* Search & Filter Bar */}
         <div className="flex items-center justify-between gap-4 mb-6 w-full">
           <div className="relative w-8/10">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search orders..."
+              placeholder="بحث في الطلبات..."
               value={searchQuery}
               onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:border-transparent"
+              className="w-full pr-10 pl-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:border-transparent"
             />
           </div>
 
@@ -443,14 +443,14 @@ export default function OrdersPage() {
                 }`}
             >
               <Filter size={20} />
-              <span>Filter{hasActiveFilters && " (Active)"}</span>
+              <span>تصفية{hasActiveFilters && " (مفعلة)"}</span>
             </button>
 
             {/* Filter Popup */}
             {showFilterPopup && (
               <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900">Filter Orders</h3>
+                  <h3 className="font-semibold text-gray-900">تصفية الطلبات</h3>
                   <button
                     onClick={() => setShowFilterPopup(false)}
                     className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -461,7 +461,7 @@ export default function OrdersPage() {
 
                 {/* Delivery Type Filter */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">نوع التوصيل</label>
                   <select
                     value={filters.deliveryType}
                     onChange={(e) => handleFilterChange("deliveryType", e.target.value)}
@@ -475,7 +475,7 @@ export default function OrdersPage() {
 
                 {/* Price Range */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Total Price Range</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">نطاق السعر الإجمالي</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -496,10 +496,10 @@ export default function OrdersPage() {
 
                 {/* Location Filters */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Wilaya</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">الولاية</label>
                   <input
                     type="text"
-                    placeholder="Enter wilaya..."
+                    placeholder="أدخل اسم الولاية..."
                     value={filters.wilaya}
                     onChange={(e) => handleFilterChange("wilaya", e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]"
@@ -507,10 +507,10 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Baladiya</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">البلدية</label>
                   <input
                     type="text"
-                    placeholder="Enter baladiya..."
+                    placeholder="أدخل اسم البلدية..."
                     value={filters.baladiya}
                     onChange={(e) => handleFilterChange("baladiya", e.target.value)}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]"
@@ -523,13 +523,13 @@ export default function OrdersPage() {
                     onClick={clearFilters}
                     className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    Clear
+                    مسح
                   </button>
                   <button
                     onClick={applyFilters}
                     className="flex-1 px-4 py-2 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-lg transition-colors"
                   >
-                    Apply
+                    تطبيق
                   </button>
                 </div>
               </div>
@@ -544,15 +544,15 @@ export default function OrdersPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">ID</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Full Name</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Phone</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Location</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Delivery</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Products</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Qty</th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Total</th>
-                  <th className="px-4 py-4 text-center text-sm font-semibold text-gray-700 w-32">Actions</th>
+                  <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">ID</th>
+                  <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">الاسم الكامل</th>
+                  <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">الهاتف</th>
+                  <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">الموقع</th>
+                  <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">التوصيل</th>
+                  <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">المنتجات</th>
+                  <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">الكمية</th>
+                  <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">المجموع</th>
+                  <th className="px-4 py-4 text-center text-sm font-semibold text-gray-700 w-32">الإجراءات</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -742,26 +742,26 @@ export default function OrdersPage() {
                         {/* Customer Contact */}
                         <div className="space-y-2">
                           <div className="flex items-start gap-2 text-sm">
-                            <span className="text-gray-600 min-w-[80px]">Phone:</span>
+                            <span className="text-gray-600 min-w-[80px]">الهاتف:</span>
                             <span className="text-gray-900">{order.phone || '-'}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm">
-                            <span className="text-gray-600 min-w-[80px]">Address:</span>
+                            <span className="text-gray-600 min-w-[80px]">العنوان:</span>
                             <span className="text-gray-900">{order.address || '-'}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm">
-                            <span className="text-gray-600 min-w-[80px]">Wilaya:</span>
+                            <span className="text-gray-600 min-w-[80px]">الولاية:</span>
                             <span className="text-gray-900">{order.wilaya || '-'}</span>
                           </div>
                           <div className="flex items-start gap-2 text-sm">
-                            <span className="text-gray-600 min-w-[80px]">Baladiya:</span>
+                            <span className="text-gray-600 min-w-[80px]">البلدية:</span>
                             <span className="text-gray-900">{order.baladiya || '-'}</span>
                           </div>
                         </div>
 
                         {/* Products List */}
                         <div className="space-y-3">
-                          <h4 className="text-sm font-semibold text-gray-900">Products</h4>
+                          <h4 className="text-sm font-semibold text-gray-900">المنتجات</h4>
                           {order.items && order.items.length > 0 ? (
                             <div className="space-y-3">
                               {order.items.map((item, idx) => (
@@ -788,7 +788,7 @@ export default function OrdersPage() {
                                     </div>
                                   )}
                                   <div className="flex items-center justify-between text-xs text-gray-600">
-                                    <span>Quantity: {item.quantity}</span>
+                                    <span>الكمية: {item.quantity}</span>
                                     <span className="font-semibold text-gray-900">
                                       {Number(item.fullPrice || item.price_per_unit * item.quantity).toFixed(2)} DA
                                     </span>
@@ -809,7 +809,7 @@ export default function OrdersPage() {
                             disabled={processingOrders.accepting.has(order.order_id) || processingOrders.rejecting.has(order.order_id)}
                           >
                             <Edit className="w-4 h-4" />
-                            <span className="hidden sm:inline">Edit</span>
+                            <span className="hidden sm:inline">تعديل</span>
                           </button>
                           <button
                             onClick={() => handleAccept(order.order_id)}
@@ -825,7 +825,7 @@ export default function OrdersPage() {
                             ) : (
                               <>
                                 <Check className="w-4 h-4" strokeWidth={3} />
-                                <span className="hidden sm:inline">Accept</span>
+                                <span className="hidden sm:inline">قبول</span>
                               </>
                             )}
                           </button>
@@ -843,7 +843,7 @@ export default function OrdersPage() {
                             ) : (
                               <>
                                 <X className="w-4 h-4" strokeWidth={3} />
-                                <span className="hidden sm:inline">Reject</span>
+                                <span className="hidden sm:inline">رفض</span>
                               </>
                             )}
                           </button>
@@ -856,7 +856,7 @@ export default function OrdersPage() {
             })}
             {currentOrders.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-gray-500">No orders match your filters</p>
+                <p className="text-gray-500">لا توجد طلبات تطابق التصفية</p>
               </div>
             )}
           </div>
@@ -865,7 +865,7 @@ export default function OrdersPage() {
         {/* Pagination Footer */}
         <footer className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
           <span className="text-sm text-gray-600">
-            Showing {filteredOrders.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} Orders
+            عرض {filteredOrders.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredOrders.length)} من {filteredOrders.length} طلب
           </span>
 
           <div className="flex items-center gap-2">
@@ -874,8 +874,8 @@ export default function OrdersPage() {
               disabled={currentPage === 1}
               className="inline-flex cursor-pointer items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft size={18} />
-              <span>Back</span>
+              <ChevronRight size={18} />
+              <span>السابق</span>
             </button>
 
             <div className="flex gap-1">
@@ -903,8 +903,8 @@ export default function OrdersPage() {
               disabled={currentPage === totalPages || totalPages === 0}
               className="inline-flex cursor-pointer items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <span>Next</span>
-              <ChevronRight size={18} />
+              <span>التالي</span>
+              <ChevronLeft size={18} />
             </button>
           </div>
         </footer>
@@ -916,7 +916,7 @@ export default function OrdersPage() {
           <div className="bg-white rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
               <h2 className="text-xl font-bold text-gray-800">
-                Edit Order #{editingOrder.order_id}
+                تعديل الطلب #{editingOrder.order_id}
               </h2>
               <button
                 onClick={() => setEditingOrder(null)}
@@ -931,7 +931,7 @@ export default function OrdersPage() {
               {/* Customer Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">الاسم</label>
                   <Input
                     value={editForm.first_name}
                     onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })}
@@ -939,7 +939,7 @@ export default function OrdersPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">اللقب</label>
                   <Input
                     value={editForm.last_name}
                     onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })}
@@ -949,7 +949,7 @@ export default function OrdersPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">الهاتف</label>
                 <Input
                   value={editForm.phone}
                   onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
@@ -960,9 +960,8 @@ export default function OrdersPage() {
               {/* Wilaya and Baladiya */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Wilaya</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">الولاية</label>
                   <Select
-                    dir="rtl"
                     value={editForm.wilaya}
                     onValueChange={handleEditWilayaChange}
                   >
@@ -982,9 +981,8 @@ export default function OrdersPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Baladiya</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">البلدية</label>
                   <Select
-                    dir="rtl"
                     value={editForm.baladiya}
                     onValueChange={(value) => setEditForm({ ...editForm, baladiya: value })}
                     disabled={!editCommunes.length}
@@ -1006,9 +1004,8 @@ export default function OrdersPage() {
               {/* Delivery Type & Price */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">نوع التوصيل</label>
                   <Select
-                    dir="rtl"
                     value={editForm.delivery_type}
                     onValueChange={(value) => setEditForm({ ...editForm, delivery_type: value })}
                   >
@@ -1023,7 +1020,7 @@ export default function OrdersPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Price (DA)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">سعر التوصيل (دج)</label>
                   <Input
                     type="number"
                     value={editForm.delivery_Price}
@@ -1036,16 +1033,16 @@ export default function OrdersPage() {
 
               {/* Items */}
               <div>
-                <h4 className="font-semibold text-gray-800 mb-3">Order Items</h4>
+                <h4 className="font-semibold text-gray-800 mb-3">عناصر الطلب</h4>
                 <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Color</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Qty</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">المنتج</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">اللون</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">الكمية</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">السعر</th>
+                        <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">المجموع</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -1093,7 +1090,7 @@ export default function OrdersPage() {
                 disabled={isSaving}
                 className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
-                Cancel
+                إلغاء
               </button>
               <button
                 onClick={handleSave}
@@ -1101,7 +1098,7 @@ export default function OrdersPage() {
                 className={`px-6 py-2 rounded-lg text-white transition-colors ${isSaving ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
                   }`}
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? 'جاري الحفظ...' : 'حفظ التغييرات'}
               </button>
             </div>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -323,7 +323,7 @@ export default function AddProductPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-6 w-96 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Add Color</h3>
+              <h3 className="text-lg font-semibold text-gray-900">إضافة لون</h3>
               <button
                 onClick={closeColorModal}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -334,19 +334,19 @@ export default function AddProductPage() {
 
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Color Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">اسم اللون *</label>
                 <input
                   type="text"
                   value={colorForm.name}
                   onChange={(e) => setColorForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Midnight Black"
+                  placeholder="مثال: أسود منتصف الليل"
                   className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FA3145] text-gray-800"
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Color</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">اختيار اللون</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
@@ -363,13 +363,13 @@ export default function AddProductPage() {
                   onClick={closeColorModal}
                   className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
                 >
-                  Cancel
+                  إلغاء
                 </button>
                 <button
                   onClick={handleAddColor}
                   className="flex-1 px-4 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-xl transition-colors font-medium"
                 >
-                  Add Color
+                  إضافة اللون
                 </button>
               </div>
             </div>
@@ -382,7 +382,7 @@ export default function AddProductPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-6 w-96 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Add Offer</h3>
+              <h3 className="text-lg font-semibold text-gray-900">إضافة عرض</h3>
               <button
                 onClick={closeOfferModal}
                 className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -393,7 +393,7 @@ export default function AddProductPage() {
 
             <div className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Quantity *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">الكمية *</label>
                 <input
                   type="number"
                   min="1"
@@ -406,7 +406,7 @@ export default function AddProductPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Total Price (DA) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">السعر الإجمالي (دج) *</label>
                 <input
                   type="number"
                   min="1"
@@ -420,7 +420,7 @@ export default function AddProductPage() {
               {offerForm.savedMoney > 0 && (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-green-700 font-medium text-sm">
-                    Savings: {offerForm.savedMoney} DA
+                    التوفير: {offerForm.savedMoney} دج
                   </p>
                 </div>
               )}
@@ -430,13 +430,13 @@ export default function AddProductPage() {
                   onClick={closeOfferModal}
                   className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
                 >
-                  Cancel
+                  إلغاء
                 </button>
                 <button
                   onClick={handleAddOffer}
                   className="flex-1 px-4 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-xl transition-colors font-medium"
                 >
-                  Add Offer
+                  إضافة العرض
                 </button>
               </div>
             </div>
@@ -449,7 +449,7 @@ export default function AddProductPage() {
         <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4">
             <Loader2 size={40} className="animate-spin text-[#FA3145]" />
-            <p className="text-lg font-medium text-gray-700">Adding product...</p>
+            <p className="text-lg font-medium text-gray-700">جاري إضافة المنتج...</p>
           </div>
         </div>
       )}
@@ -465,7 +465,7 @@ export default function AddProductPage() {
       <header className="flex items-center justify-between mb-14">
         <Link href="/admin/all-products">
           <button className="w-10 h-10 flex cursor-pointer items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors">
-            <ArrowLeft size={20} className="text-black" />
+            <ArrowRight size={20} className="text-black" />
           </button>
         </Link>
 
@@ -502,7 +502,7 @@ export default function AddProductPage() {
                 <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md">
                   <Plus size={32} className="text-gray-400" />
                 </div>
-                <span className="text-sm text-gray-500">Add Main Image</span>
+                <span className="text-sm text-gray-500">إضافة صورة رئيسية</span>
               </div>
             )}
           </div>
@@ -545,11 +545,11 @@ export default function AddProductPage() {
 
         <div className="flex flex-col gap-6 w-full max-w-[915px]">
           <div className="flex flex-col gap-3 w-full">
-            <label className="text-lg font-semibold text-black">Title: <span className="text-red-500">*</span></label>
+            <label className="text-lg font-semibold text-black">العنوان: <span className="text-red-500">*</span></label>
             <textarea
               value={formData.title}
               onChange={(e) => handleChange("title", e.target.value)}
-              placeholder="Product title..."
+              placeholder="عنوان المنتج..."
               disabled={isSubmitting}
               className="w-full p-5 bg-white border border-gray-200 rounded-xl text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145] resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
               rows={3}
@@ -557,7 +557,7 @@ export default function AddProductPage() {
           </div>
 
           <div className="flex flex-col gap-3 w-full max-w-[178px]">
-            <label className="text-lg font-semibold text-black">Quantity</label>
+            <label className="text-lg font-semibold text-black">الكمية</label>
             <div className="relative flex items-center h-[50px] px-5 bg-white border border-gray-200 rounded-xl">
               <input
                 type="number"
@@ -567,7 +567,7 @@ export default function AddProductPage() {
                 className="w-full text-base text-gray-800 focus:outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-gray-100"
                 placeholder="0"
               />
-              <div className="absolute right-4 flex items-center gap-2">
+              <div className="absolute left-4 flex items-center gap-2">
                 <button type="button" onClick={() => adjustQuantity(-1)} disabled={isSubmitting} className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded transition-colors disabled:opacity-50">
                   <Minus size={16} />
                 </button>
@@ -580,7 +580,7 @@ export default function AddProductPage() {
 
           {/* Colors Section */}
           <div className="flex flex-col gap-3 w-full">
-            <label className="text-lg font-semibold text-black">Colors:</label>
+            <label className="text-lg font-semibold text-black">الألوان:</label>
             <div className="flex flex-wrap gap-3">
               {/* Existing colors */}
               {colors.map((color, index) => (
@@ -631,11 +631,11 @@ export default function AddProductPage() {
           </div>
 
           <div className="flex flex-col gap-3 w-full">
-            <label className="text-lg font-semibold text-black">Description:</label>
+            <label className="text-lg font-semibold text-black">الوصف:</label>
             <textarea
               value={formData.description}
               onChange={(e) => handleChange("description", e.target.value)}
-              placeholder="Product description..."
+              placeholder="وصف المنتج..."
               disabled={isSubmitting}
               className="w-full p-5 bg-white border border-gray-200 rounded-xl text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145] resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
               rows={5}
@@ -644,10 +644,10 @@ export default function AddProductPage() {
 
           {/* Multiple Category Selection with Combobox */}
           <div className="flex flex-col gap-3 w-full">
-            <label className="text-lg font-semibold text-black">Categories: <span className="text-red-500">*</span></label>
+            <label className="text-lg font-semibold text-black">التصنيفات: <span className="text-red-500">*</span></label>
             {loading ? (
               <div className="w-full h-14 bg-gray-100 rounded-xl flex items-center px-5 text-gray-500">
-                Loading categories...
+                جاري تحميل التصنيفات...
               </div>
             ) : (
               <Combobox
@@ -667,13 +667,13 @@ export default function AddProductPage() {
                             {value}
                           </ComboboxChip>
                         ))}
-                        <ComboboxChipsInput placeholder="Select categories..." />
+                        <ComboboxChipsInput placeholder="اختر التصنيفات..." />
                       </>
                     )}
                   </ComboboxValue>
                 </ComboboxChips>
                 <ComboboxContent anchor={categoryAnchor}>
-                  <ComboboxEmpty>No categories found.</ComboboxEmpty>
+                  <ComboboxEmpty>لا توجد تصنيفات.</ComboboxEmpty>
                   <ComboboxList>
                     {(item) => (
                       <ComboboxItem key={item} value={item}>
@@ -696,7 +696,7 @@ export default function AddProductPage() {
                 className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 <Plus size={18} />
-                <span>Add Offer</span>
+                <span>إضافة عرض</span>
               </button>
             </div>
 
@@ -728,7 +728,7 @@ export default function AddProductPage() {
 
           <div className="flex items-center gap-6 w-full">
             <div className="flex flex-col gap-3 flex-1">
-              <label className="text-lg font-semibold text-black">Price: <span className="text-red-500">*</span></label>
+              <label className="text-lg font-semibold text-black">السعر: <span className="text-red-500">*</span></label>
               <input
                 type="number"
                 value={formData.price}
@@ -740,7 +740,7 @@ export default function AddProductPage() {
             </div>
 
             <div className="flex flex-col gap-3 w-[246px]">
-              <label className="text-lg font-semibold text-black text-center">Discount</label>
+              <label className="text-lg font-semibold text-black text-center">الخصم</label>
               <div className="flex items-center px-5 py-4 bg-white border border-gray-200 rounded-xl">
                 <input
                   type="number"
@@ -750,26 +750,26 @@ export default function AddProductPage() {
                   disabled={isSubmitting}
                   className="w-full text-base text-gray-800 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-gray-100"
                 />
-                <Percent size={20} className="text-gray-600 ml-2" />
+                <Percent size={20} className="text-gray-600 mr-2" />
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-3 w-full">
-            <label className="text-lg font-semibold text-black">Type:</label>
+            <label className="text-lg font-semibold text-black">النوع:</label>
             <Select
               value={formData.type}
               onValueChange={(value) => handleChange("type", value)}
               disabled={isSubmitting}
             >
               <SelectTrigger className="w-full h-14! bg-white rounded-xl border-gray-200 disabled:bg-gray-100">
-                <SelectValue placeholder="Select type" />
+                <SelectValue placeholder="اختر النوع" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
-                  <SelectItem value="BestDeal">Best Deal</SelectItem>
-                  <SelectItem value="Featured">Featured</SelectItem>
-                  <SelectItem value="NewArrival">New Arrival</SelectItem>
+                  <SelectItem value="BestDeal">أفضل صفقة</SelectItem>
+                  <SelectItem value="Featured">مميز</SelectItem>
+                  <SelectItem value="NewArrival">وصل حديثاً</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -778,7 +778,7 @@ export default function AddProductPage() {
           <div className="flex items-center gap-5">
             <Link href="/admin/all-products">
               <button disabled={isSubmitting} className="px-12 py-3 bg-white border cursor-pointer border-gray-200 rounded-lg text-base font-medium text-black hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                Cancel
+                إلغاء
               </button>
             </Link>
             <button
@@ -789,10 +789,10 @@ export default function AddProductPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
-                  Adding...
+                  جاري الإضافة...
                 </>
               ) : (
-                "Confirm"
+                "تأكيد"
               )}
             </button>
           </div>
