@@ -45,6 +45,8 @@ export default function RootLayout({ children }) {
     return (
         <AdminAuthGuard>
             <div
+                dir="rtl"
+                lang="ar"
                 className={`${RobotoSans.variable} antialiased bg-background w-full h-auto`}
             >
                 <div className="w-full h-auto flex">
@@ -52,8 +54,8 @@ export default function RootLayout({ children }) {
                     <button
                         type="button"
                         onClick={toggleMobileSidebar}
-                        className="md:hidden fixed top-4 left-4 z-40 p-4 bg-white border-2 border-[#FA3145] rounded-xl shadow-lg hover:bg-gray-50 pointer-events-auto touch-manipulation"
-                        aria-label="Toggle menu"
+                        className="md:hidden fixed top-4 right-4 z-40 p-4 bg-white border-2 border-[#FA3145] rounded-xl shadow-lg hover:bg-gray-50 pointer-events-auto touch-manipulation"
+                        aria-label="فتح القائمة"
                     >
                         <Menu size={22} className="text-[#FA3145]" />
                     </button>
@@ -69,8 +71,8 @@ export default function RootLayout({ children }) {
                     <main
                         className={`
                             flex-1
-                            ${sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}
-                            ml-0
+                            ${sidebarCollapsed ? 'md:mr-20' : 'md:mr-64'}
+                            mr-0
                             w-full
                             transition-all duration-300
                         `}

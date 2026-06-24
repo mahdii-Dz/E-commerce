@@ -41,7 +41,7 @@ function Toast({ message, type, onClose }) {
       <div className="flex items-center gap-2">
         <span>{type === 'success' ? '✓' : '✕'}</span>
         <span className="font-medium">{message}</span>
-        <button onClick={onClose} className="ml-2 hover:opacity-75">×</button>
+        <button onClick={onClose} className="mr-2 hover:opacity-75">×</button>
       </div>
     </div>
   );
@@ -74,7 +74,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (attempts >= MAX_ATTEMPTS) {
       setIsLocked(true);
-      setToast({ message: `Too many attempts. Locked for ${LOCKOUT_DURATION / 1000}s.`, type: 'error' });
+      setToast({ message: `محاولات كثيرة. تم القفل لمدة ${LOCKOUT_DURATION / 1000} ثانية.`, type: 'error' });
       const timer = setTimeout(() => {
         setIsLocked(false);
         setAttempts(0);
@@ -112,12 +112,12 @@ export default function AdminPage() {
     e.preventDefault();
 
     if (isLocked) {
-      showToast('Please wait before trying again.', 'error');
+      showToast('الرجاء الانتظار قبل المحاولة مرة أخرى.', 'error');
       return;
     }
 
     if (!values.password.trim()) {
-      setErrors({ password: 'Password is required' });
+      setErrors({ password: 'كلمة المرور مطلوبة' });
       return;
     }
 
@@ -133,7 +133,7 @@ export default function AdminPage() {
       router.push('/admin/dashboard');
     } else {
       setAttempts(prev => prev + 1);
-      showToast('Access denied', 'error');
+      showToast('تم رفض الوصول', 'error');
     }
 
     setIsSubmitting(false);
@@ -155,14 +155,14 @@ export default function AdminPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-secondary">Checking authorization...</p>
+          <p className="text-secondary">جاري التحقق من الصلاحية...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4" dir="rtl" lang="ar">
       {/* Toast Notification */}
       {toast && (
         <Toast
@@ -179,8 +179,8 @@ export default function AdminPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-xl mb-4 shadow-lg">
             <span className="text-white text-2xl font-bold">LOGO</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Portal</h1>
-          <p className="text-gray-500 mt-2 text-sm">Secure access required</p>
+          <h1 className="text-2xl font-bold text-gray-900">لوحة الإدارة</h1>
+          <p className="text-gray-500 mt-2 text-sm">دخول آمن مطلوب</p>
         </div>
 
         {/* Form */}
@@ -189,9 +189,8 @@ export default function AdminPage() {
             <label
               htmlFor="admin-password"
               className="block text-sm font-medium text-gray-700"
-            >
-              Password
-            </label>
+              >كلمة المرور</label>
+              
 
             <div className="relative">
               <input
@@ -201,7 +200,7 @@ export default function AdminPage() {
                 value={values.password}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Enter your password"
+                placeholder="أدخل كلمة المرور"
                 disabled={isLocked || isSubmitting}
                 className={`
                   w-full px-4 py-3 rounded-xl border-2 bg-gray-50
@@ -224,7 +223,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={togglePasswordVisibility}
                 disabled={isLocked}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -268,12 +267,12 @@ export default function AdminPage() {
             {isSubmitting ? (
               <>
                 <LoadingSpinner />
-                <span>Verifying...</span>
+                <span>جار التحقق...</span>
               </>
             ) : isLocked ? (
-              <span>Locked</span>
+              <span>مقفل</span>
             ) : (
-              <span>Sign In</span>
+                <span>تسجيل الدخول</span>
             )}
           </button>
         </form>
@@ -281,7 +280,7 @@ export default function AdminPage() {
 
       {/* Footer */}
       <footer className="mt-8 text-center text-gray-400 text-sm">
-        <p>© {new Date().getFullYear()} Your Company. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} شركتك. جميع الحقوق محفوظة.</p>
       </footer>
     </div>
   );

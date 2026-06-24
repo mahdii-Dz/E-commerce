@@ -82,8 +82,8 @@ export function ChartBarDefault({ chartData, isLoading, error, daysToShow = 30 }
     return (
         <Card className="w-full h-90">
             <CardHeader>
-                <CardTitle>Total Orders</CardTitle>
-                <CardDescription>Last {daysToShow} Days Overview</CardDescription>
+                <CardTitle>إجمالي الطلبات</CardTitle>
+                <CardDescription> اجمالي الطلبات في اخر {daysToShow} يوم</CardDescription>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig} className="h-72 w-full">

@@ -163,7 +163,7 @@ export default function ProductDashboard() {
       <div className="w-full flex flex-col  justify-start h-full">
         <header className="flex items-center justify-between mb-11">
         <h1 className="text-3xl font-semibold text-black tracking-tight">
-          All Products
+          جميع المنتجات
         </h1>
 
         <Link href="/admin/add-product" className="flex items-center gap-2.5 px-6 py-2.5 cursor-pointer bg-[#FA3145] hover:bg-[#e02a3b] text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:ring-offset-2">
@@ -172,7 +172,7 @@ export default function ProductDashboard() {
         </Link>
       </header>
       <div className="flex w-full h-50 justify-center items-center">
-        <p className="text-gray-500">No products available</p>
+        <p className="text-gray-500">لا توجد منتجات متاحة</p>
       </div>
       </div>
     );
@@ -183,12 +183,12 @@ export default function ProductDashboard() {
       {/* Header */}
       <header className="flex items-center justify-between mb-11">
         <h1 className="text-3xl font-semibold text-black tracking-tight">
-          All Products
+          جميع المنتجات
         </h1>
 
         <Link href="/admin/add-product" className="flex items-center gap-2.5 px-6 py-2.5 cursor-pointer bg-[#FA3145] hover:bg-[#e02a3b] text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:ring-offset-2">
           <Plus size={20} />
-          <span>Add Product</span>
+          <span>إضافة منتج</span>
         </Link>
       </header>
 
@@ -196,13 +196,13 @@ export default function ProductDashboard() {
         {/* Search & Filter Bar */}
         <div className="flex items-center justify-between gap-4 mb-6 w-full">
           <div className="relative w-8/10">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
-              placeholder="Search Products..."
+              placeholder="بحث عن منتجات..."
               value={searchQuery}
               onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:border-transparent"
+              className="w-full pr-10 pl-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:border-transparent"
             />
           </div>
 
@@ -215,14 +215,14 @@ export default function ProductDashboard() {
                 }`}
             >
               <Filter size={20} />
-              <span>Filter{hasActiveFilters && " (Active)"}</span>
+              <span>تصفية{hasActiveFilters && " (مفعلة)"}</span>
             </button>
 
             {/* Filter Popup */}
             {showFilterPopup && (
               <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 p-4">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900">Filter Products</h3>
+                  <h3 className="font-semibold text-gray-900">تصفية المنتجات</h3>
                   <button
                     onClick={() => setShowFilterPopup(false)}
                     className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
@@ -233,7 +233,7 @@ export default function ProductDashboard() {
 
                 {/* Type Filter */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">النوع</label>
                   <select
                     value={filters.type}
                     onChange={(e) => handleFilterChange("type", e.target.value)}
@@ -247,7 +247,7 @@ export default function ProductDashboard() {
 
                 {/* Price Range */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Price Range</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">نطاق السعر</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -268,7 +268,7 @@ export default function ProductDashboard() {
 
                 {/* Stock Range */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Stock Range</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">نطاق المخزون</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -289,7 +289,7 @@ export default function ProductDashboard() {
 
                 {/* Discount Range */}
                 <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Discount % Range</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">نطاق الخصم %</label>
                   <div className="flex gap-2">
                     <input
                       type="number"
@@ -314,13 +314,13 @@ export default function ProductDashboard() {
                     onClick={clearFilters}
                     className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    Clear
+                    مسح
                   </button>
                   <button
                     onClick={applyFilters}
                     className="flex-1 px-4 py-2 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-lg transition-colors"
                   >
-                    Apply
+                    تطبيق
                   </button>
                 </div>
               </div>
@@ -341,14 +341,14 @@ export default function ProductDashboard() {
                     checked={selectedProducts.length === currentProducts.length && currentProducts.length > 0}
                   />
                 </th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">ID</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden md:table-cell">Photo</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">Name</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden lg:table-cell">Type</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden sm:table-cell">Price</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden lg:table-cell">Stock</th>
-                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 hidden lg:table-cell">Discount</th>
-                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 w-20">Actions</th>
+                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">ID</th>
+                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden md:table-cell">الصورة</th>
+                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">الاسم</th>
+                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden lg:table-cell">النوع</th>
+                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden sm:table-cell">السعر</th>
+                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden lg:table-cell">المخزون</th>
+                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden lg:table-cell">الخصم</th>
+                <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 w-20">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -397,14 +397,14 @@ export default function ProductDashboard() {
                       {/* Actions */}
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Link href={`/admin/edit-product/${product.id}`} className="p-2 text-gray-400 hover:text-[#FA3145] hover:bg-red-50 rounded-lg transition-colors cursor-pointer hidden md:flex" title="Edit product">
+                          <Link href={`/admin/edit-product/${product.id}`} className="p-2 text-gray-400 hover:text-[#FA3145] hover:bg-red-50 rounded-lg transition-colors cursor-pointer hidden md:flex"                             title="تعديل المنتج">
                             <Edit size={20} />
                           </Link>
                           {/* Expand button - visible on mobile/tablet, hidden on desktop where all info is shown */}
                           <button
                             onClick={() => toggleExpand(product.id)}
                             className="p-2 text-gray-400 hover:text-[#FA3145] hover:bg-red-50 rounded-lg transition-colors cursor-pointer md:hidden"
-                            title={isExpanded ? "Hide details" : "Show details"}
+                            title={isExpanded ? "إخفاء التفاصيل" : "عرض التفاصيل"}
                           >
                             <ChevronDown size={20} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                           </button>
@@ -435,22 +435,22 @@ export default function ProductDashboard() {
                             {/* Essential details */}
                             <div className="grid grid-cols-2 gap-3 text-sm">
                               <div>
-                                <span className="text-gray-500">Price:</span>
-                                <span className="font-medium ml-2">{product.price} DA</span>
+                <span className="text-gray-500">السعر:</span>
+                <span className="font-medium mr-2">{product.price} DA</span>
                               </div>
                               <div>
-                                <span className="text-gray-500">Stock:</span>
-                                <span className="font-medium ml-2">{product.stock}</span>
+                <span className="text-gray-500">المخزون:</span>
+                <span className="font-medium mr-2">{product.stock}</span>
                               </div>
                               <div>
-                                <span className="text-gray-500">Type:</span>
-                                <span className={`ml-2 inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getBadgeStyle(product.type)}`}>
+                <span className="text-gray-500">النوع:</span>
+                <span className={`mr-2 inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${getBadgeStyle(product.type)}`}>
                                   {product.type}
                                 </span>
                               </div>
                               <div>
-                                <span className="text-gray-500">Discount:</span>
-                                <span className="font-medium ml-2">{product.discount_percentage}%</span>
+                <span className="text-gray-500">الخصم:</span>
+                <span className="font-medium mr-2">{product.discount_percentage}%</span>
                               </div>
                             </div>
 
@@ -462,7 +462,7 @@ export default function ProductDashboard() {
                                   <div className="flex items-start gap-3">
                                     <Hash className="w-5 h-5 text-gray-400 mt-0.5" />
                                     <div>
-                                      <p className="text-xs text-gray-500">Categories</p>
+                                      <p className="text-xs text-gray-500">التصنيفات</p>
                                       <p className="text-sm font-medium text-gray-900">
                                         {Array.isArray(product.categories)
                                           ? product.categories.map(c => typeof c === 'object' ? c.name : c).join(', ')
@@ -477,7 +477,7 @@ export default function ProductDashboard() {
                                 {/* Description */}
                                 {product.description && (
                                   <div className="md:col-span-2 lg:col-span-3">
-                                    <p className="text-xs text-gray-500 mb-1">Description</p>
+                                    <p className="text-xs text-gray-500 mb-1">الوصف</p>
                                     <p className="text-sm text-gray-700">{product.description}</p>
                                   </div>
                                 )}
@@ -485,7 +485,7 @@ export default function ProductDashboard() {
                                 {/* Colors */}
                                 {product.colors && product.colors.length > 0 && (
                                   <div className="md:col-span-2 lg:col-span-3">
-                                    <p className="text-xs text-gray-500 mb-2">Available Colors</p>
+                                    <p className="text-xs text-gray-500 mb-2">الألوان المتاحة</p>
                                     <div className="flex flex-wrap gap-2">
                                       {product.colors.map((color, idx) => (
                                         <span key={idx} className="inline-flex items-center gap-2 px-3 py-1 bg-white border border-gray-200 rounded-full text-sm">
@@ -500,13 +500,13 @@ export default function ProductDashboard() {
                                 {/* Offers */}
                                 {product.offers && product.offers.length > 0 && (
                                   <div className="md:col-span-2 lg:col-span-3">
-                                    <p className="text-xs text-gray-500 mb-2">Special Offers</p>
+                                    <p className="text-xs text-gray-500 mb-2">عروض خاصة</p>
                                     <div className="space-y-2">
                                       {product.offers.map((offer, idx) => (
                                         <div key={idx} className="bg-white border border-gray-200 rounded-lg p-3">
-                                          <p className="text-sm font-medium">Buy {offer.quantity} for {offer.price} DA</p>
+                                          <p className="text-sm font-medium">اشتري {offer.quantity} بسعر {offer.price} DA</p>
                                           {offer.savedMoney > 0 && (
-                                            <p className="text-xs text-green-600">Save {offer.savedMoney} DA</p>
+                                            <p className="text-xs text-green-600">وفر {offer.savedMoney} DA</p>
                                           )}
                                         </div>
                                       ))}
@@ -517,7 +517,7 @@ export default function ProductDashboard() {
                                 {/* Additional Images */}
                                 {product.images && product.images.length > 1 && (
                                   <div className="md:col-span-2 lg:col-span-3">
-                                    <p className="text-xs text-gray-500 mb-2">Additional Images</p>
+                                    <p className="text-xs text-gray-500 mb-2">صور إضافية</p>
                                     <div className="flex gap-2 overflow-x-auto pb-2">
                                       {product.images.map((img, idx) => (
                                         <Image key={idx} src={img} alt={`${product.name} ${idx + 1}`} width={64} height={64} className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0" />
@@ -535,7 +535,7 @@ export default function ProductDashboard() {
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#FA3145] hover:bg-[#e02a3b] text-white text-sm font-medium rounded-lg transition-colors"
                               >
                                 <Edit size={16} />
-                                Edit Product
+                                تعديل المنتج
                               </Link>
                             </div>
                           </div>
@@ -552,7 +552,7 @@ export default function ProductDashboard() {
         {/* Pagination Footer */}
         <footer className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
           <span className="text-sm text-gray-600">
-            Showing {filteredProducts.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredProducts.length)} of {filteredProducts.length} Products
+            عرض {filteredProducts.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredProducts.length)} من {filteredProducts.length} منتج
           </span>
 
           <div className="flex items-center gap-2">
@@ -561,8 +561,8 @@ export default function ProductDashboard() {
               disabled={currentPage === 1}
               className="inline-flex cursor-pointer items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <ChevronLeft size={18} />
-              <span>Back</span>
+              <ChevronRight size={18} />
+              <span>السابق</span>
             </button>
 
             <div className="flex gap-1">
@@ -585,8 +585,8 @@ export default function ProductDashboard() {
               disabled={currentPage === totalPages || totalPages === 0}
               className="inline-flex cursor-pointer items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <span>Next</span>
-              <ChevronRight size={18} />
+              <span>التالي</span>
+              <ChevronLeft size={18} />
             </button>
           </div>
         </footer>
