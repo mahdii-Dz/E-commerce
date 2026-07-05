@@ -15,6 +15,10 @@
   "type": "module",
   "dependencies": {
     "@tidbcloud/serverless": "^0.3.0",
+    "@tiptap/extension-text-align": "^3.27.1",
+    "@tiptap/react": "^3.27.1",
+    "@tiptap/starter-kit": "^3.27.1",
+    "axios": "^1.18.1",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",

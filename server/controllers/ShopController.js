@@ -1,5 +1,49 @@
 // controllers/ShopController.js
 import { query, execute } from '../db.js';
+import axios from 'axios';
+
+// Netlify cache invalidation
+const NETLIFY_BUILD_HOOK = process.env.NETLIFY_BUILD_HOOK;
+const NETLIFY_AUTH_TOKEN = process.env.NETLIFY_AUTH_TOKEN;
+const NETLIFY_SITE_ID = process.env.NETLIFY_SITE_ID;
+
+async function triggerNetlifyRebuild() {
+  if (!NETLIFY_BUILD_HOOK) {
+    console.warn('⚠️ NETLIFY_BUILD_HOOK not configured, skipping rebuild');
+    return;
+  }
+  try {
+    await axios.post(NETLIFY_BUILD_HOOK, {}, { timeout: 10000 });
+    console.log('✅ Netlify rebuild triggered');
+  } catch (error) {
+    console.error('❌ Netlify rebuild failed:', error.message);
+  }
+}
+
+async function purgeNetlifyCacheTag(tag = 'products') {
+  if (!NETLIFY_AUTH_TOKEN || !NETLIFY_SITE_ID) {
+    console.warn('⚠️ Netlify cache purge not configured');
+    return;
+  }
+  try {
+    await axios.post(
+      `https://api.netlify.com/api/v1/sites/${NETLIFY_SITE_ID}/cache-tags/${tag}/purge`,
+      {},
+      { headers: { Authorization: `Bearer ${NETLIFY_AUTH_TOKEN}` }, timeout: 10000 }
+    );
+    console.log(`✅ Netlify cache tag '${tag}' purged`);
+  } catch (error) {
+    console.error('❌ Netlify cache purge failed:', error.message);
+  }
+}
+
+async function invalidateNetlifyCache() {
+  await Promise.allSettled([
+    triggerNetlifyRebuild(),
+    purgeNetlifyCacheTag('products'),
+    purgeNetlifyCacheTag('categories'),
+  ]);
+}
 
 // Helper function for safe JSON parsing
 const safeJsonParse = (str, defaultValue = null) => {
@@ -39,6 +83,15 @@ export const GetCategories = async (req, res) => {
   }
 };
 
+// Invalidate cache after category changes
+async function invalidateCategoryCache() {
+  await Promise.allSettled([
+    triggerNetlifyRebuild(),
+    purgeNetlifyCacheTag('categories'),
+    purgeNetlifyCacheTag('products'),
+  ]);
+}
+
 export const AddCategory = async (req, res) => {
   try {
     const { name } = req.body;
@@ -62,6 +115,9 @@ export const AddCategory = async (req, res) => {
     if (!categoryId || categoryId === 0) {
       return res.status(500).json({ error: "Failed to retrieve category ID" });
     }
+
+    // Invalidate cache
+    await invalidateCategoryCache();
 
     return res.status(201).json({ 
       message: "Category added successfully",
@@ -91,6 +147,9 @@ export const DeleteCategory = async (req, res) => {
       [id]
     );
 
+    // Invalidate cache
+    await invalidateCategoryCache();
+
     return res.status(200).json({ message: "Category deleted successfully" });
   } catch (error) {
     if (error.code === "ER_ROW_IS_REFERENCED_2") {
@@ -104,16 +163,102 @@ export const DeleteCategory = async (req, res) => {
 
 // ==================== PRODUCT CONTROLLERS ====================
 
+// Build WHERE clause for product filtering
+function buildProductWhereClause({ category, minPrice, maxPrice, minDiscount }) {
+  const conditions = ['p.is_active = true'];
+  const values = [];
+
+  if (minPrice !== undefined && minPrice !== null && minPrice !== '') {
+    conditions.push('p.price >= ?');
+    values.push(parseFloat(minPrice));
+  }
+
+  if (maxPrice !== undefined && maxPrice !== null && maxPrice !== '') {
+    conditions.push('p.price <= ?');
+    values.push(parseFloat(maxPrice));
+  }
+
+  if (minDiscount !== undefined && minDiscount !== null && minDiscount !== '' && parseFloat(minDiscount) > 0) {
+    conditions.push('p.discount_percentage >= ?');
+    values.push(parseFloat(minDiscount));
+  }
+
+  return { where: conditions.join(' AND '), values, category };
+}
+
+// Build ORDER BY clause
+function buildProductOrderBy(sort) {
+  const sortMap = {
+    'Newest': 'p.created_at DESC',
+    'Oldest': 'p.created_at ASC',
+    'PriceLow': 'p.price ASC',
+    'PriceHigh': 'p.price DESC',
+    'TopSold': 'COALESCE(sales.total_sold, 0) DESC, p.created_at DESC',
+  };
+  return sortMap[sort] || 'p.created_at DESC';
+}
+
 export const GetProducts = async (req, res) => {
   try {
-    const rows = await query(`
+    const { 
+      category, 
+      minPrice, 
+      maxPrice, 
+      minDiscount,
+      sort, 
+      page = 1, 
+      limit = 12 
+    } = req.query;
+
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+    const offset = (pageNum - 1) * limitNum;
+
+    const { where, values, category: catFilter } = buildProductWhereClause({ category, minPrice, maxPrice, minDiscount });
+    const orderBy = buildProductOrderBy(sort);
+
+    // Build category filter for WHERE clause
+    let categoryFilter = '';
+    let categoryValues = [];
+    if (catFilter) {
+      categoryFilter = `AND EXISTS (
+        SELECT 1 FROM product_categories pc2 
+        JOIN categories c2 ON pc2.category_id = c2.id 
+        WHERE pc2.product_id = p.id AND c2.name = ?
+      )`;
+      categoryValues = [catFilter];
+    }
+
+    // Sales join for TopSold sorting
+    const isTopSold = sort === 'TopSold';
+    const salesJoin = isTopSold ? `
+      LEFT JOIN (
+        SELECT oi.product_id, SUM(oi.quantity) as total_sold
+        FROM order_items oi
+        GROUP BY oi.product_id
+      ) sales ON p.id = sales.product_id
+    ` : '';
+
+    // Count total for pagination
+    const countQuery = `
+      SELECT COUNT(DISTINCT p.id) as total
+      FROM products p
+      ${salesJoin}
+      WHERE ${where} ${categoryFilter}
+    `;
+    const countResult = await query(countQuery, [...values, ...categoryValues]);
+    const total = countResult?.[0]?.total || 0;
+    const totalPages = Math.ceil(total / limitNum);
+
+    // Main query - fetch products without categories first
+    const productQuery = `
       SELECT
         p.id,
         p.name,
         p.description,
+        p.big_description,
         p.discount_percentage,
         p.price,
-        p.stock,
         p.image_url,
         p.is_active,
         p.images,
@@ -121,54 +266,67 @@ export const GetProducts = async (req, res) => {
         p.created_at,
         p.type,
         p.offers,
-        p.colors,
-        c.id AS category_id,
-        c.name AS category_name
+        p.colors
       FROM products p
-      LEFT JOIN product_categories pc ON p.id = pc.product_id
-      LEFT JOIN categories c ON pc.category_id = c.id
-      ORDER BY p.id
-    `);
+      ${salesJoin}
+      WHERE ${where} ${categoryFilter}
+      ORDER BY ${orderBy}
+      LIMIT ? OFFSET ?
+    `;
+    const productValues = [...values, ...categoryValues, limitNum, offset];
+    const rows = await query(productQuery, productValues);
+
+    // Fetch categories separately for these products
+    const productIds = rows.map(r => r.id);
+    let categoriesMap = new Map();
+    
+    if (productIds.length > 0) {
+      const placeholders = productIds.map(() => '?').join(',');
+      const catQuery = `
+        SELECT 
+          pc.product_id,
+          c.id AS category_id,
+          c.name AS category_name
+        FROM product_categories pc
+        JOIN categories c ON pc.category_id = c.id
+        WHERE pc.product_id IN (${placeholders})
+      `;
+      const catRows = await query(catQuery, productIds);
+      
+      for (const catRow of catRows) {
+        if (!categoriesMap.has(catRow.product_id)) {
+          categoriesMap.set(catRow.product_id, []);
+        }
+        categoriesMap.get(catRow.product_id).push({
+          id: catRow.category_id,
+          name: catRow.category_name
+        });
+      }
+    }
 
     if (!rows || !Array.isArray(rows)) {
-      return res.status(200).json([]);
+      return res.status(200).json({ products: [], total, page: pageNum, totalPages });
     }
 
-    const productsMap = new Map();
+    const products = rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      discount_percentage: row.discount_percentage || 0,
+      description: row.description,
+      big_description: row.big_description,
+      price: parseFloat(row.price) || 0,
+      image_url: row.image_url,
+      images: safeJsonParse(row.images, []),
+      thumbnail: row.thumbnail,
+      is_active: row.is_active === 1,
+      created_at: row.created_at,
+      type: row.type,
+      colors: safeJsonParse(row.colors, null),
+      offers: safeJsonParse(row.offers, null),
+      categories: categoriesMap.get(row.id) || [],
+    }));
 
-    for (const row of rows) {
-      const productId = row.id;
-
-      if (!productsMap.has(productId)) {
-        productsMap.set(productId, {
-          id: row.id,
-          name: row.name,
-          discount_percentage: row.discount_percentage || 0,
-          description: row.description,
-          price: parseFloat(row.price) || 0,
-          stock: parseInt(row.stock) || 0,
-          image_url: row.image_url,
-          images: safeJsonParse(row.images, []),
-          thumbnail: row.thumbnail,
-          is_active: row.is_active === 1,
-          created_at: row.created_at,
-          type: row.type,
-          colors: safeJsonParse(row.colors, null),
-          offers: safeJsonParse(row.offers, null),
-          categories: [],
-        });
-      }
-
-      if (row.category_id) {
-        productsMap.get(productId).categories.push({
-          id: row.category_id,
-          name: row.category_name,
-        });
-      }
-    }
-
-    const products = Array.from(productsMap.values());
-    return res.status(200).json(products);
+    return res.status(200).json({ products, total, page: pageNum, totalPages });
   } catch (error) {
     return handleDbError(res, error, "fetching products");
   }
@@ -183,14 +341,15 @@ export const GetProductById = async (req, res) => {
       return res.status(400).json({ error: "Invalid product ID" });
     }
 
-    const rows = await query(`
+    // Fetch product first
+    const productRows = await query(`
       SELECT
         p.id,
         p.name,
         p.description,
+        p.big_description,
         p.discount_percentage,
         p.price,
-        p.stock,
         p.image_url,
         p.thumbnail,
         p.images,
@@ -198,53 +357,40 @@ export const GetProductById = async (req, res) => {
         p.created_at,
         p.type,
         p.colors,
-        p.offers,
-        c.id AS category_id,
-        c.name AS category_name
+        p.offers
       FROM products p
-      LEFT JOIN product_categories pc ON p.id = pc.product_id
-      LEFT JOIN categories c ON pc.category_id = c.id
-      WHERE p.id = ?
+      WHERE p.id = ? AND p.is_active = true
     `, [productIdNum]);
 
-    if (!rows || rows.length === 0) {
+    if (!productRows || productRows.length === 0) {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    const productMap = new Map();
+    const product = productRows[0];
 
-    for (const row of rows) {
-      const productId = row.id;
+    // Fetch categories separately
+    const catRows = await query(`
+      SELECT 
+        c.id AS category_id,
+        c.name AS category_name
+      FROM product_categories pc
+      JOIN categories c ON pc.category_id = c.id
+      WHERE pc.product_id = ?
+    `, [productIdNum]);
 
-      if (!productMap.has(productId)) {
-        productMap.set(productId, {
-          id: row.id,
-          name: row.name,
-          discount_percentage: row.discount_percentage || 0,
-          description: row.description,
-          price: parseFloat(row.price) || 0,
-          stock: parseInt(row.stock) || 0,
-          image_url: row.image_url,
-          thumbnail: row.thumbnail,
-          images: safeJsonParse(row.images, []),
-          is_active: row.is_active === 1,
-          created_at: row.created_at,
-          type: row.type,
-          colors: safeJsonParse(row.colors, null),
-          offers: safeJsonParse(row.offers, null),
-          categories: [],
-        });
-      }
+    product.categories = catRows.map(catRow => ({
+      id: catRow.category_id,
+      name: catRow.category_name
+    }));
 
-      if (row.category_id) {
-        productMap.get(productId).categories.push({
-          id: row.category_id,
-          name: row.category_name,
-        });
-      }
-    }
+    // Parse JSON fields
+    product.images = safeJsonParse(product.images, []);
+    product.colors = safeJsonParse(product.colors, null);
+    product.offers = safeJsonParse(product.offers, null);
+    product.price = parseFloat(product.price) || 0;
+    product.discount_percentage = product.discount_percentage || 0;
+    product.is_active = product.is_active === 1;
 
-    const product = Array.from(productMap.values())[0];
     return res.status(200).json(product);
   } catch (error) {
     return handleDbError(res, error, "fetching product");
@@ -254,38 +400,91 @@ export const GetProductById = async (req, res) => {
 export const GetProductsByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
+    const { page = 1, limit = 12 } = req.query;
     const categoryIdNum = validateId(categoryId);
     
     if (!categoryIdNum) {
       return res.status(400).json({ error: "Invalid category ID" });
     }
 
-    const rows = await query(`
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+    const offset = (pageNum - 1) * limitNum;
+
+    // Main query - filter by category using EXISTS to avoid GROUP BY issues
+    const productQuery = `
       SELECT
         p.id,
         p.name,
         p.description,
+        p.big_description,
         p.discount_percentage,
         p.price,
-        p.stock,
         p.image_url,
         p.thumbnail,
         p.images,
         p.is_active,
         p.created_at,
         p.type,
-        p.offers,
-        c.id AS category_id,
-        c.name AS category_name
+        p.offers
       FROM products p
-      INNER JOIN product_categories pc ON p.id = pc.product_id
-      INNER JOIN categories c ON pc.category_id = c.id
-      WHERE c.id = ?
-      LIMIT 4
+      WHERE p.is_active = true
+        AND EXISTS (
+          SELECT 1 FROM product_categories pc 
+          JOIN categories c ON pc.category_id = c.id 
+          WHERE pc.product_id = p.id AND c.id = ?
+        )
+      ORDER BY p.created_at DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const rows = await query(productQuery, [categoryIdNum, limitNum, offset]);
+
+    // Fetch categories for these products
+    const productIds = rows.map(r => r.id);
+    let categoriesMap = new Map();
+    
+    if (productIds.length > 0) {
+      const placeholders = productIds.map(() => '?').join(',');
+      const catQuery = `
+        SELECT 
+          pc.product_id,
+          c.id AS category_id,
+          c.name AS category_name
+        FROM product_categories pc
+        JOIN categories c ON pc.category_id = c.id
+        WHERE pc.product_id IN (${placeholders})
+      `;
+      const catRows = await query(catQuery, productIds);
+      
+      for (const catRow of catRows) {
+        if (!categoriesMap.has(catRow.product_id)) {
+          categoriesMap.set(catRow.product_id, []);
+        }
+        categoriesMap.get(catRow.product_id).push({
+          id: catRow.category_id,
+          name: catRow.category_name
+        });
+      }
+    }
+
+    // Get total count
+    const countResult = await query(`
+      SELECT COUNT(DISTINCT p.id) as total
+      FROM products p
+      WHERE p.is_active = true
+        AND EXISTS (
+          SELECT 1 FROM product_categories pc 
+          JOIN categories c ON pc.category_id = c.id 
+          WHERE pc.product_id = p.id AND c.id = ?
+        )
     `, [categoryIdNum]);
+    
+    const total = countResult?.[0]?.total || 0;
+    const totalPages = Math.ceil(total / limitNum);
 
     if (!rows || !Array.isArray(rows)) {
-      return res.status(200).json([]);
+      return res.status(200).json({ products: [], total, page: pageNum, totalPages });
     }
 
     const productMap = new Map();
@@ -299,8 +498,8 @@ export const GetProductsByCategory = async (req, res) => {
           name: row.name,
           discount_percentage: row.discount_percentage || 0,
           description: row.description,
+          big_description: row.big_description,
           price: parseFloat(row.price) || 0,
-          stock: parseInt(row.stock) || 0,
           image_url: row.image_url,
           thumbnail: row.thumbnail,
           images: safeJsonParse(row.images, []),
@@ -308,20 +507,13 @@ export const GetProductsByCategory = async (req, res) => {
           created_at: row.created_at,
           type: row.type,
           offers: safeJsonParse(row.offers, null),
-          categories: [],
-        });
-      }
-
-      if (row.category_id) {
-        productMap.get(productId).categories.push({
-          id: row.category_id,
-          name: row.category_name,
+          categories: categoriesMap.get(productId) || [],
         });
       }
     }
 
     const products = Array.from(productMap.values());
-    return res.status(200).json(products);
+    return res.status(200).json({ products, total, page: pageNum, totalPages });
   } catch (error) {
     return handleDbError(res, error, "fetching products by category");
   }
@@ -332,8 +524,8 @@ export const AddProduct = async (req, res) => {
     const {
       name,
       description,
+      big_description,
       price,
-      stock,
       categoryIds,
       type,
       images,
@@ -357,14 +549,14 @@ export const AddProduct = async (req, res) => {
     // Insert product
     const productResult = await execute(
       `INSERT INTO products (
-        name, description, price, stock, type, images,
+        name, description, big_description, price, type, images,
         thumbnail, discount_percentage, colors, offers
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         description || null,
+        big_description || null,
         price,
-        stock || 0,
         type || null,
         JSON.stringify(images || []),
         thumbnail || null,
@@ -402,6 +594,9 @@ export const AddProduct = async (req, res) => {
       }
     }
 
+    // Invalidate Netlify cache
+    await invalidateNetlifyCache();
+
     return res.status(201).json({
       message: "Product created successfully",
       productId: productId,
@@ -418,8 +613,8 @@ export const UpdateProduct = async (req, res) => {
     const {
       name,
       description,
+      big_description,
       price,
-      stock,
       discount_percentage,
       images,
       thumbnail,
@@ -442,15 +637,15 @@ export const UpdateProduct = async (req, res) => {
     // Update product — if no error, it succeeded
     await execute(
       `UPDATE products
-       SET name = ?, description = ?, price = ?, stock = ?,
+       SET name = ?, description = ?, big_description = ?, price = ?,
            discount_percentage = ?, images = ?, thumbnail = ?,
            type = ?, colors = ?, offers = ?
        WHERE id = ?`,
       [
         name?.trim(),
         description || null,
+        big_description || null,
         price,
-        stock,
         discount_percentage || 0,
         JSON.stringify(images || []),
         thumbnail || null,
@@ -483,6 +678,9 @@ export const UpdateProduct = async (req, res) => {
       }
     }
 
+    // Invalidate Netlify cache
+    await invalidateNetlifyCache();
+
     return res.status(200).json({
       success: true,
       message: "Product updated successfully",
@@ -514,6 +712,9 @@ export const DeleteProduct = async (req, res) => {
       "DELETE FROM products WHERE id = ?",
       [id]
     );
+
+    // Invalidate Netlify cache
+    await invalidateNetlifyCache();
 
     return res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
@@ -860,6 +1061,14 @@ export const getBanners = async (req, res) => {
   }
 };
 
+// Invalidate cache after banner changes
+async function invalidateBannerCache() {
+  await Promise.allSettled([
+    triggerNetlifyRebuild(),
+    purgeNetlifyCacheTag('banners'),
+  ]);
+}
+
 export const updateBanners = async (req, res) => {
   try {
     const { banners } = req.body;
@@ -891,6 +1100,9 @@ export const updateBanners = async (req, res) => {
       );
     }
 
+    // Invalidate cache
+    await invalidateBannerCache();
+
     return res.status(200).json({
       success: true,
       message: 'Banners saved successfully',
@@ -918,6 +1130,9 @@ export const deleteBanner = async (req, res) => {
       'DELETE FROM banners WHERE position = ?',
       [position]
     );
+
+    // Invalidate cache
+    await invalidateBannerCache();
 
     return res.status(200).json({
       success: true,
