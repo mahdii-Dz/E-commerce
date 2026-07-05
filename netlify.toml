@@ -55,6 +55,3 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["lib/**/*"]
-
-[edge_functions]
-  path = "netlify/edge-functions/**/*"
