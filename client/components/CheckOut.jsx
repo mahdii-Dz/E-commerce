@@ -46,6 +46,8 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     const [colorQuantities, setColorQuantities] = useState({});
     const [deliveryPrice, setDeliveryPrice] = useState(0);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [showError, setShowError] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const [submitError, setSubmitError] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
     const successModalRef = useRef(null);
@@ -155,10 +157,19 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             w => w.name === formData.wilaya && (formData.delivery !== 'stopDesk' || w.hasStopDesk)
         );
         if (!currentWilayaExists && formData.wilaya !== '') {
-            // Reset to first available wilaya
             const firstWilaya = filteredWilayas[0];
             if (firstWilaya) {
-                handleWilayaChange(firstWilaya[1].name);
+                const wilayaName = firstWilaya[1].name;
+                const code = Object.keys(wilayaData).find(key => wilayaData[key].name === wilayaName);
+                const filteredCommunes = formData.delivery === 'stopDesk'
+                    ? (code ? getStopDeskCommunesByWilayaCode(code) : [])
+                    : (code ? (wilayaData[code]?.municipalities || []) : []);
+                const newBaladiya = filteredCommunes.length > 0 ? filteredCommunes[0] : '';
+                setFormData(prev => ({
+                    ...prev,
+                    wilaya: wilayaName,
+                    baladiya: newBaladiya,
+                }));
             } else {
                 setFormData(prev => ({ ...prev, wilaya: '', baladiya: '' }));
             }
@@ -233,7 +244,8 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             }
         },
         onError: (error) => {
-            alert('Order failed: ' + error.message);
+            setErrorMessage(error.message);
+            setShowError(true);
         },
     });
 
@@ -281,46 +293,6 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
         if (Object.keys(errors).length > 0) {
             setFieldErrors(errors);
-            return;
-        }
-
-        // Validation: required fields
-        if (!firstName) {
-            setSubmitError('الاسم الأول مطلوب');
-            return;
-        }
-        if (!lastName) {
-            setSubmitError('اللقب مطلوب');
-            return;
-        }
-        if (!phoneNumber) {
-            setSubmitError('رقم الهاتف مطلوب');
-            return;
-        }
-
-        // Simple phone validation: allow digits and optional leading +, require at least 8 digits
-        const digitsOnly = phoneNumber.replace(/[^\d]/g, '');
-        if (digitsOnly.length < 8) {
-            setSubmitError('رقم الهاتف غير صحيح');
-            return;
-        }
-
-        if (!wilaya) {
-            setSubmitError('الولاية مطلوبة');
-            return;
-        }
-
-        if (!colors || colors.length === 0 || colors.every(c => (colorQuantities[c.hex] || 0) === 0)) {
-            setSubmitError('يرجى اختيار الكمية قبل إتمام الطلب');
-            return;
-        }
-
-        // Delivery-specific baladiya validation
-        const requiresBaladiya =
-            formData.delivery === 'domicile' || (formData.delivery === 'stopDesk' && communes.length > 0);
-
-        if (requiresBaladiya && !baladiyaValue) {
-            setSubmitError('البلدية مطلوبة');
             return;
         }
 
@@ -383,7 +355,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
     // Order filtered wilayas by numeric code (ascending) for the dropdown
     const orderedFilteredWilayas = useMemo(() => {
-        return filteredWilayas.sort(([codeA], [codeB]) => parseInt(codeA, 10) - parseInt(codeB, 10));
+        return [...filteredWilayas].sort(([codeA], [codeB]) => parseInt(codeA, 10) - parseInt(codeB, 10));
     }, [filteredWilayas]);
 
     if (showSuccess) {
@@ -727,6 +699,38 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             >
                 إتمام الطلب
             </button>
+
+            {/* Error Popup */}
+            {showError && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="flex flex-col w-full max-w-md mx-4 items-center justify-center gap-6 px-6 py-8 bg-white rounded-xl border-2 border-stroke shadow-2xl relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowError(false)}
+                            className="absolute top-4 left-4 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                            aria-label="إغلاق"
+                        >
+                            <X size={24} className="text-gray-500" />
+                        </button>
+                        <div className="text-center">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </div>
+                            <h2 className="text-2xl font-bold text-red-600 mb-2">فشل تقديم الطلب</h2>
+                            <p className="text-gray-600 mb-6">حدث خطأ أثناء تقديم الطلب. يرجى المحاولة مرة أخرى.</p>
+                            <button
+                                type="button"
+                                onClick={() => setShowError(false)}
+                                className="w-[200px] cursor-pointer h-11 bg-primary text-white rounded-xl hover:opacity-90 transition-opacity font-medium text-sm"
+                            >
+                                إعادة المحاولة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </form>
     );
 }

@@ -3,6 +3,9 @@ import { proxyRequest } from "@/lib/proxy";
 import { adminAuth } from "@/lib/adminAuth";
 
 export async function PUT(request, { params }) {
+  const auth = await adminAuth(request);
+  if (auth.error) return auth.error;
+
   try {
     const { id } = await params;
     const body = await request.json();

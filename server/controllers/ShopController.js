@@ -64,7 +64,7 @@ const validateId = (id) => {
 
 const handleDbError = (res, error, context) => {
   console.error(`Error ${context}:`, error);
-  return res.status(500).json({ error: "Internal Server Error" });
+  return res.status(500).json({ error: `Error ${context}: ${error.message}` });
 };
 
 // ==================== CATEGORY CONTROLLERS ====================

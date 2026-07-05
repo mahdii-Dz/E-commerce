@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(request,{ params }) {
+export async function POST(request) {
     const data = await request.json();
     const {nom_client, telephone, commune, code_wilaya,address,montant, produit, quantite, boutique, delivery_type} = data;
     const api_token = {
