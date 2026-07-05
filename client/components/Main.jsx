@@ -6,9 +6,9 @@ import React, { useContext } from 'react'
 import RenderProducts from './RenderProducts'
 import Image from 'next/image'
 
-function Main({ Banners, onOpenCategorySidebar }) {
-  const { Products, Promotions } = useContext(GlobalContext)
-  const NewestProducts = Products && Products.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4)
+function Main({ Banners, Products = [], onOpenCategorySidebar }) {
+  const { Promotions } = useContext(GlobalContext)
+  const NewestProducts = Products.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 4)
 
   const sortedBanners = Array.isArray(Banners)
     ? [...Banners].sort((a, b) => a.position - b.position)
@@ -85,7 +85,7 @@ function Main({ Banners, onOpenCategorySidebar }) {
             <ArrowRight size={16} className="rotate-180" />
           </Link>
         </div>
-        <RenderProducts Products={NewestProducts && NewestProducts.slice(0, 3)} Class={'mt-8'} />
+        <RenderProducts Products={NewestProducts.slice(0, 3)} Class={'mt-8'} />
       </section>
 
       <section className='mt-10 px-4 lg:px-0 mb-10'>
@@ -96,7 +96,7 @@ function Main({ Banners, onOpenCategorySidebar }) {
             <ArrowRight size={16} className="rotate-180" />
           </Link>
         </div>
-        <RenderProducts Products={Products && Products.slice(0, 12)} Class={'mt-8'} />
+        <RenderProducts Products={Products.slice(0, 12)} Class={'mt-8'} />
       </section>
     </main>
   )

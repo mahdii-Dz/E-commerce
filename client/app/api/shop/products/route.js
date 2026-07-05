@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import { proxyGET, proxyRequest } from "@/lib/proxy";
 import { adminAuth } from "@/lib/adminAuth";
 
-export async function GET() {
+export async function GET(request) {
   try {
-    const data = await proxyGET('/api/shop/get-products');
+    const { searchParams } = new URL(request.url);
+    const queryString = searchParams.toString();
+    const endpoint = queryString 
+      ? `/api/shop/get-products?${queryString}`
+      : '/api/shop/get-products';
+    
+    const data = await proxyGET(endpoint);
     return NextResponse.json(data);
   } catch (error) {
     console.error('Products proxy error:', error);

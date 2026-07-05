@@ -12,11 +12,10 @@ async function getCategories() {
   return res.json();
 }
 
-export default async function CategoriesLoader({ banners }) {
+export default async function CategoriesLoader({ banners = [], products = [] }) {
   const categories = await getCategories();
 
-  // If banners is an error object (from failed fetch), extract just the banners array or use empty array
-  const bannersToPass = banners && banners.banners ? banners.banners : (Array.isArray(banners) ? banners : []);
+  const bannersToPass = Array.isArray(banners) ? banners : [];
 
-  return <HomeClient banners={bannersToPass} categories={categories} />;
+  return <HomeClient banners={bannersToPass} products={products} categories={categories} />;
 }

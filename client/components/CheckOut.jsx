@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/select';
 import { wilayaDataWithStopDesk as wilayaData } from '@/lib/wilayaDataWithStopDesk';
 import { getStopDeskCommunesByWilayaCode } from '@/lib/stopDeskFilter';
-import { Minus, Plus, X } from 'lucide-react';
+import { Minus, Plus, X, Truck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 
@@ -46,7 +46,8 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     const [colorQuantities, setColorQuantities] = useState({});
     const [deliveryPrice, setDeliveryPrice] = useState(0);
     const [showSuccess, setShowSuccess] = useState(false);
-    const [submitError, setSubmitError] = useState(''); // for validation errors
+    const [submitError, setSubmitError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
     const successModalRef = useRef(null);
 
     // Initialize colorQuantities when colors change
@@ -185,6 +186,12 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     };
     // Update delivery price when wilaya name or delivery type changes
     useEffect(() => {
+        // Free delivery if the selected offer has it
+        if (selectedOffer?.freeDelivery) {
+            setDeliveryPrice(0);
+            return;
+        }
+
         const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
         if (!code) {
             setDeliveryPrice(0);
@@ -203,13 +210,15 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [formData.wilaya, formData.delivery]);
+    }, [formData.wilaya, formData.delivery, selectedOffer]);
 
     const handleInputChange = (field, value) => {
         setFormData((prev) => ({
             ...prev,
             [field]: value,
         }));
+        setFieldErrors((prev) => ({ ...prev, [field]: '' }));
+        setSubmitError('');
     };
 
     const mutation = useMutation({
@@ -231,48 +240,35 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     const handleSubmit = (e) => {
         e.preventDefault();
         setSubmitError('');
+        setFieldErrors({});
 
         const firstName = formData.firstName?.trim() || '';
         const lastName = formData.lastName?.trim() || '';
         const phoneNumber = formData.phoneNumber?.trim() || '';
         const wilaya = formData.wilaya?.trim() || '';
         const baladiyaValue = formData.baladiya?.trim() || '';
+        const errors = {};
 
         // Validation: if offer selected, total must match exactly
         if (selectedOffer && totalAllocated !== selectedOffer.quantity) {
-            setSubmitError(`ءارشلا ضرع ةراتخملا ةيمكلا قباطت نأ بجي (المطلوب: ${selectedOffer.quantity}، الحالي: ${totalAllocated})`);
-            return;
+            errors.colors = `يجب أن تطابق الكمية المختارة عرض الشراء (المطلوب: ${selectedOffer.quantity}، الحالي: ${totalAllocated})`;
         }
 
         // Validation: required fields
-        if (!firstName) {
-            setSubmitError('الاسم الأول مطلوب');
-            return;
-        }
-        if (!lastName) {
-            setSubmitError('اللقب مطلوب');
-            return;
-        }
-        if (!phoneNumber) {
-            setSubmitError('رقم الهاتف مطلوب');
-            return;
-        }
+        if (!firstName) errors.firstName = 'الاسم الأول مطلوب';
+        if (!lastName) errors.lastName = 'اللقب مطلوب';
+        if (!phoneNumber) errors.phoneNumber = 'رقم الهاتف مطلوب';
 
         // Simple phone validation: allow digits and optional leading +, require at least 8 digits
         const digitsOnly = phoneNumber.replace(/[^\d]/g, '');
-        if (digitsOnly.length < 8) {
-            setSubmitError('رقم الهاتف غير صحيح');
-            return;
+        if (phoneNumber && digitsOnly.length < 8) {
+            errors.phoneNumber = 'رقم الهاتف غير صحيح';
         }
 
-        if (!wilaya) {
-            setSubmitError('الولاية مطلوبة');
-            return;
-        }
+        if (!wilaya) errors.wilaya = 'الولاية مطلوبة';
 
         if (!colors || colors.length === 0 || colors.every(c => (colorQuantities[c.hex] || 0) === 0)) {
-            setSubmitError('يرجى اختيار الكمية قبل إتمام الطلب');
-            return;
+            errors.colors = 'يرجى اختيار الكمية قبل إتمام الطلب';
         }
 
         // Delivery-specific baladiya validation
@@ -280,7 +276,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             formData.delivery === 'domicile' || (formData.delivery === 'stopDesk' && communes.length > 0);
 
         if (requiresBaladiya && !baladiyaValue) {
-            setSubmitError('البلدية مطلوبة');
+            errors.baladiya = 'البلدية مطلوبة';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
             return;
         }
 
@@ -386,13 +386,8 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             onSubmit={handleSubmit}
             className="flex flex-col w-full items-center self-center mt-4 justify-center gap-6 lg:px-12 md:px-8 sm:px-4 px-2 py-8 bg-white rounded-xl border-2 border-stroke"
         >
-            {!!submitError && (
-                <div className="w-full p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-600 text-sm text-right">{submitError}</p>
-                </div>
-            )}
             {/* First & Last Name */}
-            <div className="flex w-full items-center gap-6">
+            <div className="flex w-full items-start gap-6">
                 <div className="flex flex-col w-full">
                     <label htmlFor="firstName" className="font-medium text-black text-base mb-2">
                         الاسم الأول *
@@ -402,9 +397,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                         value={formData.firstName}
                         onChange={(e) => handleInputChange('firstName', e.target.value)}
                         placeholder="الاسم الأول"
-                        className="h-11 text-right"
-                        required
+                        className={`h-11 text-right ${fieldErrors.firstName ? 'border-red-400 focus:ring-red-400' : ''}`}
                     />
+                    {fieldErrors.firstName && (
+                        <p className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</p>
+                    )}
                 </div>
                 <div className="flex flex-col w-full">
                     <label htmlFor="lastName" className="font-medium text-black text-base mb-2">
@@ -415,9 +412,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
                         placeholder="اللقب"
-                        className="h-11 text-right"
-                        required
+                        className={`h-11 text-right ${fieldErrors.lastName ? 'border-red-400 focus:ring-red-400' : ''}`}
                     />
+                    {fieldErrors.lastName && (
+                        <p className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</p>
+                    )}
                 </div>
             </div>
 
@@ -432,9 +431,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                     value={formData.phoneNumber}
                     onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
                     placeholder="0x xxxxxxxx"
-                    className="h-11 text-right"
-                    required
+                    className={`h-11 text-right ${fieldErrors.phoneNumber ? 'border-red-400 focus:ring-red-400' : ''}`}
                 />
+                {fieldErrors.phoneNumber && (
+                    <p className="text-red-500 text-xs mt-1">{fieldErrors.phoneNumber}</p>
+                )}
             </div>
 
             {/* Color Quantities */}
@@ -443,6 +444,9 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                     <label className="font-medium text-black text-base mb-3">
                         الكمية لكل لون *
                     </label>
+                    {fieldErrors.colors && (
+                        <p className="text-red-500 text-sm mb-2">{fieldErrors.colors}</p>
+                    )}
 
                     {/* Selected Offer Summary */}
                     {selectedOffer && (
@@ -566,7 +570,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 <Select
                     dir="rtl"
                     value={formData.wilaya}
-                    onValueChange={handleWilayaChange}
+                    onValueChange={(v) => { handleWilayaChange(v); setFieldErrors(prev => ({ ...prev, wilaya: '' })); }}
                 >
                     <SelectTrigger className="w-full h-11!">
                         <SelectValue placeholder="اختر الولاية" />
@@ -581,8 +585,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                                 {String(code).padStart(2, '0')} - {data.name}
                             </SelectItem>
                         ))}
-                    </SelectContent>
+                        </SelectContent>
                 </Select>
+                {fieldErrors.wilaya && (
+                    <p className="text-red-500 text-xs mt-1">{fieldErrors.wilaya}</p>
+                )}
             </div>
 
             {/* Baladiya */}
@@ -598,7 +605,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 <Select
                     dir="rtl"
                     value={formData.baladiya}
-                    onValueChange={(value) => handleInputChange('baladiya', value)}
+                    onValueChange={(value) => { handleInputChange('baladiya', value); setFieldErrors(prev => ({ ...prev, baladiya: '' })); }}
                     disabled={!communes.length}
                 >
                     <SelectTrigger className="w-full h-11!">
@@ -614,8 +621,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                                 {commune}
                             </SelectItem>
                         ))}
-                    </SelectContent>
+                        </SelectContent>
                 </Select>
+                {fieldErrors.baladiya && (
+                    <p className="text-red-500 text-xs mt-1">{fieldErrors.baladiya}</p>
+                )}
                 {formData.delivery === 'stopDesk' && communes.length === 0 && formData.wilaya && (
                     <p className="text-xs text-gray-400 mt-1">
                         سيتم استخدام اسم الولاية كبلدية للتوصيل
@@ -627,7 +637,16 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             <div className="w-full flex flex-col items-start gap-2">
                 <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
                     <span className="font-medium text-black text-lg">رسوم التوصيل:</span>
-                    <p className="font-medium text-primary text-xl">{deliveryPrice} دج</p>
+                    <p className="font-medium text-primary text-xl">
+                        {deliveryPrice === 0 ? (
+                            <span className="text-green-600 flex items-center gap-1.5">
+                                <Truck size={18} />
+                                مجاني
+                            </span>
+                        ) : (
+                            <>{deliveryPrice} دج</>
+                        )}
+                    </p>
                 </div>
                 <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
                     <span className="font-medium text-black text-lg">الإجمالي:</span>

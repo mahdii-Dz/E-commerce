@@ -1,8 +1,8 @@
-# vacagest/netlify.toml
 [build]
   base = "client"  
   publish = ".next"
   command = "npm run build"
+  functions = "netlify/functions/**/*"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs" 
@@ -10,3 +10,51 @@
 [build.environment]
   # Exclude node_modules from secrets scanning (false positives in binaries)
   SECRETS_SCAN_OMIT_PATHS = "node_modules/**,.netlify/**,.next/**"
+
+[[headers]]
+  for = "/api/shop/products*"
+  [headers.values]
+    Cache-Control = "public, s-maxage=300, stale-while-revalidate=600"
+    Netlify-CDN-Cache-Tag = "products"
+
+[[headers]]
+  for = "/api/shop/products/*"
+  [headers.values]
+    Cache-Control = "public, s-maxage=3600, stale-while-revalidate=7200"
+    Netlify-CDN-Cache-Tag = "products"
+
+[[headers]]
+  for = "/api/shop/categories*"
+  [headers.values]
+    Cache-Control = "public, s-maxage=3600, stale-while-revalidate=7200"
+    Netlify-CDN-Cache-Tag = "categories"
+
+[[headers]]
+  for = "/api/shop/banners*"
+  [headers.values]
+    Cache-Control = "public, s-maxage=3600, stale-while-revalidate=7200"
+    Netlify-CDN-Cache-Tag = "banners"
+
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["lib/**/*"]
+
+[edge_functions]
+  path = "netlify/edge-functions/**/*"

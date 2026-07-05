@@ -1,10 +1,10 @@
 "use client";
 
-import { useContext, useState, useMemo, Fragment } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { Plus, Search, Filter, Edit, ChevronLeft, ChevronRight, X, ChevronDown, Package, Percent, Tag, Hash } from "lucide-react";
-import { GlobalContext } from "@/app/context/Context";
 import Link from "next/link";
 import Image from "next/image";
+import { useFetchAllProducts } from "@/components/useFetchAllProducts";
 
 const getBadgeStyle = (type) => {
   switch (type) {
@@ -21,7 +21,10 @@ const ITEMS_PER_PAGE = 10;
 const FILTER_TYPES = ["All", "New", "Top Sold", "Promotions", "Best Deal"];
 
 export default function ProductDashboard() {
-  const { Products } = useContext(GlobalContext);
+  const { data: productsData, isLoading: productsLoading } = useFetchAllProducts('/api/shop/products', {
+    staleTime: 60 * 1000,
+  });
+  const Products = Array.isArray(productsData) ? productsData : (productsData?.products || []);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,8 +40,7 @@ export default function ProductDashboard() {
     type: "All",
     minPrice: "",
     maxPrice: "",
-    minStock: "",
-    maxStock: "",
+
     minDiscount: "",
     maxDiscount: "",
   });
@@ -65,14 +67,6 @@ export default function ProductDashboard() {
     }
     if (filters.maxPrice !== "") {
       result = result.filter(product => product.price <= Number(filters.maxPrice));
-    }
-
-    // Stock filter
-    if (filters.minStock !== "") {
-      result = result.filter(product => product.stock >= Number(filters.minStock));
-    }
-    if (filters.maxStock !== "") {
-      result = result.filter(product => product.stock <= Number(filters.maxStock));
     }
 
     // Discount filter
@@ -107,8 +101,7 @@ export default function ProductDashboard() {
       type: "All",
       minPrice: "",
       maxPrice: "",
-      minStock: "",
-      maxStock: "",
+
       minDiscount: "",
       maxDiscount: "",
     });
@@ -124,8 +117,7 @@ export default function ProductDashboard() {
     filters.type !== "All" ||
     filters.minPrice !== "" ||
     filters.maxPrice !== "" ||
-    filters.minStock !== "" ||
-    filters.maxStock !== "" ||
+
     filters.minDiscount !== "" ||
     filters.maxDiscount !== "";
 
@@ -158,22 +150,40 @@ export default function ProductDashboard() {
     return pages;
   };
 
-  if (!Products || Products.length === 0) {
+  if (productsLoading) {
     return (
-      <div className="w-full flex flex-col  justify-start h-full">
+      <div className="w-full flex flex-col justify-start h-full">
         <header className="flex items-center justify-between mb-11">
-        <h1 className="text-3xl font-semibold text-black tracking-tight">
-          جميع المنتجات
-        </h1>
-
-        <Link href="/admin/add-product" className="flex items-center gap-2.5 px-6 py-2.5 cursor-pointer bg-[#FA3145] hover:bg-[#e02a3b] text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:ring-offset-2">
-          <Plus size={20} />
-          <span>Add Product</span>
-        </Link>
-      </header>
-      <div className="flex w-full h-50 justify-center items-center">
-        <p className="text-gray-500">لا توجد منتجات متاحة</p>
+          <h1 className="text-3xl font-semibold text-black tracking-tight">
+            جميع المنتجات
+          </h1>
+          <Link href="/admin/add-product" className="flex items-center gap-2.5 px-6 py-2.5 cursor-pointer bg-[#FA3145] hover:bg-[#e02a3b] text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:ring-offset-2">
+            <Plus size={20} />
+            <span>إضافة منتج</span>
+          </Link>
+        </header>
+        <div className="flex w-full h-50 justify-center items-center">
+          <p className="text-gray-500">جار تحميل المنتجات...</p>
+        </div>
       </div>
+    );
+  }
+
+  if (Products.length === 0) {
+    return (
+      <div className="w-full flex flex-col justify-start h-full">
+        <header className="flex items-center justify-between mb-11">
+          <h1 className="text-3xl font-semibold text-black tracking-tight">
+            جميع المنتجات
+          </h1>
+          <Link href="/admin/add-product" className="flex items-center gap-2.5 px-6 py-2.5 cursor-pointer bg-[#FA3145] hover:bg-[#e02a3b] text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:ring-offset-2">
+            <Plus size={20} />
+            <span>إضافة منتج</span>
+          </Link>
+        </header>
+        <div className="flex w-full h-50 justify-center items-center">
+          <p className="text-gray-500">لا توجد منتجات متاحة</p>
+        </div>
       </div>
     );
   }
@@ -266,27 +276,6 @@ export default function ProductDashboard() {
                   </div>
                 </div>
 
-                {/* Stock Range */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">نطاق المخزون</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      placeholder="Min"
-                      value={filters.minStock}
-                      onChange={(e) => handleFilterChange("minStock", e.target.value)}
-                      className="w-1/2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Max"
-                      value={filters.maxStock}
-                      onChange={(e) => handleFilterChange("maxStock", e.target.value)}
-                      className="w-1/2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]"
-                    />
-                  </div>
-                </div>
-
                 {/* Discount Range */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">نطاق الخصم %</label>
@@ -346,7 +335,6 @@ export default function ProductDashboard() {
                 <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700">الاسم</th>
                 <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden lg:table-cell">النوع</th>
                 <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden sm:table-cell">السعر</th>
-                <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden lg:table-cell">المخزون</th>
                 <th className="px-4 py-4 text-right text-sm font-semibold text-gray-700 hidden lg:table-cell">الخصم</th>
                 <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700 w-20">الإجراءات</th>
               </tr>
@@ -390,8 +378,6 @@ export default function ProductDashboard() {
                       </td>
                       {/* Price - Always visible */}
                       <td className="px-4 py-4 text-sm font-medium text-gray-900 hidden sm:table-cell">{product.price} DA</td>
-                      {/* Stock - Desktop only */}
-                      <td className="px-4 py-4 text-sm text-gray-600 hidden lg:table-cell">{product.stock}</td>
                       {/* Discount - Desktop only */}
                       <td className="px-4 py-4 text-sm text-gray-600 hidden lg:table-cell">{product.discount_percentage}%</td>
                       {/* Actions */}
@@ -437,10 +423,6 @@ export default function ProductDashboard() {
                               <div>
                 <span className="text-gray-500">السعر:</span>
                 <span className="font-medium mr-2">{product.price} DA</span>
-                              </div>
-                              <div>
-                <span className="text-gray-500">المخزون:</span>
-                <span className="font-medium mr-2">{product.stock}</span>
                               </div>
                               <div>
                 <span className="text-gray-500">النوع:</span>

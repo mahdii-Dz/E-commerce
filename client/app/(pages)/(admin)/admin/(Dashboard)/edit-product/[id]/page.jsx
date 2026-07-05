@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2, Sparkles, Truck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,7 @@ import {
 import axios from "axios";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import AdminTestimonialForm from "@/components/AdminTestimonialForm";
+import RichTextEditor from "@/components/RichTextEditor";
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -38,10 +39,10 @@ export default function EditProductPage() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    big_description: "",
     categories: [],
     price: "",
     discount: "",
-    quantity: "",
     type: "None",
   });
 
@@ -59,7 +60,7 @@ export default function EditProductPage() {
   // Offers state
   const [offers, setOffers] = useState([]);
   const [showOfferModal, setShowOfferModal] = useState(false);
-  const [offerForm, setOfferForm] = useState({ quantity: '', price: '', savedMoney: 0 });
+  const [offerForm, setOfferForm] = useState({ quantity: '', price: '', savedMoney: 0, isBestOffer: false, freeDelivery: false });
 
   // Combobox anchor for categories
   const categoryAnchor = useComboboxAnchor();
@@ -94,10 +95,10 @@ export default function EditProductPage() {
         setFormData({
           title: data.name || "",
           description: data.description || "",
+          big_description: data.big_description || "",
           categories: productCategories,
           price: data.price?.toString() || "",
           discount: data.discount_percentage?.toString() || "",
-          quantity: data.stock?.toString() || "",
           type: mappedType,
         });
 
@@ -153,13 +154,6 @@ export default function EditProductPage() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const adjustQuantity = (delta) => {
-    setFormData(prev => ({
-      ...prev,
-      quantity: Math.max(0, (parseInt(prev.quantity) || 0) + delta)
-    }));
-  };
-
   // Color management functions
   const openColorModal = () => {
     setColorForm({ name: "", hex: "#000000" });
@@ -190,13 +184,13 @@ export default function EditProductPage() {
 
   // Offer management
   const openOfferModal = () => {
-    setOfferForm({ quantity: '', price: '', savedMoney: 0 });
+    setOfferForm({ quantity: '', price: '', savedMoney: 0, isBestOffer: false, freeDelivery: false });
     setShowOfferModal(true);
   };
 
   const closeOfferModal = () => {
     setShowOfferModal(false);
-    setOfferForm({ quantity: '', price: '', savedMoney: 0 });
+    setOfferForm({ quantity: '', price: '', savedMoney: 0, isBestOffer: false, freeDelivery: false });
   };
 
   const handleOfferInputChange = (field, value) => {
@@ -228,7 +222,9 @@ export default function EditProductPage() {
     const newOffer = {
       quantity: parseInt(offerForm.quantity),
       price: parseFloat(offerForm.price),
-      savedMoney: Math.round(offerForm.savedMoney)
+      savedMoney: Math.round(offerForm.savedMoney),
+      isBestOffer: offerForm.isBestOffer,
+      freeDelivery: offerForm.freeDelivery,
     };
 
     setOffers(prev => [...prev, newOffer]);
@@ -370,15 +366,15 @@ export default function EditProductPage() {
       const response = await axios.put(`/api/shop/products/${id}`, {
         name: formData.title,
         description: formData.description,
+        big_description: formData.big_description || null,
         price: parseFloat(formData.price),
-        stock: parseInt(formData.quantity) || 0,
         categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : [],
         type: typeMapReverse[formData.type] || formData.type,
         discount_percentage: parseFloat(formData.discount) || 0,
         images: images.map(img => img.url),
         thumbnail: getThumbnailUrl(images[0]?.url),
         colors: colors, // Array of objects { name, hex }
-        offers: offers, // Array of { quantity, price, savedMoney }
+        offers: offers, // Array of { quantity, price, savedMoney, isBestOffer, freeDelivery }
       });
 
       showToast("Product updated successfully!", "success");
@@ -549,6 +545,30 @@ export default function EditProductPage() {
                 </div>
               )}
 
+              {/* Offer flags */}
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={offerForm.isBestOffer}
+                    onChange={(e) => setOfferForm(prev => ({ ...prev, isBestOffer: e.target.checked }))}
+                    className="w-4 h-4 accent-[#FA3145]"
+                  />
+                  <Sparkles size={16} className="text-amber-500" />
+                  <span className="text-sm text-gray-700">أفضل عرض</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={offerForm.freeDelivery}
+                    onChange={(e) => setOfferForm(prev => ({ ...prev, freeDelivery: e.target.checked }))}
+                    className="w-4 h-4 accent-[#FA3145]"
+                  />
+                  <Truck size={16} className="text-blue-500" />
+                  <span className="text-sm text-gray-700">توصيل مجاني</span>
+                </label>
+              </div>
+
               <div className="flex gap-3 mt-4">
                 <button
                   onClick={closeOfferModal}
@@ -691,28 +711,6 @@ export default function EditProductPage() {
             />
           </div>
 
-          <div className="flex flex-col gap-3 w-[178px]">
-            <label className="text-lg font-semibold text-black">الكمية</label>
-            <div className="relative flex items-center h-[50px] px-5 bg-white border border-gray-200 rounded-xl">
-              <input
-                type="number"
-                value={formData.quantity}
-                onChange={(e) => handleChange("quantity", parseInt(e.target.value) || 0)}
-                disabled={isSubmitting}
-                className="w-full text-base text-gray-800 focus:outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-gray-100"
-                placeholder="0"
-              />
-              <div className="absolute left-4 flex items-center gap-2">
-                <button type="button" onClick={() => adjustQuantity(-1)} disabled={isSubmitting} className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded transition-colors disabled:opacity-50">
-                  <Minus size={16} />
-                </button>
-                <button type="button" onClick={() => adjustQuantity(1)} disabled={isSubmitting} className="w-6 h-6 flex items-center justify-center hover:bg-gray-100 rounded transition-colors disabled:opacity-50">
-                  <Plus size={16} />
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Colors Section */}
           <div className="flex flex-col gap-3 w-[671px]">
             <label className="text-lg font-semibold text-black">الألوان:</label>
@@ -784,9 +782,23 @@ export default function EditProductPage() {
                 {offers.map((offer, idx) => (
                   <div key={idx} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
                     <div>
-                      <p className="font-medium text-gray-800">
-                        اشتري {offer.quantity} بسعر {offer.price} DA
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-medium text-gray-800">
+                          اشتري {offer.quantity} بسعر {offer.price} DA
+                        </p>
+                        {offer.isBestOffer && (
+                          <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <Sparkles size={12} />
+                            أفضل عرض
+                          </span>
+                        )}
+                        {offer.freeDelivery && (
+                          <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                            <Truck size={12} />
+                            توصيل مجاني
+                          </span>
+                        )}
+                      </div>
                       {offer.savedMoney > 0 && (
                         <p className="text-sm text-green-600">وفر {offer.savedMoney} DA</p>
                       )}
@@ -814,6 +826,15 @@ export default function EditProductPage() {
               disabled={isSubmitting}
               className="w-full p-5 bg-white border border-gray-200 rounded-xl text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145] resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
               rows={5}
+            />
+          </div>
+
+          {/* Big Description (TipTap Rich Text) */}
+          <div className="flex flex-col gap-3 w-[671px]">
+            <label className="text-lg font-semibold text-black">الوصف الطويل:</label>
+            <RichTextEditor
+              content={formData.big_description}
+              onChange={(html) => handleChange("big_description", html)}
             />
           </div>
 

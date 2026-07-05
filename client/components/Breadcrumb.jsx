@@ -41,7 +41,7 @@ export default function Breadcrumb() {
   ];
 
   return (
-    <nav aria-label="Breadcrumb" className="text-gray-500 text-sm">
+    <nav aria-label="Breadcrumb" className="text-gray-500 text-sm border-b-2 pb-2 border-gray-200 w-fit">
       <ol className="flex items-center space-x-1">
         {breadcrumbItems.map((item, i) => (
           <React.Fragment key={i}>

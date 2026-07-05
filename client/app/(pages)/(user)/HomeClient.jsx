@@ -1,12 +1,11 @@
 'use client'
 
 import { useState } from 'react';
-import Footer from "@/components/Footer";
 import Main from "@/components/Main";
 import SideBar from "@/components/SideBar";
 import NavBar from "@/components/NavBar";
 
-export default function HomeClient({ banners, categories }) {
+export default function HomeClient({ banners = [], products = [], categories }) {
   const [isCategorySidebarOpen, setIsCategorySidebarOpen] = useState(false);
   const isLoadingCategories = categories === null;
 
@@ -28,6 +27,7 @@ export default function HomeClient({ banners, categories }) {
             />
           <Main
             Banners={banners}
+            Products={products}
             onOpenCategorySidebar={openCategorySidebar}
           />
         </div>
