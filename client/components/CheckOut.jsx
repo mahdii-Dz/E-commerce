@@ -284,6 +284,46 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             return;
         }
 
+        // Validation: required fields
+        if (!firstName) {
+            setSubmitError('الاسم الأول مطلوب');
+            return;
+        }
+        if (!lastName) {
+            setSubmitError('اللقب مطلوب');
+            return;
+        }
+        if (!phoneNumber) {
+            setSubmitError('رقم الهاتف مطلوب');
+            return;
+        }
+
+        // Simple phone validation: allow digits and optional leading +, require at least 8 digits
+        const digitsOnly = phoneNumber.replace(/[^\d]/g, '');
+        if (digitsOnly.length < 8) {
+            setSubmitError('رقم الهاتف غير صحيح');
+            return;
+        }
+
+        if (!wilaya) {
+            setSubmitError('الولاية مطلوبة');
+            return;
+        }
+
+        if (!colors || colors.length === 0 || colors.every(c => (colorQuantities[c.hex] || 0) === 0)) {
+            setSubmitError('يرجى اختيار الكمية قبل إتمام الطلب');
+            return;
+        }
+
+        // Delivery-specific baladiya validation
+        const requiresBaladiya =
+            formData.delivery === 'domicile' || (formData.delivery === 'stopDesk' && communes.length > 0);
+
+        if (requiresBaladiya && !baladiyaValue) {
+            setSubmitError('البلدية مطلوبة');
+            return;
+        }
+
         // Build items array from colorQuantities with quantity > 0
         const items = colors
             .filter((c) => (colorQuantities[c.hex] || 0) > 0)
@@ -386,6 +426,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             onSubmit={handleSubmit}
             className="flex flex-col w-full items-center self-center mt-4 justify-center gap-6 lg:px-12 md:px-8 sm:px-4 px-2 py-8 bg-white rounded-xl border-2 border-stroke"
         >
+            {!!submitError && (
+                <div className="w-full p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm text-right">{submitError}</p>
+                </div>
+            )}
             {/* First & Last Name */}
             <div className="flex w-full items-start gap-6">
                 <div className="flex flex-col w-full">
