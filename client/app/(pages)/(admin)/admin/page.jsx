@@ -1,5 +1,6 @@
 'use client';
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
 
@@ -176,9 +177,10 @@ export default function AdminPage() {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 transform transition-all duration-300 hover:shadow-2xl">
         {/* Logo Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-xl mb-4 shadow-lg">
-            <span className="text-white text-2xl font-bold">LOGO</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-4 shadow-lg">
+            <Image src='/Logo.png' alt='Logo' width={64} height={64} className="rounded-xl" />
           </div>
+            <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D'or</h3>
           <h1 className="text-2xl font-bold text-gray-900">لوحة الإدارة</h1>
           <p className="text-gray-500 mt-2 text-sm">دخول آمن مطلوب</p>
         </div>
@@ -189,8 +191,8 @@ export default function AdminPage() {
             <label
               htmlFor="admin-password"
               className="block text-sm font-medium text-gray-700"
-              >كلمة المرور</label>
-              
+            >كلمة المرور</label>
+
 
             <div className="relative">
               <input
@@ -260,7 +262,7 @@ export default function AdminPage() {
               flex items-center justify-center gap-2
               ${isSubmitting || isLocked || !values.password.trim()
                 ? 'bg-gray-400 cursor-not-allowed opacity-70'
-                : 'bg-primary hover:bg-red-400 hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl'
+                : 'bg-[#EEC910] hover:bg-[#D4B80F] hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl'
               }
             `}
           >
@@ -272,7 +274,7 @@ export default function AdminPage() {
             ) : isLocked ? (
               <span>مقفل</span>
             ) : (
-                <span>تسجيل الدخول</span>
+              <span>تسجيل الدخول</span>
             )}
           </button>
         </form>

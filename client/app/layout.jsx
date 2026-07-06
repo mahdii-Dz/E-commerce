@@ -1,13 +1,9 @@
 import "./globals.css";
-import { Roboto, Rubik } from "next/font/google";
+import { Rubik } from "next/font/google";
 import Providers from "./providers";
 import GoogleTagManager from "@/components/GoogleTagManager";
+import RouteProgress from "@/components/RouteProgress";
 
-
-const RobotoSans = Roboto({
-  variable: "--font-Roboto-sans",
-  subsets: ["latin"],
-});
 
 const RubikSans = Rubik({
   variable: "--font-Rubik-sans",
@@ -28,9 +24,10 @@ export default function RootLayout({ children }) {
         className={`${RubikSans.variable} font-sans antialiased bg-background w-full h-auto `}
       >
         <Providers>
+          <RouteProgress />
           {children}
         </Providers>
-            <GoogleTagManager />
+          <GoogleTagManager />
       </body>
     </html>
   );

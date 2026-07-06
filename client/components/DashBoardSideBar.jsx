@@ -14,6 +14,7 @@ import {
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 const menuItemsData = [
   { icon: LayoutGrid, label: "لوحة التحكم", href: "/admin/dashboard" },
@@ -111,7 +112,8 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
           <>
             <div className="flex items-center justify-between mb-12">
               <div className="text-2xl font-bold text-black tracking-tight">
-                LOGO
+                <Image src='/Logo.png' alt='Logo' width={40} height={40} />
+                <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D'or</h3>
               </div>
               <button
                 onClick={toggleSidebar}

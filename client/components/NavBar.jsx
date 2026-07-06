@@ -2,6 +2,7 @@
 
 import { GlobalContext } from '@/app/context/Context'
 import { Search, ShoppingCart, Menu, X } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useContext, useState, useCallback, useEffect } from 'react'
 
@@ -48,13 +49,14 @@ function NavBar({ onOpenCategorySidebar }) {
         </button>
 
         {/* Logo */}
-        <Link href="/" className='logo cursor-pointer flex-shrink-0 min-w-0'>
-          <h1 className='text-2xl lg:text-4xl font-bold truncate'>LOGO</h1>
+        <Link href="/" className='logo cursor-pointer flex-shrink-0 min-w-0 flex items-center gap-2'>
+          <Image src='/Logo.png' alt='Logo' width={40} height={40} />
+          <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D'or</h3>
         </Link>
 
         {/* Desktop Search */}
-        <div className='hidden lg:flex search justify-between items-center rounded-2xl border border-stroke pl-4 w-2/4 max-w-2xl'>
-          <Search className="cursor-pointer hover:text-primary transition-colors flex-shrink-0" />
+        <div className='hidden lg:flex search justify-between items-center px-2 rounded-2xl border border-stroke pl-4 w-2/4 max-w-2xl'>
+          <Search className="cursor-pointer hover:text-primary transition-colors shrink-0" />
           <input 
             type="search" 
             placeholder='ابحث عن المنتجات...' 
