@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
 export function AdminAuthGuard({ children }) {
@@ -8,6 +8,7 @@ export function AdminAuthGuard({ children }) {
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const intervalRef = useRef(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -16,14 +17,14 @@ export function AdminAuthGuard({ children }) {
         const data = await res.json();
 
         if (!data.authenticated) {
-          // Redirect to login
+          setIsAuthenticated(false);
           router.replace('/admin');
           return;
         }
 
         setIsAuthenticated(true);
       } catch (error) {
-        // Network error - assume not authenticated
+        setIsAuthenticated(false);
         router.replace('/admin');
       } finally {
         setIsChecking(false);
@@ -31,6 +32,15 @@ export function AdminAuthGuard({ children }) {
     }
 
     checkAuth();
+
+    // Refresh session every 25 minutes to keep it alive
+    intervalRef.current = setInterval(checkAuth, 25 * 60 * 1000);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
   }, [router]);
 
   if (isChecking) {
