@@ -237,7 +237,7 @@ export default function ProductClient({ product, relatedProducts }) {
                                         <img
                                             src={image}
                                             alt={`${product.name} - عرض ${index + 1}`}
-                                            className='w-full h-20 lg:h-24 object-contain rounded-lg border border-stroke cursor-pointer hover:scale-110 transition-transform duration-300 bg-white'
+                                            className='w-full h-20 lg:h-24 object-cover rounded-lg border border-stroke cursor-pointer hover:scale-110 transition-transform duration-300 bg-white'
                                             loading="lazy"
                                             decoding="async"
                                             onError={(e) => { e.target.src = '/placeholder.png'; }}
