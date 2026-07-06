@@ -1,11 +1,25 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2, Sparkles, Truck } from "lucide-react";
+import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2, Sparkles, Truck, GripVertical, Upload } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Image from "next/image";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  rectSwappingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Combobox,
   ComboboxChip,
@@ -52,10 +66,10 @@ export default function EditProductPage() {
   const [colorForm, setColorForm] = useState({ name: "", hex: "#000000" });
 
   const [images, setImages] = useState([]);
-  const [uploadingIndex, setUploadingIndex] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
-  const [pendingUploadIndex, setPendingUploadIndex] = useState(null);
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [overallProgress, setOverallProgress] = useState(0);
+  const [uploadStatusText, setUploadStatusText] = useState("");
 
   // Offers state
   const [offers, setOffers] = useState([]);
@@ -125,9 +139,10 @@ export default function EditProductPage() {
               }
             }
             return {
+              id: crypto.randomUUID(),
               url: url,
               publicId: publicId,
-              isExisting: true
+              status: 'existing'
             };
           });
           setImages(formattedImages);
@@ -149,6 +164,11 @@ export default function EditProductPage() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor)
+  );
 
   const handleChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -235,95 +255,53 @@ export default function EditProductPage() {
     setOffers(prev => prev.filter((_, i) => i !== index));
   };
 
-  const uploadImage = async (file, index) => {
-    setUploadingIndex(index);
-    setUploadProgress(0);
-
-    const formDataUpload = new FormData();
-    formDataUpload.append("image", file);
-
-    try {
-      const response = await axios.post(
-        "/api/cloudinary",
-        formDataUpload,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
-            setUploadProgress(percentCompleted);
-          },
-        }
-      );
-
-      const imageUrl = response.data.data.url;
-      const publicId = response.data.data.public_id;
-
-      setImages(prev => {
-        const newImages = [...prev];
-        newImages[index] = { url: imageUrl, publicId, isNew: true };
-        return newImages;
-      });
-
-    } catch (error) {
-      console.error("Upload failed:", error);
-      showToast("Failed to upload image", "error");
-      setImages(prev => prev.filter((_, i) => i !== index));
-    } finally {
-      setUploadingIndex(null);
-      setUploadProgress(0);
-    }
-  };
-
   const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
 
-    const index = pendingUploadIndex !== null ? pendingUploadIndex : images.length;
-    if (index >= images.length) setImages(prev => [...prev, null]);
+    const newImages = files.map(file => ({
+      id: crypto.randomUUID(),
+      file,
+      url: URL.createObjectURL(file),
+      publicId: null,
+      status: 'local'
+    }));
 
-    uploadImage(file, index);
-    setPendingUploadIndex(null);
+    setImages(prev => [...prev, ...newImages]);
     e.target.value = '';
   };
 
-  const triggerUpload = (index) => {
-    setPendingUploadIndex(index);
-    fileInputRef.current?.click();
-  };
-
-  const getGridItems = () => {
-    const items = [];
-    const totalSlots = Math.max(images.length + 1, 1);
-    for (let i = 0; i < totalSlots && i < 6; i++) {
-      items.push({
-        index: i,
-        isMain: i === 0,
-        hasImage: images[i] !== undefined && images[i] !== null,
-        isUploading: uploadingIndex === i,
-        image: images[i]
-      });
-    }
-    return items;
-  };
-
-  const gridItems = getGridItems();
-
-  const DeleteImageFromDB = async (e, index, publicId, isExisting) => {
+  const handleDeleteImage = async (e, id) => {
     e.stopPropagation();
+    const img = images.find(i => i.id === id);
+    if (!img) return;
 
-    setImages(prev => prev.filter((_, i) => i !== index));
+    if (img.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(img.url);
+    }
 
-    if (publicId) {
-      console.log("Deleting publicId:", publicId);
+    setImages(prev => prev.filter(i => i.id !== id));
+
+    if (img.publicId) {
       try {
-        await axios.delete(`/api/cloudinary/${publicId}`);
+        await axios.delete(`/api/cloudinary/${img.publicId}`);
       } catch (error) {
         console.error("Delete failed:", error);
         showToast("Failed to delete image from server", "error");
       }
     }
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setImages(prev => {
+      const oldIndex = prev.findIndex(i => i.id === active.id);
+      const newIndex = prev.findIndex(i => i.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
   };
 
   const getThumbnailUrl = (url) => {
@@ -350,6 +328,37 @@ export default function EditProductPage() {
     setIsSubmitting(true);
 
     try {
+      let finalImages = [...images];
+
+      const localImages = images.filter(img => img.status === 'local');
+      if (localImages.length > 0) {
+        setIsUploadingImages(true);
+
+        for (let i = 0; i < localImages.length; i++) {
+          setUploadStatusText(`Uploading ${i + 1}/${localImages.length}...`);
+
+          const formDataUpload = new FormData();
+          formDataUpload.append("image", localImages[i].file);
+
+          const response = await axios.post("/api/cloudinary", formDataUpload, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+
+          const uploadedUrl = response.data.data.url;
+          const uploadedPublicId = response.data.data.public_id;
+
+          finalImages = finalImages.map(img =>
+            img.id === localImages[i].id
+              ? { ...img, url: uploadedUrl, publicId: uploadedPublicId, status: 'uploaded', file: null }
+              : img
+          );
+
+          setOverallProgress(((i + 1) / localImages.length) * 100);
+        }
+
+        setIsUploadingImages(false);
+      }
+
       // Map back to backend format
       const typeMapReverse = {
         "BestDeal": "Best Deal",
@@ -371,10 +380,10 @@ export default function EditProductPage() {
         categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : [],
         type: typeMapReverse[formData.type] || formData.type,
         discount_percentage: parseFloat(formData.discount) || 0,
-        images: images.map(img => img.url),
-        thumbnail: getThumbnailUrl(images[0]?.url),
-        colors: colors, // Array of objects { name, hex }
-        offers: offers, // Array of { quantity, price, savedMoney, isBestOffer, freeDelivery }
+        images: finalImages.map(img => img.url),
+        thumbnail: getThumbnailUrl(finalImages[0]?.url),
+        colors: colors,
+        offers: offers,
       });
 
       showToast("Product updated successfully!", "success");
@@ -588,22 +597,13 @@ export default function EditProductPage() {
         </div>
       )}
 
-      {/* Loading Overlay */}
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center">
-          <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4">
-            <Loader2 size={40} className="animate-spin text-[#FA3145]" />
-            <p className="text-lg font-medium text-gray-700">
-                    {product ? "جاري تحديث المنتج..." : "جاري حذف المنتج..."}
-            </p>
-          </div>
-        </div>
-      )}
+
 
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         onChange={handleFileSelect}
         className="hidden"
       />
@@ -625,77 +625,59 @@ export default function EditProductPage() {
       </header>
 
       <div className="flex flex-col gap-10">
-        <div className="flex gap-6">
-          <div
-            onClick={() => !images[0] && !isSubmitting && triggerUpload(0)}
-            className={`relative w-[494px] h-[415px] bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden group ${!isSubmitting ? "cursor-pointer hover:bg-gray-300" : "cursor-not-allowed opacity-50"
-              } transition-colors`}
-          >
-            {uploadingIndex === 0 ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100">
-                <div className="w-48 h-2 bg-gray-300 rounded-full overflow-hidden">
-                  <div className="h-full bg-[#FA3145] transition-all duration-200" style={{ width: `${uploadProgress}%` }} />
-                </div>
-                <span className="mt-3 text-sm text-gray-600">{uploadProgress}%</span>
-                <span className="mt-1 text-xs text-gray-500">Uploading...</span>
-              </div>
-            ) : images[0] ? (
-              <>
-                <Image src={images[0].url} alt="Main" width={300} height={200} className="w-full h-full object-cover border border-stroke rounded-xl" />
-                {!isSubmitting && (
-                  <button
-                    onClick={(e) => DeleteImageFromDB(e, 0, images[0].publicId, images[0].isExisting)}
-                    className="absolute top-3 right-3 w-8 h-8 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                  >
-                    <X size={16} className="text-gray-700" />
-                  </button>
-                )}
-              </>
-            ) : (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <label className="text-lg font-semibold text-black">صور المنتج:</label>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-4 py-2 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer text-sm"
+            >
+              <Upload size={16} />
+              <span>إضافة صور</span>
+            </button>
+          </div>
+          {images.length === 0 ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full max-w-[494px] aspect-[494/415] bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden group cursor-pointer hover:bg-gray-300 transition-colors"
+            >
               <div className="flex flex-col items-center gap-3">
                 <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md">
-                  <Plus size={32} className="text-gray-400" />
+                  <Upload size={32} className="text-gray-400" />
                 </div>
-                <span className="text-sm text-gray-500">إضافة صورة رئيسية</span>
+                <span className="text-sm text-gray-500">إضافة صور</span>
               </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-5 gap-4 content-start">
-            {gridItems.slice(1).map((item) => (
-              <div
-                key={item.index}
-                onClick={() => !item.hasImage && !item.isUploading && !isSubmitting && triggerUpload(item.index)}
-                className={`relative w-[108px] h-[108px] rounded-xl flex items-center justify-center overflow-hidden transition-colors group ${isSubmitting ? "cursor-not-allowed opacity-50" : item.hasImage ? "bg-gray-100" : "bg-gray-200 hover:bg-gray-300 cursor-pointer"
-                  }`}
-              >
-                {item.isUploading ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100">
-                    <div className="w-16 h-1.5 bg-gray-300 rounded-full overflow-hidden">
-                      <div className="h-full bg-[#FA3145] transition-all duration-200" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={images.map(i => i.id)} strategy={rectSwappingStrategy}>
+                <div className="flex gap-6">
+                  <SortableImage
+                    image={images[0]}
+                    position={1}
+                    isSubmitting={isSubmitting}
+                    onDelete={handleDeleteImage}
+                    variant="main"
+                  />
+                  {images.length > 1 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 content-start flex-1">
+                      {images.slice(1).map((img, idx) => (
+                        <SortableImage
+                          key={img.id}
+                          image={img}
+                          position={idx + 2}
+                          isSubmitting={isSubmitting}
+                          onDelete={handleDeleteImage}
+                          variant="grid"
+                        />
+                      ))}
                     </div>
-                    <span className="mt-1 text-xs text-gray-600">{uploadProgress}%</span>
-                  </div>
-                ) : item.hasImage ? (
-                  <>
-                    <Image src={item.image.url} alt={`Product ${item.index}`} width={300} height={200} className="w-full h-full object-cover border border-stroke rounded-xl" />
-                    {!isSubmitting && (
-                      <button
-                        onClick={(e) => DeleteImageFromDB(e, item.index, item.image.publicId, item.image.isExisting)}
-                        className="absolute top-1.5 right-1.5 w-6 h-6 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
-                      >
-                        <X size={14} className="text-gray-700" />
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm">
-                    <Plus size={16} className="text-gray-400" />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+                  )}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
         </div>
 
         <div className="flex flex-col gap-6 w-[915px]">
@@ -946,13 +928,26 @@ export default function EditProductPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 size={18} className="animate-spin" />
-                  جاري التحديث...
+                  {isUploadingImages ? uploadStatusText : 'جاري التحديث...'}
                 </>
               ) : (
                 "تحديث المنتج"
               )}
             </button>
           </div>
+
+          {/* Upload Progress Bar */}
+          {isUploadingImages && (
+            <div className="w-full mt-4">
+              <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#FA3145] transition-all duration-300 rounded-full"
+                  style={{ width: `${overallProgress}%` }}
+                />
+              </div>
+              <p className="text-sm text-gray-600 mt-2 text-center">{uploadStatusText}</p>
+            </div>
+          )}
         </div>
 
         {/* Admin Testimonial Section */}
@@ -962,6 +957,86 @@ export default function EditProductPage() {
             <AdminTestimonialForm productId={product.id} />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function SortableImage({ image, position, isSubmitting, onDelete, variant }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: image.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : 'auto',
+  };
+
+  if (variant === 'main') {
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className={`relative w-full max-w-[494px] aspect-[494/415] bg-gray-200 rounded-xl overflow-hidden group cursor-grab active:cursor-grabbing transition-colors`}
+      >
+        <img
+          src={image.url}
+          alt="Main"
+          className="w-full h-full object-cover border border-gray-200 rounded-xl pointer-events-none"
+        />
+        <div className="absolute top-3 left-3 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center">
+          <span className="text-white text-xs font-bold">{position}</span>
+        </div>
+        {!isSubmitting && (
+          <button
+            onClick={(e) => onDelete(e, image.id)}
+            className="absolute top-3 right-3 w-8 h-8 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
+          >
+            <X size={16} className="text-gray-700 pointer-events-none" />
+          </button>
+        )}
+        <div className="absolute bottom-3 left-3 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <GripVertical size={16} className="text-gray-600" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`relative w-full aspect-square rounded-xl overflow-hidden group bg-gray-200 cursor-grab active:cursor-grabbing transition-colors`}
+    >
+      <img
+        src={image.url}
+        alt={`Product ${position}`}
+        className="w-full h-full object-cover border border-gray-200 rounded-xl pointer-events-none"
+      />
+      <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
+        <span className="text-white text-[10px] font-bold">{position}</span>
+      </div>
+      {!isSubmitting && (
+        <button
+          onClick={(e) => onDelete(e, image.id)}
+          className="absolute top-1.5 right-1.5 w-6 h-6 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
+        >
+          <X size={14} className="text-gray-700 pointer-events-none" />
+        </button>
+      )}
+      <div className="absolute bottom-1.5 left-1.5 w-5 h-5 bg-white/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+        <GripVertical size={12} className="text-gray-600" />
       </div>
     </div>
   );

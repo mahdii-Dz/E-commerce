@@ -59,8 +59,9 @@ export default function AdminReviewsPage() {
 
   // Initialize products from API data
   useEffect(() => {
-    if (productsData && Array.isArray(productsData)) {
-      setProducts(productsData);
+    if (productsData) {
+      const list = Array.isArray(productsData) ? productsData : (productsData.products || []);
+      setProducts(list);
     }
   }, [productsData]);
 
@@ -221,7 +222,7 @@ export default function AdminReviewsPage() {
       return;
     }
 
-    setSubmitting(true);
+    setIsSubmitting(true);
 
     try {
       const response = await fetch(
@@ -265,7 +266,7 @@ export default function AdminReviewsPage() {
       console.error('Error submitting admin review:', err);
       showToast(err.message || 'Failed to submit admin review', 'error');
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
