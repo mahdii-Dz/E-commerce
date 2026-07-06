@@ -5,17 +5,24 @@ import Breadcrumb from '@/components/Breadcrumb';
 import CheckOut from '@/components/CheckOut';
 import RenderProducts from '@/components/RenderProducts';
 import ReviewsSection from '@/components/ReviewsSection';
-import { ArrowRight, Check, Minus, Percent, Plus, ShoppingCart, Sparkles, Tag, Truck, Van, XIcon } from 'lucide-react';
+import { ArrowRight, Check, Percent, ShoppingCart, Sparkles, Tag, Truck, Van, XIcon } from 'lucide-react';
 import Link from 'next/link';
-import React, { useCallback, useContext, useEffect, useRef, useState } from 'react'
-import Image from 'next/image';
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils';
+import 'swiper/css';
+import 'swiper/css/thumbs';
+import 'swiper/css/free-mode';
+import 'swiper/css/navigation';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Thumbs, FreeMode, Navigation } from 'swiper/modules';
 
 export default function ProductClient({ product, relatedProducts }) {
     const { Cart, setCart } = useContext(GlobalContext)
-    const [currentImage, setCurrentImage] = useState('')
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const modalRef = useRef(null);
+    const [thumbsSwiper, setThumbsSwiper] = useState(null);
+    const mainSwiperRef = useRef(null);
+    const [fullscreenIndex, setFullscreenIndex] = useState(0);
+    const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
+    const fullscreenRef = useRef(null);
     const date = new Date();
     const today = date.getDate()
     const deliveryDate = new Date(date.setDate(date.getDate() + 2));
@@ -33,7 +40,6 @@ export default function ProductClient({ product, relatedProducts }) {
 
     useEffect(() => {
         if (product) {
-            setCurrentImage(product.images[0])
             setPriceWithDiscount(product.discount_percentage > 0 ? product.price - (product.price * product.discount_percentage / 100) : product.price)
 
             const effectivePrice = product.discount_percentage > 0
@@ -55,17 +61,17 @@ export default function ProductClient({ product, relatedProducts }) {
         }
     }, [product])
 
-    // Full size image modal handlers
+    // Fullscreen modal handlers
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (modalRef.current && !modalRef.current.contains(e.target)) {
-                setIsModalOpen(false);
+            if (fullscreenRef.current && !fullscreenRef.current.contains(e.target)) {
+                setIsFullscreenOpen(false);
             }
         };
         const handleEscape = (e) => {
-            if (e.key === 'Escape') setIsModalOpen(false);
+            if (e.key === 'Escape') setIsFullscreenOpen(false);
         };
-        if (isModalOpen) {
+        if (isFullscreenOpen) {
             document.addEventListener('mousedown', handleClickOutside);
             document.addEventListener('keydown', handleEscape);
             document.body.style.overflow = 'hidden';
@@ -75,7 +81,7 @@ export default function ProductClient({ product, relatedProducts }) {
             document.removeEventListener('keydown', handleEscape);
             document.body.style.overflow = 'unset';
         };
-    }, [isModalOpen]);
+    }, [isFullscreenOpen]);
 
     function handleAddToCart(product) {
         setCart(prevCart => {
@@ -96,6 +102,16 @@ export default function ProductClient({ product, relatedProducts }) {
     return (
         <>
             <main className='pt-24 lg:pt-30 px-4 lg:px-20 w-full --font-Rubik-sans'>
+                <style>{`
+                  .product-swiper .swiper-button-next,
+                  .product-swiper .swiper-button-prev {
+                    color: #EEC910;
+                  }
+                  .fullscreen-swiper .swiper-button-next,
+                  .fullscreen-swiper .swiper-button-prev {
+                    color: #EEC910;
+                  }
+                `}</style>
                 <Breadcrumb />
                 {/* Product Details Section */}
                 <section className='w-full mb-12 lg:mb-20 px-4 lg:px-6 py-6 lg:py-8 mt-0 rounded-xl'>
@@ -149,49 +165,89 @@ export default function ProductClient({ product, relatedProducts }) {
                             )}
                         </div>
 
-                        {/* IMAGES COLUMN - right after description on mobile, sticky right column on desktop spanning full height */}
+                        {/* IMAGES COLUMN */}
                         <div className='w-full lg:sticky lg:top-24 self-start lg:row-start-1 lg:row-end-3 lg:col-start-1 lg:col-end-2 mt-6 lg:mt-0'>
-                            {/* Main Image */}
+                            {/* Main Swiper */}
                             <div className='relative w-full bg-stroke/50 border border-stroke rounded-lg overflow-hidden'>
-                                <img
-                                    src={currentImage || product?.images[0]}
-                                    alt={product.name}
-                                    className='w-full object-contain bg-white max-h-[500px]'
-                                    onClick={() => setIsModalOpen(true)}
-                                />
+                                <Swiper
+                                    spaceBetween={0}
+                                    slidesPerView={1}
+                                    onSwiper={(swiper) => { mainSwiperRef.current = swiper; }}
+                                    autoplay={{
+                                        delay: 5000,
+                                        disableOnInteraction: false,
+                                    }}
+                                    navigation
+                                    modules={[Autoplay, Thumbs, FreeMode, Navigation]}
+                                    thumbs={{
+                                        swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null,
+                                    }}
+                                    className='w-full product-swiper'
+                                    onClick={(swiper) => {
+                                        setFullscreenIndex(swiper.activeIndex);
+                                        setIsFullscreenOpen(true);
+                                    }}
+                                >
+                                    {product.images.map((image, index) => (
+                                        <SwiperSlide key={index}>
+                                            <img
+                                                src={image}
+                                                alt={`${product.name} - ${index + 1}`}
+                                                className='w-full object-cover bg-white cursor-pointer h-[400px] lg:h-[600px]'
+                                                decoding="async"
+                                                loading={index === 0 ? "eager" : "lazy"}
+                                                fetchPriority={index === 0 ? "high" : "low"}
+                                                onError={(e) => { e.target.src = '/placeholder.png'; }}
+                                            />
+                                        </SwiperSlide>
+                                    ))}
+                                </Swiper>
+
                                 <div
-                                    onClick={() => setIsModalOpen(true)}
+                                    onClick={() => {
+                                        setFullscreenIndex(thumbsSwiper?.activeIndex || 0);
+                                        setIsFullscreenOpen(true);
+                                    }}
                                     className='absolute inset-0 bg-black/0 hover:bg-black/30 transition-all duration-300 flex items-center justify-center cursor-pointer'
                                 >
                                     <span className='text-white font-medium bg-black/60 px-4 py-2 rounded-lg opacity-0 hover:opacity-100 transition-opacity'>
                                         انقر لعرض الحجم الكامل
                                     </span>
                                 </div>
+
                                 {product.discount_percentage > 0 && (
-                                    <div className='discount bg-primary absolute top-2 right-2 px-0.5 rounded-full'>
+                                    <div className='discount bg-primary absolute top-2 right-2 px-0.5 rounded-full z-10'>
                                         <p className='text-white text-xs px-2 py-1'>-{product.discount_percentage}%</p>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Thumbnail Images */}
-                            <div className='flex gap-2 lg:gap-4 flex-wrap w-full overflow-x-auto pb-2 mt-4'>
+                            {/* Thumbnail Swiper */}
+                            <Swiper
+                                onSwiper={setThumbsSwiper}
+                                spaceBetween={8}
+                                slidesPerView={4.5}
+                                watchSlidesProgress={true}
+                                modules={[Thumbs]}
+                                className='mt-4 overflow-hidden'
+                                breakpoints={{
+                                    640: { slidesPerView: 5.5 },
+                                    1024: { slidesPerView: 5.5 },
+                                }}
+                            >
                                 {product.images.map((image, index) => (
-                                    <button
-                                        key={image}
-                                        onClick={() => setCurrentImage(image)}
-                                        className={`border flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 lg:w-24 m-1 lg:h-24 flex items-center justify-center overflow-hidden border-stroke rounded-lg transition-all ${currentImage === image ? 'ring-2 ring-primary' : 'hover:border-primary'}`}
-                                    >
-                                        <Image
+                                    <SwiperSlide key={index} className='!w-20 lg:!w-24' onClick={() => mainSwiperRef.current?.slideTo(index)}>
+                                        <img
                                             src={image}
                                             alt={`${product.name} - عرض ${index + 1}`}
-                                            width={96}
-                                            height={96}
-                                            className='object-contain hover:scale-110 transition-transform duration-300'
+                                            className='w-full h-20 lg:h-24 object-contain rounded-lg border border-stroke cursor-pointer hover:scale-110 transition-transform duration-300 bg-white'
+                                            loading="lazy"
+                                            decoding="async"
+                                            onError={(e) => { e.target.src = '/placeholder.png'; }}
                                         />
-                                    </button>
+                                    </SwiperSlide>
                                 ))}
-                            </div>
+                            </Swiper>
                         </div>
 
                         {/* Big Description — mobile only (after images) */}
@@ -351,23 +407,38 @@ export default function ProductClient({ product, relatedProducts }) {
                 </section>
 
                 {/* Fullscreen Image Modal */}
-                {isModalOpen && (
+                {isFullscreenOpen && (
                     <div className='fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4'>
-                        <div ref={modalRef} className='relative w-full max-w-4xl max-h-full flex items-center justify-center'>
+                        <div ref={fullscreenRef} className='relative w-full max-w-6xl max-h-full'>
                             <button
-                                onClick={() => setIsModalOpen(false)}
-                                className='absolute -top-12 right-0 lg:-top-4 lg:-right-12 p-2 text-white hover:bg-white/10 rounded-full transition-colors'
+                                onClick={() => setIsFullscreenOpen(false)}
+                                className='absolute -top-12 right-0 lg:-top-4 lg:-right-12 p-2 text-white hover:bg-white/10 rounded-full transition-colors z-10'
                             >
                                 <XIcon size={28} />
                             </button>
-                            <Image
-                                src={currentImage}
-                                alt="Full size"
-                                width={800}
-                                height={800}
-                                className='max-w-full max-h-[80vh] lg:max-h-[90vh] object-contain rounded-lg'
-                                priority
-                            />
+                            <Swiper
+                                initialSlide={fullscreenIndex}
+                                spaceBetween={0}
+                                slidesPerView={1}
+                                navigation
+                                modules={[Navigation]}
+                                className='w-full fullscreen-swiper'
+                            >
+                                {product.images.map((image, index) => (
+                                    <SwiperSlide key={index}>
+                                        <div className='flex items-center justify-center' style={{ height: '80vh' }}>
+                                            <img
+                                                src={image}
+                                                alt={`${product.name} - ${index + 1}`}
+                                                className='max-w-full max-h-full object-contain'
+                                                decoding="async"
+                                                fetchPriority="high"
+                                                onError={(e) => { e.target.src = '/placeholder.png'; }}
+                                            />
+                                        </div>
+                                    </SwiperSlide>
+                                ))}
+                            </Swiper>
                         </div>
                     </div>
                 )}
