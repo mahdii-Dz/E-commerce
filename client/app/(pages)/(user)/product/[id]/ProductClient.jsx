@@ -226,14 +226,11 @@ export default function ProductClient({ product, relatedProducts }) {
                             <Swiper
                                 onSwiper={setThumbsSwiper}
                                 spaceBetween={8}
-                                slidesPerView={4.5}
+                                slidesPerView="auto"
                                 watchSlidesProgress={true}
                                 modules={[Thumbs]}
                                 className='mt-4 overflow-hidden'
-                                breakpoints={{
-                                    640: { slidesPerView: 5.5 },
-                                    1024: { slidesPerView: 5.5 },
-                                }}
+                                freeMode={false}
                             >
                                 {product.images.map((image, index) => (
                                     <SwiperSlide key={index} className='!w-20 lg:!w-24' onClick={() => mainSwiperRef.current?.slideTo(index)}>
