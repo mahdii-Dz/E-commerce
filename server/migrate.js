@@ -8,26 +8,22 @@ async function migrate() {
   try {
     console.log('Connecting to TiDB...');
     
-    // Check if stock column exists
-    const [checkStock] = await conn.execute(`SHOW COLUMNS FROM products LIKE 'stock'`);
-    const hasStock = Array.isArray(checkStock) && checkStock.length > 0;
-    if (hasStock) {
-      console.log('Dropping column: stock');
-      await conn.execute(`ALTER TABLE products DROP COLUMN stock`);
-      console.log('  ✓ stock dropped');
-    } else {
-      console.log('  - stock column already removed, skipping');
-    }
 
-    // Check if big_description column exists
-    const [checkBigDesc] = await conn.execute(`SHOW COLUMNS FROM products LIKE 'big_description'`);
-    const hasBigDesc = Array.isArray(checkBigDesc) && checkBigDesc.length > 0;
-    if (!hasBigDesc) {
-      console.log('Adding column: big_description TEXT');
-      await conn.execute(`ALTER TABLE products ADD COLUMN big_description TEXT`);
-      console.log('  ✓ big_description added');
+
+    // Make last_name nullable in order_info
+    const checkLastNameRows = await conn.execute('SHOW COLUMNS FROM order_info LIKE ?', ['last_name']);
+    const hasLastName = Array.isArray(checkLastNameRows) && checkLastNameRows.length > 0;
+    if (hasLastName) {
+      const lastCol = checkLastNameRows[0];
+      if (lastCol.Null === 'NO') {
+        console.log('Making last_name nullable...');
+        await conn.execute(`ALTER TABLE order_info MODIFY last_name VARCHAR(255) NULL`);
+        console.log('  ✓ last_name is now nullable');
+      } else {
+        console.log('  - last_name already nullable, skipping');
+      }
     } else {
-      console.log('  - big_description column already exists, skipping');
+      console.log('  - last_name column not found in order_info, skipping');
     }
 
     console.log('\nMigration completed successfully!');

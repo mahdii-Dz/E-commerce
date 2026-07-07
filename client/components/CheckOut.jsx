@@ -2,16 +2,10 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Input } from '@/components/ui/input';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { Select } from '@base-ui/react/select';
 import { wilayaDataWithStopDesk as wilayaData } from '@/lib/wilayaDataWithStopDesk';
 import { getStopDeskCommunesByWilayaCode } from '@/lib/stopDeskFilter';
-import { Minus, Plus, X, Truck } from 'lucide-react';
+import { ChevronDown, Loader2, Minus, Plus, X, Truck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
 
@@ -268,7 +262,6 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
         // Validation: required fields
         if (!firstName) errors.firstName = 'الاسم الأول مطلوب';
-        if (!lastName) errors.lastName = 'اللقب مطلوب';
         if (!phoneNumber) errors.phoneNumber = 'رقم الهاتف مطلوب';
 
         // Simple phone validation: allow digits and optional leading +, require at least 8 digits
@@ -422,18 +415,15 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 </div>
                 <div className="flex flex-col w-full">
                     <label htmlFor="lastName" className="font-medium text-black text-base mb-2">
-                        اللقب *
+                        اللقب
                     </label>
                     <Input
                         id="lastName"
                         value={formData.lastName}
                         onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        placeholder="اللقب"
-                        className={`h-11 text-right ${fieldErrors.lastName ? 'border-red-400 focus:ring-red-400' : ''}`}
+                        placeholder="اللقب (اختياري)"
+                        className="h-11 text-right"
                     />
-                    {fieldErrors.lastName && (
-                        <p className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</p>
-                    )}
                 </div>
             </div>
 
@@ -561,49 +551,73 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
             {/* Delivery Type */}
             <div className="flex flex-col w-full">
-                <label htmlFor="delivery" className="font-medium text-black text-base mb-2">
+                <label className="font-medium text-black text-base mb-2">
                     التوصيل *
                 </label>
-                <Select
-                    dir="rtl"
+                <Select.Root
                     value={formData.delivery}
                     onValueChange={(value) => handleInputChange('delivery', value)}
                 >
-                    <SelectTrigger className="w-full h-11!">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="domicile" className="text-right">توصيل للمنزل</SelectItem>
-                        <SelectItem value="stopDesk" className="text-right">استلام من المكتب</SelectItem>
-                    </SelectContent>
-                </Select>
+                    <Select.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-primary/20 focus:border-primary data-[open]:ring-2 data-[open]:ring-primary/20 data-[open]:border-primary">
+                        <Select.Value placeholder="اختر نوع التوصيل">
+                            {(value) => value === 'domicile' ? 'توصيل للمنزل' : value === 'stopDesk' ? 'استلام من المكتب' : value}
+                        </Select.Value>
+                        <ChevronDown size={16} className="text-gray-500 shrink-0" />
+                    </Select.Trigger>
+                    <Select.Portal>
+                        <Select.Positioner side="bottom" align="start" alignItemWithTrigger={false} className="z-50">
+                            <Select.Popup className="rounded-xl border border-stroke bg-white py-2 shadow-lg" style={{ width: 'var(--anchor-width)' }}>
+                                <Select.List>
+                                    <Select.Item
+                                        value="domicile"
+                                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-primary"
+                                    >
+                                        <Select.ItemText>توصيل للمنزل</Select.ItemText>
+                                    </Select.Item>
+                                    <Select.Item
+                                        value="stopDesk"
+                                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-primary"
+                                    >
+                                        <Select.ItemText>استلام من المكتب</Select.ItemText>
+                                    </Select.Item>
+                                </Select.List>
+                            </Select.Popup>
+                        </Select.Positioner>
+                    </Select.Portal>
+                </Select.Root>
             </div>
 
             {/* Wilaya */}
             <div className="flex flex-col w-full">
-                <label htmlFor="wilaya" className="font-medium text-black text-base mb-2">
+                <label className="font-medium text-black text-base mb-2">
                     الولاية *
                 </label>
-                <Select
-                    dir="rtl"
+                <Select.Root
                     value={formData.wilaya}
                     onValueChange={(v) => { handleWilayaChange(v); setFieldErrors(prev => ({ ...prev, wilaya: '' })); }}
                 >
-                    <SelectTrigger className="w-full h-11!">
-                        <SelectValue placeholder="اختر الولاية" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {orderedFilteredWilayas.map(([code, data]) => (
-                            <SelectItem
-                                key={code}
-                                value={data.name}
-                                className="text-right"
-                            >
-                                {String(code).padStart(2, '0')} - {data.name}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                </Select>
+                    <Select.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-primary/20 focus:border-primary data-[open]:ring-2 data-[open]:ring-primary/20 data-[open]:border-primary">
+                        <Select.Value placeholder="اختر الولاية" />
+                        <ChevronDown size={16} className="text-gray-500 shrink-0" />
+                    </Select.Trigger>
+                    <Select.Portal>
+                        <Select.Positioner side="bottom" align="start" alignItemWithTrigger={false} className="z-50">
+                            <Select.Popup className="max-h-60 overflow-y-auto rounded-xl border border-stroke bg-white py-2 shadow-lg" style={{ width: 'var(--anchor-width)' }}>
+                                <Select.List>
+                                    {orderedFilteredWilayas.map(([code, data]) => (
+                                        <Select.Item
+                                            key={code}
+                                            value={data.name}
+                                            className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-primary"
+                                        >
+                                            <Select.ItemText>{String(code).padStart(2, '0')} - {data.name}</Select.ItemText>
+                                        </Select.Item>
+                                    ))}
+                                </Select.List>
+                            </Select.Popup>
+                        </Select.Positioner>
+                    </Select.Portal>
+                </Select.Root>
                 {fieldErrors.wilaya && (
                     <p className="text-red-500 text-xs mt-1">{fieldErrors.wilaya}</p>
                 )}
@@ -611,7 +625,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
             {/* Baladiya */}
             <div className="flex flex-col w-full">
-                <label htmlFor="baladiya" className="font-medium text-black text-base mb-2">
+                <label className="font-medium text-black text-base mb-2">
                     البلدية *
                 </label>
                 {formData.delivery === 'stopDesk' && communes.length === 0 && formData.wilaya && (
@@ -619,27 +633,33 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                         لا توجد بلديات مع خدمة استلام من المكتب في هذه الولاية
                     </p>
                 )}
-                <Select
-                    dir="rtl"
+                <Select.Root
                     value={formData.baladiya}
                     onValueChange={(value) => { handleInputChange('baladiya', value); setFieldErrors(prev => ({ ...prev, baladiya: '' })); }}
                     disabled={!communes.length}
                 >
-                    <SelectTrigger className="w-full h-11!">
-                        <SelectValue placeholder={communes.length === 0 ? "لا توجد بلديات متاحة" : "اختر البلدية"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {communes.map((commune, index) => (
-                            <SelectItem
-                                key={`${formData.wilaya}-${index}`}
-                                value={commune}
-                                className="text-right"
-                            >
-                                {commune}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                </Select>
+                    <Select.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-primary/20 focus:border-primary data-[open]:ring-2 data-[open]:ring-primary/20 data-[open]:border-primary data-[disabled]:bg-gray-100 data-[disabled]:cursor-not-allowed">
+                        <Select.Value placeholder={communes.length === 0 ? "لا توجد بلديات متاحة" : "اختر البلدية"} />
+                        <ChevronDown size={16} className="text-gray-500 shrink-0" />
+                    </Select.Trigger>
+                    <Select.Portal>
+                        <Select.Positioner side="bottom" align="start" alignItemWithTrigger={false} className="z-50">
+                            <Select.Popup className="max-h-60 overflow-y-auto rounded-xl border border-stroke bg-white py-2 shadow-lg" style={{ width: 'var(--anchor-width)' }}>
+                                <Select.List>
+                                    {communes.map((commune, index) => (
+                                        <Select.Item
+                                            key={`${formData.wilaya}-${index}`}
+                                            value={commune}
+                                            className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-primary"
+                                        >
+                                            <Select.ItemText>{commune}</Select.ItemText>
+                                        </Select.Item>
+                                    ))}
+                                </Select.List>
+                            </Select.Popup>
+                        </Select.Positioner>
+                    </Select.Portal>
+                </Select.Root>
                 {fieldErrors.baladiya && (
                     <p className="text-red-500 text-xs mt-1">{fieldErrors.baladiya}</p>
                 )}
@@ -675,20 +695,20 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             <button
                 type="submit"
                 disabled={
+                    mutation.isPending ||
                     (colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) ||
                     !!quantityError ||
                     !formData.firstName.trim() ||
-                    !formData.lastName.trim() ||
                     !formData.phoneNumber.trim() ||
                     !formData.wilaya.trim() ||
                     (formData.delivery === 'domicile' ? !formData.baladiya.trim() : false) ||
                     (formData.delivery === 'stopDesk' && communes.length > 0 ? !formData.baladiya.trim() : false)
                 }
-                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm ${
+                className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm flex items-center justify-center gap-2 ${
+                    mutation.isPending ||
                     (colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) ||
                     !!quantityError ||
                     !formData.firstName.trim() ||
-                    !formData.lastName.trim() ||
                     !formData.phoneNumber.trim() ||
                     !formData.wilaya.trim() ||
                     (formData.delivery === 'domicile' ? !formData.baladiya.trim() : false) ||
@@ -697,7 +717,8 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                         : 'bg-primary text-white hover:opacity-90 cursor-pointer'
                 }`}
             >
-                إتمام الطلب
+                {mutation.isPending ? <Loader2 size={18} className="animate-spin" /> : null}
+                {mutation.isPending ? 'جاري التقديم...' : 'إتمام الطلب'}
             </button>
 
             {/* Error Popup */}

@@ -744,7 +744,7 @@ export const AddOrder = async (req, res) => {
       items,
     } = req.body;
 
-    if (!first_name || !last_name || !phone || !wilaya || !baladiya) {
+    if (!first_name || !phone || !wilaya || !baladiya) {
       return res.status(400).json({ error: "Missing required fields" });
     }
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -764,7 +764,7 @@ export const AddOrder = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         first_name.trim(),
-        last_name.trim(),
+        last_name ? last_name.trim() : null,
         phone,
         wilaya,
         baladiya,
