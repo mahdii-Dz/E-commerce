@@ -39,6 +39,9 @@ export default function ProductClient({ product, relatedProducts }) {
     // Offers state
     const [offers, setOffers] = useState([]);
     const [selectedOffer, setSelectedOffer] = useState(null);
+    const offersRef = useRef(null);
+    const checkoutRef = useRef(null);
+    const isInitialSelection = useRef(true);
 
     // Find manually marked best offer
     const manualBestOffer = offers.find(o => o.isBestOffer);
@@ -63,8 +66,22 @@ export default function ProductClient({ product, relatedProducts }) {
             setOffers(allOffers);
 
             setSelectedOffer(buyOneOffer);
+            setTimeout(() => { isInitialSelection.current = false; }, 0);
         }
     }, [product])
+
+    useEffect(() => {
+        if (selectedOffer && !isInitialSelection.current) {
+            const timer = setTimeout(() => {
+                const el = checkoutRef.current;
+                if (el) {
+                    const top = el.getBoundingClientRect().top + window.scrollY - 100;
+                    window.scrollTo({ top, behavior: 'smooth' });
+                }
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [selectedOffer])
 
     // Fullscreen modal handlers
     useEffect(() => {
@@ -106,7 +123,7 @@ export default function ProductClient({ product, relatedProducts }) {
 
     return (
         <>
-            <main className='pt-24 lg:pt-30 px-4 lg:px-20 w-full --font-Rubik-sans'>
+            <main className='pt-24 lg:pt-30 px-4 lg:px-20 pb-16 lg:pb-0 w-full --font-Rubik-sans'>
                 <style>{`
                   .product-swiper .swiper-button-next,
                   .product-swiper .swiper-button-prev {
@@ -263,39 +280,9 @@ export default function ProductClient({ product, relatedProducts }) {
 
                         {/* BOTTOM CONTENT - delivery, cart, offers, checkout (left column in RTL) */}
                         <div className='flex flex-col items-start gap-3 lg:gap-4 text-right w-full mt-6 lg:mt-0 lg:col-start-2 lg:col-end-3'>
-                            {/* Delivery Info */}
-                            <div className='flex items-start w-full bg-stroke/30 h-fit border lg:border-2 rounded-xl p-3 lg:p-4 gap-3 lg:gap-4 border-stroke'>
-                                <Van className='text-primary flex-shrink-0' size={20} />
-                                <div>
-                                    <h4 className='font-semibold text-sm lg:text-base'>التوصيل المتوقع</h4>
-                                    <p className='text-secondary text-xs lg:text-sm '>
-                                        {today} - {ArriveDay} {month}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Add to Cart Button */}
-                            {mounted && Cart.find(item => item.id === product.id) ? (
-                                <button
-                                    onClick={() => handleRemoveFromCart(product.id)}
-                                    className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full hover:bg-red-50 transition-colors text-sm lg:text-base'
-                                >
-                                    <ShoppingCart size={18} />
-                                    إزالة من السلة
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => handleAddToCart(product)}
-                                    className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full hover:bg-primary/5 transition-colors text-sm lg:text-base'
-                                >
-                                    <ShoppingCart size={18} />
-                                    أضف إلى السلة
-                                </button>
-                            )}
-
                             {/* Offers Selection Section */}
-                            <div className='w-full flex flex-col gap-4 mt-4'>
-                                <h3 className='font-semibold text-lg text-black'>العروض:</h3>
+                            <div ref={offersRef} className='w-full flex flex-col gap-4 mt-4'>
+                                <h3 className='font-semibold text-lg text-black'>اختر عرض:</h3>
                                 <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                                     {offers.map((offer, idx) => {
                                         const isSelected = selectedOffer?.quantity === offer.quantity && selectedOffer?.price === offer.price;
@@ -371,7 +358,7 @@ export default function ProductClient({ product, relatedProducts }) {
                             </div>
 
                             {/* Checkout Form */}
-                            <div className="w-full">
+                            <div ref={checkoutRef} className="w-full">
                                 <CheckOut
                                     productPrice={PriceWithDiscount}
                                     productId={product.id}
@@ -379,6 +366,36 @@ export default function ProductClient({ product, relatedProducts }) {
                                     selectedOffer={selectedOffer}
                                 />
                             </div>
+
+                            {/* Delivery Info */}
+                            <div className='flex items-start w-full bg-stroke/30 h-fit border lg:border-2 rounded-xl p-3 lg:p-4 gap-3 lg:gap-4 border-stroke'>
+                                <Van className='text-primary flex-shrink-0' size={20} />
+                                <div>
+                                    <h4 className='font-semibold text-sm lg:text-base'>التوصيل المتوقع</h4>
+                                    <p className='text-secondary text-xs lg:text-sm '>
+                                        {today} - {ArriveDay} {month}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Add to Cart Button */}
+                            {mounted && Cart.find(item => item.id === product.id) ? (
+                                <button
+                                    onClick={() => handleRemoveFromCart(product.id)}
+                                    className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full hover:bg-red-50 transition-colors text-sm lg:text-base'
+                                >
+                                    <ShoppingCart size={18} />
+                                    إزالة من السلة
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => handleAddToCart(product)}
+                                    className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full hover:bg-primary/5 transition-colors text-sm lg:text-base'
+                                >
+                                    <ShoppingCart size={18} />
+                                    أضف إلى السلة
+                                </button>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -445,6 +462,22 @@ export default function ProductClient({ product, relatedProducts }) {
                     </div>
                 )}
             </main>
+
+            {/* Mobile Buy Now Button */}
+            <div className='lg:hidden flex fixed bottom-2 right-0 left-0 z-40 p-2 justify-center items-center'>
+                <button
+                    onClick={() => {
+                    const el = offersRef.current;
+                    if (el) {
+                        const top = el.getBoundingClientRect().top + window.scrollY - 100;
+                        window.scrollTo({ top, behavior: 'smooth' });
+                    }
+                }}
+                    className='lg:hidden  w-full z-40 bg-[#dfbc0d] text-white text-center font-bold py-3.5 text-base shadow-2xl rounded-xl'
+                >
+                    اشتري الآن
+                </button>
+            </div>
         </>
     )
 }

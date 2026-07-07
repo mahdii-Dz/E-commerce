@@ -101,19 +101,22 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         return Object.values(colorQuantities).reduce((sum, qty) => sum + qty, 0);
     }, [colorQuantities]);
 
-    // Validation error: must match offer quantity exactly
-    const quantityError = selectedOffer && totalAllocated !== selectedOffer.quantity
+    // Validation error: must match offer quantity exactly (only when colors exist)
+    const quantityError = colors.length > 0 && selectedOffer && totalAllocated !== selectedOffer.quantity
         ? "يجب أن تطابق القيمة المختارة عرض الشراء"
         : '';
 
     // Compute total price
     const totalPrice = useMemo(() => {
-        const itemsTotal = colors.reduce((sum, c) => {
+        let itemsTotal = colors.reduce((sum, c) => {
             const qty = colorQuantities[c.hex] || 0;
             return sum + (qty * effectivePrice);
         }, 0);
+        if (itemsTotal === 0 && selectedOffer) {
+            itemsTotal = selectedOffer.price;
+        }
         return deliveryPrice + itemsTotal;
-    }, [colorQuantities, deliveryPrice, colors, effectivePrice]);
+    }, [colorQuantities, deliveryPrice, colors, effectivePrice, selectedOffer]);
 
     const router = useRouter();
 
@@ -272,7 +275,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
         if (!wilaya) errors.wilaya = 'الولاية مطلوبة';
 
-        if (!colors || colors.length === 0 || colors.every(c => (colorQuantities[c.hex] || 0) === 0)) {
+        if (colors && colors.length > 0 && colors.every(c => (colorQuantities[c.hex] || 0) === 0)) {
             errors.colors = 'يرجى اختيار الكمية قبل إتمام الطلب';
         }
 
@@ -290,16 +293,25 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         }
 
         // Build items array from colorQuantities with quantity > 0
-        const items = colors
-            .filter((c) => (colorQuantities[c.hex] || 0) > 0)
-            .map((c) => ({
+        const items = colors.length > 0
+            ? colors
+                .filter((c) => (colorQuantities[c.hex] || 0) > 0)
+                .map((c) => ({
+                    product_id: productId,
+                    quantity: colorQuantities[c.hex],
+                    price_per_unit: effectivePrice,
+                    color_name: c.name,
+                    color_hex: c.hex,
+                    offer_text: selectedOffer ? `${selectedOffer.quantity} for ${selectedOffer.price} DA` : null,
+                }))
+            : [{
                 product_id: productId,
-                quantity: colorQuantities[c.hex],
+                quantity: selectedOffer?.quantity || 1,
                 price_per_unit: effectivePrice,
-                color_name: c.name,
-                color_hex: c.hex,
+                color_name: null,
+                color_hex: null,
                 offer_text: selectedOffer ? `${selectedOffer.quantity} for ${selectedOffer.price} DA` : null,
-            }));
+            }];
 
         if (items.length === 0) {
             setSubmitError('يرجى اختيار الكمية قبل إتمام الطلب');
@@ -389,15 +401,17 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         <form
             id='form'
             onSubmit={handleSubmit}
-            className="flex flex-col w-full items-center self-center mt-4 justify-center gap-6 lg:px-12 md:px-8 sm:px-4 px-2 py-8 bg-white rounded-xl border-2 border-stroke"
+            className="flex flex-col w-full items-center self-center mt-4 justify-center gap-6 lg:px-12 md:px-8 sm:px-4 px-2 py-8 bg-white rounded-xl border-2 border-[#ecc70fd4]"
         >
             {!!submitError && (
                 <div className="w-full p-3 bg-red-50 border border-red-200 rounded-lg">
                     <p className="text-red-600 text-sm text-right">{submitError}</p>
                 </div>
             )}
+            <h3 className="text-lg font-semibold text-black">املأ معلومات الطلب</h3>
             {/* First & Last Name */}
             <div className="flex w-full items-start gap-6">
+                
                 <div className="flex flex-col w-full">
                     <label htmlFor="firstName" className="font-medium text-black text-base mb-2">
                         الاسم الأول *
@@ -469,7 +483,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                     {selectedOffer && (
                         <div className="mb-3">
                             <p className="text-sm text-gray-600">
-                                يجب توزيع {selectedOffer.quantity} قطع (تم تخصيص: {totalAllocated})
+                                يجب توزيع الوان على حسب العرض (تم تخصيص: {totalAllocated})
                             </p>
                             <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-1">
                                 <div
