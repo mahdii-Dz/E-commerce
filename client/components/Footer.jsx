@@ -5,6 +5,7 @@ import GoTop from './GoTop'
 import Image from 'next/image'
 
 function Footer() {
+  const currentYear = new Date().getFullYear();
   return (
     <footer className='flex flex-col items-center px-4 sm:px-6 lg:px-20 xl:px-39 pb-3 w-full h-auto bg-white border-t border-stroke mt-16 lg:mt-32 overflow-x-hidden'>
       {/* Features Section */}
@@ -90,7 +91,7 @@ function Footer() {
 
       {/* Copyright */}
       <div className='mt-10 lg:mt-40 text-secondary text-sm text-center'>
-        <p>© 2026 E-commerce. جميع الحقوق محفوظة.</p>
+        <p>© {currentYear} La Maison D'or. جميع الحقوق محفوظة.</p>
       </div>
     </footer>
   )

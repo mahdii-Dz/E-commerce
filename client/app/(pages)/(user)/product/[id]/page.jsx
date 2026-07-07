@@ -16,17 +16,32 @@ export async function generateStaticParams() {
 
 export const revalidate = 300; // ISR - regenerate every 5 minutes
 
+function getOgImage(image) {
+  const url = image?.url || image;
+  if (!url || typeof url !== 'string') return '';
+  // Apply Cloudinary transformations for optimal social sharing (1200x630, auto quality/format)
+  return url.replace('/upload/', '/upload/w_1200,h_630,c_fill,g_auto,f_auto,q_auto/');
+}
+
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   try {
     const product = await getProduct(resolvedParams.id);
+    const ogImage = product.images?.[0] ? getOgImage(product.images[0]) : '';
     return {
       title: product.name,
       description: product.description?.substring(0, 160),
       openGraph: {
         title: product.name,
         description: product.description?.substring(0, 160),
-        images: product.images?.[0] ? [product.images[0].url || product.images[0]] : [],
+        type: 'website',
+        images: ogImage ? [{ url: ogImage, width: 1200, height: 630 }] : [],
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: product.name,
+        description: product.description?.substring(0, 160),
+        images: ogImage ? [ogImage] : [],
       },
     };
   } catch {
