@@ -30,6 +30,11 @@ export default function ProductClient({ product, relatedProducts }) {
     const month = deliveryDate.toLocaleString('default', { month: 'long' });
     const year = deliveryDate.getFullYear();
     const [PriceWithDiscount, setPriceWithDiscount] = useState(0)
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     // Offers state
     const [offers, setOffers] = useState([]);
@@ -191,7 +196,7 @@ export default function ProductClient({ product, relatedProducts }) {
                                     {product.images.map((image, index) => (
                                         <SwiperSlide key={index}>
                                             <img
-                                                src={image}
+                                                src={image?.url || image}
                                                 alt={`${product.name} - ${index + 1}`}
                                                 className='w-full object-cover bg-white cursor-pointer h-[400px] lg:h-[600px]'
                                                 decoding="async"
@@ -235,7 +240,7 @@ export default function ProductClient({ product, relatedProducts }) {
                                 {product.images.map((image, index) => (
                                     <SwiperSlide key={index} className='!w-20 lg:!w-24' onClick={() => mainSwiperRef.current?.slideTo(index)}>
                                         <img
-                                            src={image}
+                                            src={image?.url || image}
                                             alt={`${product.name} - عرض ${index + 1}`}
                                             className='w-full h-20 lg:h-24 object-cover rounded-lg border border-stroke cursor-pointer hover:scale-110 transition-transform duration-300 bg-white'
                                             loading="lazy"
@@ -270,7 +275,7 @@ export default function ProductClient({ product, relatedProducts }) {
                             </div>
 
                             {/* Add to Cart Button */}
-                            {Cart.find(item => item.id === product.id) ? (
+                            {mounted && Cart.find(item => item.id === product.id) ? (
                                 <button
                                     onClick={() => handleRemoveFromCart(product.id)}
                                     className='border flex items-center justify-center gap-2 font-medium cursor-pointer border-stroke py-2.5 rounded-full bg-white w-full hover:bg-red-50 transition-colors text-sm lg:text-base'
@@ -425,7 +430,7 @@ export default function ProductClient({ product, relatedProducts }) {
                                     <SwiperSlide key={index}>
                                         <div className='flex items-center justify-center' style={{ height: '80vh' }}>
                                             <img
-                                                src={image}
+                                                src={image?.url || image}
                                                 alt={`${product.name} - ${index + 1}`}
                                                 className='max-w-full max-h-full object-contain'
                                                 decoding="async"

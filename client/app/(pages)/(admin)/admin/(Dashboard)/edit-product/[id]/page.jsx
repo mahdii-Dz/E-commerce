@@ -128,20 +128,13 @@ export default function EditProductPage() {
 
         // Populate images if they exist
         if (data.images && Array.isArray(data.images)) {
-          const formattedImages = data.images.map((url, index) => {
-            const publicIdData = data.publicIds?.[index];
-            let publicId = "";
-            if (publicIdData) {
-              if (typeof publicIdData === 'string') {
-                publicId = publicIdData;
-              } else {
-                publicId = publicIdData.public_id || publicIdData.publicId || "";
-              }
-            }
+          const formattedImages = data.images.map((img) => {
+            const url = typeof img === 'string' ? img : (img.url || '');
+            const publicId = typeof img === 'object' ? (img.public_id || img.publicId || '') : '';
             return {
               id: crypto.randomUUID(),
-              url: url,
-              publicId: publicId,
+              url,
+              publicId,
               status: 'existing'
             };
           });
@@ -306,7 +299,7 @@ export default function EditProductPage() {
 
   const getThumbnailUrl = (url) => {
     if (!url) return "";
-    return url.replace('/upload/', '/upload/w_300,h_300,c_fill,f_auto,q_auto/');
+    return url.replace('/upload/', '/upload/w_800,h_800,c_fill,f_auto,q_auto/');
   };
 
   const handleSubmit = async () => {
@@ -380,7 +373,7 @@ export default function EditProductPage() {
         categoryIds: selectedCategoryIds.length > 0 ? selectedCategoryIds : [],
         type: typeMapReverse[formData.type] || formData.type,
         discount_percentage: parseFloat(formData.discount) || 0,
-        images: finalImages.map(img => img.url),
+        images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null })),
         thumbnail: getThumbnailUrl(finalImages[0]?.url),
         colors: colors,
         offers: offers,

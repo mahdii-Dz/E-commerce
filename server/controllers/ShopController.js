@@ -56,6 +56,12 @@ const safeJsonParse = (str, defaultValue = null) => {
   }
 };
 
+const normalizeImage = (img) => {
+  if (typeof img === 'string') return { url: img, public_id: null };
+  if (img && typeof img === 'object') return { url: img.url || '', public_id: img.public_id || img.publicId || null };
+  return { url: '', public_id: null };
+};
+
 // Helper function to validate ID
 const validateId = (id) => {
   const num = parseInt(id, 10);
@@ -316,7 +322,7 @@ export const GetProducts = async (req, res) => {
       big_description: row.big_description,
       price: parseFloat(row.price) || 0,
       image_url: row.image_url,
-      images: safeJsonParse(row.images, []),
+      images: safeJsonParse(row.images, []).map(normalizeImage),
       thumbnail: row.thumbnail,
       is_active: row.is_active === 1,
       created_at: row.created_at,
@@ -384,7 +390,7 @@ export const GetProductById = async (req, res) => {
     }));
 
     // Parse JSON fields
-    product.images = safeJsonParse(product.images, []);
+    product.images = safeJsonParse(product.images, []).map(normalizeImage);
     product.colors = safeJsonParse(product.colors, null);
     product.offers = safeJsonParse(product.offers, null);
     product.price = parseFloat(product.price) || 0;
@@ -502,7 +508,7 @@ export const GetProductsByCategory = async (req, res) => {
           price: parseFloat(row.price) || 0,
           image_url: row.image_url,
           thumbnail: row.thumbnail,
-          images: safeJsonParse(row.images, []),
+          images: safeJsonParse(row.images, []).map(normalizeImage),
           is_active: row.is_active === 1,
           created_at: row.created_at,
           type: row.type,
@@ -558,7 +564,7 @@ export const AddProduct = async (req, res) => {
         big_description || null,
         price,
         type || null,
-        JSON.stringify(images || []),
+        JSON.stringify((images || []).map(normalizeImage)),
         thumbnail || null,
         discount_percentage || 0,
         colors ? JSON.stringify(colors) : null,
@@ -647,7 +653,7 @@ export const UpdateProduct = async (req, res) => {
         big_description || null,
         price,
         discount_percentage || 0,
-        JSON.stringify(images || []),
+        JSON.stringify((images || []).map(normalizeImage)),
         thumbnail || null,
         type || null,
         colors ? JSON.stringify(colors) : null,

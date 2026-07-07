@@ -502,7 +502,7 @@ export default function ProductDashboard() {
                                     <p className="text-xs text-gray-500 mb-2">صور إضافية</p>
                                     <div className="flex gap-2 overflow-x-auto pb-2">
                                       {product.images.map((img, idx) => (
-                                        <Image key={idx} src={img} alt={`${product.name} ${idx + 1}`} width={64} height={64} className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0" />
+                                        <Image key={idx} src={img?.url || img} alt={`${product.name} ${idx + 1}`} width={64} height={64} className="w-16 h-16 object-cover rounded-lg border border-gray-200 flex-shrink-0" />
                                       ))}
                                     </div>
                                   </div>

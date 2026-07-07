@@ -62,17 +62,17 @@ const extractPublicIdFromCloudinaryUrl = (input) => {
     const uploadIdx = parts.lastIndexOf("upload");
     if (uploadIdx === -1) return null;
 
-    // Everything after uploadIdx that represents transformation segments comes first;
-    // the last segment should be <public_id>.<ext>
-    const last = parts[parts.length - 1];
+    // Everything after "upload" — includes version (v123456), folders, and filename
+    const afterUpload = parts.slice(uploadIdx + 1);
 
-    // Strip extension
-    const lastNoExt = last.replace(/\.[a-zA-Z0-9]+$/, "");
+    // Remove the version segment (e.g., v123456) if present
+    const versionRegex = /^v\d+$/;
+    const publicIdParts = afterUpload.filter(p => !versionRegex.test(p));
 
-    // public_id can include folders, so we must reconstruct from the lastNoExt only;
-    // transformations are not part of public_id.
-    // Cloudinary's public_id is exactly what precedes the extension in the final segment.
-    return lastNoExt;
+    // Reconstruct the full path and strip the file extension
+    const fullPath = publicIdParts.join("/");
+    const lastDot = fullPath.lastIndexOf(".");
+    return lastDot > 0 ? fullPath.substring(0, lastDot) : fullPath;
   } catch {
     return null;
   }

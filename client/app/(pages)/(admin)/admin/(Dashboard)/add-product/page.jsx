@@ -74,7 +74,7 @@ export default function AddProductPage() {
 
   useEffect(() => {
     const imageUrl = images[0]?.url || "";
-    setThumbnailUrl(imageUrl.replace('/upload/', '/upload/w_300,h_300,c_fill,f_auto,q_auto/'));
+    setThumbnailUrl(imageUrl.replace('/upload/', '/upload/w_800,h_800,c_fill,f_auto,q_auto/'));
   }, [images])
 
   // Combobox anchor for categories
@@ -191,15 +191,25 @@ export default function AddProductPage() {
     e.target.value = '';
   };
 
-  const handleDeleteImage = (e, id) => {
+  const handleDeleteImage = async (e, id) => {
     e.stopPropagation();
-    setImages(prev => {
-      const img = prev.find(i => i.id === id);
-      if (img?.url?.startsWith('blob:')) {
-        URL.revokeObjectURL(img.url);
+    const img = images.find(i => i.id === id);
+    if (!img) return;
+
+    if (img.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(img.url);
+    }
+
+    setImages(prev => prev.filter(i => i.id !== id));
+
+    if (img.publicId) {
+      try {
+        await axios.delete(`/api/cloudinary/${img.publicId}`);
+      } catch (error) {
+        console.error("Delete failed:", error);
+        showToast("Failed to delete image from server", "error");
       }
-      return prev.filter(i => i.id !== id);
-    });
+    }
   };
 
   const handleDragEnd = (event) => {
@@ -277,7 +287,7 @@ export default function AddProductPage() {
         categoryIds: selectedCategoryIds,
         type: formData.type,
         discount_percentage: parseFloat(formData.discount) || 0,
-        images: finalImages.map(img => img.url),
+        images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null })),
         thumbnail: thumbnailUrl,
         colors: colors,
         offers: offers,

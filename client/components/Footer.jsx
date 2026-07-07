@@ -2,6 +2,7 @@ import { Package, TicketPercent, Van, Wallet } from 'lucide-react'
 import Link from 'next/link'
 import React from 'react'
 import GoTop from './GoTop'
+import Image from 'next/image'
 
 function Footer() {
   return (
@@ -36,7 +37,10 @@ function Footer() {
       {/* Main Footer Content */}
       <div className='w-full flex flex-col lg:flex-row justify-between items-center lg:items-start mt-8 lg:mt-18 gap-8 lg:gap-4 text-center lg:text-right'>
         {/* Logo */}
-        <h1 className='text-3xl lg:text-4xl font-bold order-1'>LOGO</h1>
+        <div className='flex flex-col items-center lg:items-start gap-2 '>
+          <Image src="/logo.png" alt="Logo" width={75} height={75} />
+          <h1 className='text-3xl lg:text-4xl font-bold order-1'>La Maison D'or</h1>
+        </div>
         
         {/* Contact Info */}
         <div className='order-2 lg:order-2'>
