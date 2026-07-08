@@ -64,18 +64,20 @@ export default function ProductClient({ product, relatedProducts }) {
         }
     }, [product])
 
-    useEffect(() => {
-        if (selectedOffer && !isInitialSelection.current) {
-            const timer = setTimeout(() => {
-                const el = checkoutRef.current;
-                if (el) {
-                    const top = el.getBoundingClientRect().top + window.scrollY - 100;
-                    window.scrollTo({ top, behavior: 'smooth' });
-                }
-            }, 500);
-            return () => clearTimeout(timer);
+    const scrollToCheckout = () => {
+        const el = checkoutRef.current;
+        if (el) {
+            const top = el.getBoundingClientRect().top + window.scrollY - 100;
+            window.scrollTo({ top, behavior: 'smooth' });
         }
-    }, [selectedOffer])
+    };
+
+    const handleSelectOffer = (offer) => {
+        setSelectedOffer(offer);
+        if (!isInitialSelection.current) {
+            setTimeout(scrollToCheckout, 500);
+        }
+    };
 
     // Fullscreen modal handlers
     useEffect(() => {
@@ -332,7 +334,7 @@ export default function ProductClient({ product, relatedProducts }) {
                                         return (
                                             <button
                                                 key={idx}
-                                                onClick={() => setSelectedOffer(offer)}
+                                                onClick={() => handleSelectOffer(offer)}
                                                 className={cn(
                                                     "relative flex flex-col items-start gap-2 p-4 rounded-xl border-2 transition-all text-right",
                                                     isSelected
