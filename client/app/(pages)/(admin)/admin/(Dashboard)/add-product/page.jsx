@@ -54,10 +54,10 @@ export default function AddProductPage() {
     type: "",
   });
 
-  // Colors state - array of objects { name: string, hex: string }
+  // Colors state - array of objects { name: string, hex: string, image: string }
   const [colors, setColors] = useState([]);
   const [showColorModal, setShowColorModal] = useState(false);
-  const [colorForm, setColorForm] = useState({ name: "", hex: "#000000" });
+  const [colorForm, setColorForm] = useState({ name: "", hex: "#000000", image: "" });
 
   const [images, setImages] = useState([]);
   const [thumbnailUrl, setThumbnailUrl] = useState("");
@@ -96,13 +96,13 @@ export default function AddProductPage() {
 
   // Color management functions
   const openColorModal = () => {
-    setColorForm({ name: "", hex: "#000000" });
+    setColorForm({ name: "", hex: "#000000", image: "" });
     setShowColorModal(true);
   };
 
   const closeColorModal = () => {
     setShowColorModal(false);
-    setColorForm({ name: "", hex: "#000000" });
+    setColorForm({ name: "", hex: "#000000", image: "" });
   };
 
   const handleAddColor = () => {
@@ -111,10 +111,15 @@ export default function AddProductPage() {
       return;
     }
 
+    if (!colorForm.image) {
+      showToast("Please select an image for this color", "error");
+      return;
+    }
+
     // Remove # from hex if present for storage
     const hexValue = colorForm.hex.replace("#", "");
 
-    setColors(prev => [...prev, { name: colorForm.name.trim(), hex: hexValue }]);
+    setColors(prev => [...prev, { name: colorForm.name.trim(), hex: hexValue, image: colorForm.image }]);
     closeColorModal();
   };
 
@@ -357,6 +362,34 @@ export default function AddProductPage() {
                 </div>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">صورة المنتج لهذا اللون *</label>
+                {images.length === 0 ? (
+                  <p className="text-sm text-gray-400">قم برفع صور المنتج أولاً</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border border-gray-200 rounded-xl">
+                    {images.map((img) => (
+                      <button
+                        key={img.id}
+                        type="button"
+                        onClick={() => setColorForm(prev => ({ ...prev, image: img.url }))}
+                        className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                          colorForm.image === img.url
+                            ? "border-[#FA3145] ring-2 ring-[#FA3145]/30"
+                            : "border-gray-200 hover:border-gray-400"
+                        }`}
+                      >
+                        <img
+                          src={img.url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 mt-4">
                 <button
                   onClick={closeColorModal}
@@ -564,10 +597,18 @@ export default function AddProductPage() {
               {colors.map((color, index) => (
                 <div
                   key={index}
-                  className="relative group w-14 h-14 rounded-full border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-gray-400 transition-colors"
-                  style={{ backgroundColor: `#${color.hex}` }}
-                  title={`${color.name} (#${color.hex})`}
+                  className="relative group w-14 h-14 rounded-lg border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-gray-400 transition-colors"
                 >
+                  <img
+                    src={color.image}
+                    alt={color.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                  />
+                  <div
+                    className="w-full h-full items-center justify-center hidden"
+                    style={{ backgroundColor: `#${color.hex}` }}
+                  />
                   {!isSubmitting && (
                     <button
                       onClick={() => handleRemoveColor(index)}
