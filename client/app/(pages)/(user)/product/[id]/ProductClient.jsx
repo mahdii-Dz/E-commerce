@@ -31,6 +31,7 @@ export default function ProductClient({ product, relatedProducts }) {
     const year = deliveryDate.getFullYear();
     const [PriceWithDiscount, setPriceWithDiscount] = useState(0)
     const [mounted, setMounted] = useState(false)
+    const [selectedColor, setSelectedColor] = useState(null)
 
     useEffect(() => {
         setMounted(true)
@@ -280,6 +281,51 @@ export default function ProductClient({ product, relatedProducts }) {
 
                         {/* BOTTOM CONTENT - delivery, cart, offers, checkout (left column in RTL) */}
                         <div className='flex flex-col items-start gap-3 lg:gap-4 text-right w-full mt-6 lg:mt-0 lg:col-start-2 lg:col-end-3'>
+                            {/* Color Selection Section */}
+                            {product.colors?.length > 0 && (
+                                <div className="w-full flex flex-col gap-3">
+                                    <h3 className='font-semibold text-lg text-black'>الالوان المتوفرة:</h3>
+                                    <div className="flex flex-wrap gap-3">
+                                        {product.colors.map((color) => (
+                                            <button
+                                                key={color.hex}
+                                                onClick={() => {
+                                                    setSelectedColor(color.hex);
+                                                    const idx = product.images.findIndex(
+                                                        img => (img?.url || img) === color.image
+                                                    );
+                                                    if (idx !== -1) {
+                                                        mainSwiperRef.current?.slideTo(idx);
+                                                        thumbsSwiper?.slideTo(idx);
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "flex flex-col w-30 relative items-center gap-3 p-2 rounded-xl border-2 transition-all cursor-pointer",
+                                                    selectedColor === color.hex
+                                                        ? "border-primary bg-primary/5"
+                                                        : "border-gray-200 hover:border-primary/30"
+                                                )}
+                                            >
+                                                <img
+                                                    src={color.image}
+                                                    alt={color.name}
+                                                    className="size-20 rounded-lg object-cover border border-gray-200"
+                                                    onError={(e) => { e.target.style.display = 'none'; }}
+                                                />
+                                                <span
+                                                        className="w-8 h-4 absolute bottom-13 rounded-full border border-gray-300"
+                                                        style={{ backgroundColor: `#${color.hex}` }}
+                                                    />
+                                                <div className="flex items-center gap-2">
+                                                    
+                                                    <span className="text-sm font-medium text-gray-800">{color.name}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Offers Selection Section */}
                             <div ref={offersRef} className='w-full flex flex-col gap-4 mt-4'>
                                 <h3 className='font-semibold text-lg text-black'>اختر عرض:</h3>

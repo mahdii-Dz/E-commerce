@@ -505,15 +505,23 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                                 className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div
-                                        className="w-10 h-10 rounded-full border border-gray-300 shadow-sm flex-shrink-0"
-                                        style={{ backgroundColor: `#${color.hex}` }}
-                                    />
+                                    {color.image ? (
+                                        <img
+                                            src={color.image}
+                                            alt={color.name}
+                                            className="size-14 rounded-lg border border-gray-300 shadow-sm flex-shrink-0 object-cover"
+                                            onError={(e) => { e.target.style.display = 'none'; }}
+                                        />
+                                    ) : (
+                                        <div
+                                            className="w-10 h-10 rounded-lg border border-gray-300 shadow-sm flex-shrink-0"
+                                            style={{ backgroundColor: `#${color.hex}` }}
+                                        />
+                                    )}
                                     <div className="flex flex-col items-start text-right">
                                         <span className="font-medium text-sm text-gray-800">
                                             {color.name}
                                         </span>
-                                        <span className="text-xs text-gray-500">#{color.hex}</span>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
