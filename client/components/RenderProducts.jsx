@@ -50,7 +50,7 @@ function ProductCard({ product, isCart, Cart, setCart }) {
       {/* Discount Badge */}
       {product.discount_percentage > 0 && (
         <div className='discount bg-primary absolute top-2 right-2 px-0.5 rounded-full z-10'>
-          <p className='text-white text-xs px-2 py-1'>-{product.discount_percentage}%</p>
+          <p className='text-white text-xs px-2 py-1'>{product.discount_percentage}%-</p>
         </div>
       )}
 
