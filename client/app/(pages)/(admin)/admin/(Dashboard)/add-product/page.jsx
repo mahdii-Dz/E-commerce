@@ -53,6 +53,7 @@ export default function AddProductPage() {
     discount: "",
     type: "",
   });
+  const [ComparePrice,setComparePrice] = useState("");
 
   // Colors state - array of objects { name: string, hex: string, image: string }
   const [colors, setColors] = useState([]);
@@ -165,6 +166,7 @@ export default function AddProductPage() {
     }
 
     const newOffer = {
+      id: crypto.randomUUID(),
       quantity: parseInt(offerForm.quantity),
       price: parseFloat(offerForm.price),
       savedMoney: Math.round(offerForm.savedMoney),
@@ -176,8 +178,25 @@ export default function AddProductPage() {
     closeOfferModal();
   };
 
-  const handleRemoveOffer = (index) => {
-    setOffers(prev => prev.filter((_, i) => i !== index));
+  const handleRemoveOffer = (offerId) => {
+    setOffers(prev => prev.filter(o => o.id !== offerId));
+  };
+
+  const handleToggleOfferFlag = (offerId, flag) => {
+    setOffers(prev => prev.map(o =>
+      o.id === offerId ? { ...o, [flag]: !o[flag] } : o
+    ));
+  };
+
+  const handleOfferDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setOffers(prev => {
+      const oldIndex = prev.findIndex(o => o.id === active.id);
+      const newIndex = prev.findIndex(o => o.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
   };
 
   const handleFileSelect = (e) => {
@@ -291,6 +310,7 @@ export default function AddProductPage() {
         price: parseFloat(formData.price),
         categoryIds: selectedCategoryIds,
         type: formData.type,
+        compare_price: parseFloat(ComparePrice) || 0,
         discount_percentage: parseFloat(formData.discount) || 0,
         images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null })),
         thumbnail: thumbnailUrl,
@@ -729,48 +749,27 @@ export default function AddProductPage() {
             </div>
 
             {offers.length > 0 && (
-              <div className="flex flex-col gap-2">
-                {offers.map((offer, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-gray-800">
-                          اشتري {offer.quantity} بسعر {offer.price} DA
-                        </p>
-                        {offer.isBestOffer && (
-                          <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Sparkles size={12} />
-                            أفضل عرض
-                          </span>
-                        )}
-                        {offer.freeDelivery && (
-                          <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Truck size={12} />
-                            توصيل مجاني
-                          </span>
-                        )}
-                      </div>
-                      {offer.savedMoney > 0 && (
-                        <p className="text-sm text-green-600">وفر {offer.savedMoney} DA</p>
-                      )}
-                    </div>
-                    {!isSubmitting && (
-                      <button
-                        onClick={() => handleRemoveOffer(idx)}
-                        className="p-1 hover:bg-gray-200 rounded-full transition-colors"
-                      >
-                        <X size={18} className="text-red-500" />
-                      </button>
-                    )}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleOfferDragEnd}>
+                <SortableContext items={offers.map(o => o.id)} strategy={rectSwappingStrategy}>
+                  <div className="flex flex-col gap-2">
+                    {offers.map((offer) => (
+                      <SortableOffer
+                        key={offer.id}
+                        offer={offer}
+                        isSubmitting={isSubmitting}
+                        onRemove={handleRemoveOffer}
+                        onToggle={handleToggleOfferFlag}
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
 
           <div className="flex items-center gap-6 w-full">
             <div className="flex flex-col gap-3 flex-1">
-              <label className="text-lg font-semibold text-black">السعر: <span className="text-red-500">*</span></label>
+              <label className="text-lg font-semibold text-black">سعر البيع: <span className="text-red-500">*</span></label>
               <input
                 type="number"
                 value={formData.price}
@@ -781,21 +780,36 @@ export default function AddProductPage() {
               />
             </div>
 
+            <div className="flex flex-col gap-3 ">
+              <label className="text-lg font-semibold text-black">سعر المقارنة:</label>
+              <input
+                type="number"
+                value={ComparePrice}
+                onChange={(e) => {
+                  setComparePrice(e.target.value)
+                  handleChange("discount", Math.floor(100 - (formData.price / e.target.value) * 100))
+                }}
+                placeholder="0"
+                disabled={isSubmitting}
+                className="w-full px-5 py-4 bg-white border border-gray-200 rounded-xl text-base text-primary focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+            </div>
+
+          </div>
             <div className="flex flex-col gap-3 w-[246px]">
               <label className="text-lg font-semibold text-black text-center">الخصم</label>
               <div className="flex items-center px-5 py-4 bg-white border border-gray-200 rounded-xl">
                 <input
                   type="number"
                   value={formData.discount}
-                  onChange={(e) => handleChange("discount", e.target.value)}
+                  // onChange={(e) => handleChange("discount", e.target.value)}
                   placeholder="0"
-                  disabled={isSubmitting}
-                  className="w-full text-base text-gray-800 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-gray-100"
+                  disabled
+                  className="w-full text-base text-gray-800 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <Percent size={20} className="text-gray-600 mr-2" />
               </div>
             </div>
-          </div>
 
           <div className="flex flex-col gap-3 w-full">
             <label className="text-lg font-semibold text-black">النوع:</label>
@@ -951,6 +965,94 @@ function SortableImage({ image, position, isSubmitting, onDelete, variant }) {
       )}
       <div className="absolute bottom-1.5 left-1.5 w-5 h-5 bg-white/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
         <GripVertical size={12} className="text-gray-600" />
+      </div>
+    </div>
+  );
+}
+
+function SortableOffer({ offer, isSubmitting, onRemove, onToggle }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: offer.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 10 : 'auto',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50 ${isDragging ? 'shadow-lg' : ''}`}
+    >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing flex items-center gap-3 flex-1 min-w-0">
+        <GripVertical size={18} className="text-gray-400 flex-shrink-0" />
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium text-gray-800 whitespace-nowrap">
+              اشتري {offer.quantity} بسعر {offer.price} DA
+            </p>
+            {offer.isBestOffer && (
+              <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Sparkles size={12} />
+                أفضل عرض
+              </span>
+            )}
+            {offer.freeDelivery && (
+              <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Truck size={12} />
+                توصيل مجاني
+              </span>
+            )}
+          </div>
+          {offer.savedMoney > 0 && (
+            <p className="text-sm text-green-600">وفر {offer.savedMoney} DA</p>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => onToggle(offer.id, 'isBestOffer')}
+          className={`p-1.5 rounded-lg transition-colors ${
+            offer.isBestOffer
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-gray-100 text-gray-400 hover:text-amber-600 hover:bg-amber-50'
+          }`}
+          title={offer.isBestOffer ? 'إلغاء أفضل عرض' : 'تعيين كأفضل عرض'}
+        >
+          <Sparkles size={16} />
+        </button>
+        <button
+          type="button"
+          onClick={() => onToggle(offer.id, 'freeDelivery')}
+          className={`p-1.5 rounded-lg transition-colors ${
+            offer.freeDelivery
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-gray-100 text-gray-400 hover:text-blue-600 hover:bg-blue-50'
+          }`}
+          title={offer.freeDelivery ? 'إلغاء التوصيل المجاني' : 'تفعيل التوصيل المجاني'}
+        >
+          <Truck size={16} />
+        </button>
+        {!isSubmitting && (
+          <button
+            type="button"
+            onClick={() => onRemove(offer.id)}
+            className="p-1.5 rounded-lg hover:bg-gray-200 transition-colors"
+            title="حذف العرض"
+          >
+            <X size={16} className="text-red-500" />
+          </button>
+        )}
       </div>
     </div>
   );

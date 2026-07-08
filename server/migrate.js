@@ -26,6 +26,17 @@ async function migrate() {
       console.log('  - last_name column not found in order_info, skipping');
     }
 
+    // Add compare_price column to products table
+    const checkComparePriceRows = await conn.execute('SHOW COLUMNS FROM products LIKE ?', ['compare_price']);
+    const hasComparePrice = Array.isArray(checkComparePriceRows) && checkComparePriceRows.length > 0;
+    if (!hasComparePrice) {
+      console.log('Adding compare_price column to products...');
+      await conn.execute('ALTER TABLE products ADD COLUMN compare_price DECIMAL(10,2) DEFAULT 0 AFTER price');
+      console.log('  ✓ compare_price column added');
+    } else {
+      console.log('  - compare_price already exists, skipping');
+    }
+
     console.log('\nMigration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error.message);

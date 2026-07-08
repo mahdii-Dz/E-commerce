@@ -82,15 +82,15 @@ function ProductCard({ product, isCart, Cart, setCart }) {
         </div>
 
         {/* Price */}
-        {product.discount_percentage > 0 ? (
+        {product.compare_price > product.price ? (
           <p className="text-gray-600 text-base sm:text-lg">
             <span className='line-through text-secondary text-sm'>
-              {product.price}DA
+              {product.compare_price}DA
             </span>
             <span className="hidden sm:inline"> | </span>
             <br className="sm:hidden" />
             <span className='text-primary font-semibold'>
-              {Math.round(product.price - (product.price * product.discount_percentage / 100))}DA
+              {product.price}DA
             </span>
           </p>
         ) : (

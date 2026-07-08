@@ -265,6 +265,7 @@ export const GetProducts = async (req, res) => {
         p.big_description,
         p.discount_percentage,
         p.price,
+        p.compare_price,
         p.image_url,
         p.is_active,
         p.images,
@@ -321,6 +322,7 @@ export const GetProducts = async (req, res) => {
       description: row.description,
       big_description: row.big_description,
       price: parseFloat(row.price) || 0,
+      compare_price: parseFloat(row.compare_price) || 0,
       image_url: row.image_url,
       images: safeJsonParse(row.images, []).map(normalizeImage),
       thumbnail: row.thumbnail,
@@ -356,6 +358,7 @@ export const GetProductById = async (req, res) => {
         p.big_description,
         p.discount_percentage,
         p.price,
+        p.compare_price,
         p.image_url,
         p.thumbnail,
         p.images,
@@ -394,6 +397,7 @@ export const GetProductById = async (req, res) => {
     product.colors = safeJsonParse(product.colors, null);
     product.offers = safeJsonParse(product.offers, null);
     product.price = parseFloat(product.price) || 0;
+    product.compare_price = parseFloat(product.compare_price) || 0;
     product.discount_percentage = product.discount_percentage || 0;
     product.is_active = product.is_active === 1;
 
@@ -426,6 +430,7 @@ export const GetProductsByCategory = async (req, res) => {
         p.big_description,
         p.discount_percentage,
         p.price,
+        p.compare_price,
         p.image_url,
         p.thumbnail,
         p.images,
@@ -506,6 +511,7 @@ export const GetProductsByCategory = async (req, res) => {
           description: row.description,
           big_description: row.big_description,
           price: parseFloat(row.price) || 0,
+          compare_price: parseFloat(row.compare_price) || 0,
           image_url: row.image_url,
           thumbnail: row.thumbnail,
           images: safeJsonParse(row.images, []).map(normalizeImage),
@@ -539,6 +545,7 @@ export const AddProduct = async (req, res) => {
       thumbnail,
       colors,
       offers,
+      compare_price,
     } = req.body;
 
     // Validation
@@ -555,14 +562,15 @@ export const AddProduct = async (req, res) => {
     // Insert product
     const productResult = await execute(
       `INSERT INTO products (
-        name, description, big_description, price, type, images,
+        name, description, big_description, price, compare_price, type, images,
         thumbnail, discount_percentage, colors, offers
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         description || null,
         big_description || null,
         price,
+        compare_price || 0,
         type || null,
         JSON.stringify((images || []).map(normalizeImage)),
         thumbnail || null,
@@ -628,6 +636,7 @@ export const UpdateProduct = async (req, res) => {
       categoryIds,
       colors,
       offers,
+      compare_price,
     } = req.body;
 
     // Verify product exists first
@@ -644,7 +653,7 @@ export const UpdateProduct = async (req, res) => {
     await execute(
       `UPDATE products
        SET name = ?, description = ?, big_description = ?, price = ?,
-           discount_percentage = ?, images = ?, thumbnail = ?,
+           compare_price = ?, discount_percentage = ?, images = ?, thumbnail = ?,
            type = ?, colors = ?, offers = ?
        WHERE id = ?`,
       [
@@ -652,6 +661,7 @@ export const UpdateProduct = async (req, res) => {
         description || null,
         big_description || null,
         price,
+        compare_price || 0,
         discount_percentage || 0,
         JSON.stringify((images || []).map(normalizeImage)),
         thumbnail || null,

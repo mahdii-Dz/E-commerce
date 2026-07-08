@@ -29,7 +29,6 @@ export default function ProductClient({ product, relatedProducts }) {
     const ArriveDay = deliveryDate.getDate();
     const month = deliveryDate.toLocaleString('default', { month: 'long' });
     const year = deliveryDate.getFullYear();
-    const [PriceWithDiscount, setPriceWithDiscount] = useState(0)
     const [mounted, setMounted] = useState(false)
     const [selectedColor, setSelectedColor] = useState(null)
 
@@ -49,16 +48,10 @@ export default function ProductClient({ product, relatedProducts }) {
 
     useEffect(() => {
         if (product) {
-            setPriceWithDiscount(product.discount_percentage > 0 ? product.price - (product.price * product.discount_percentage / 100) : product.price)
-
-            const effectivePrice = product.discount_percentage > 0
-                ? product.price - (product.price * product.discount_percentage / 100)
-                : product.price;
-
             const buyOneOffer = {
                 quantity: 1,
-                price: effectivePrice,
-                savedMoney: product.price - effectivePrice,
+                price: product.price,
+                savedMoney: 0,
                 isBestOffer: false,
                 freeDelivery: false,
             };
@@ -151,14 +144,14 @@ export default function ProductClient({ product, relatedProducts }) {
                             </p>
 
                             {/* Price */}
-                            {PriceWithDiscount < product.price ? (
+                            {product.compare_price > product.price ? (
                                 <div className="text-gray-600 w-full flex items-center justify-between gap-2">
                                     <div>
                                         <span className='text-primary text-2xl lg:text-3xl font-bold '>
-                                            {Math.round(PriceWithDiscount)} دج
+                                            {Math.round(product.price)} دج
                                         </span>
                                         <span className='line-through text-secondary text-base lg:text-lg mr-2'>
-                                            {product.price} دج
+                                            {product.compare_price} دج
                                         </span>
                                     </div>
                                     {product.discount_percentage > 0 && (
@@ -406,7 +399,7 @@ export default function ProductClient({ product, relatedProducts }) {
                             {/* Checkout Form */}
                             <div ref={checkoutRef} className="w-full">
                                 <CheckOut
-                                    productPrice={PriceWithDiscount}
+                                    productPrice={product.price}
                                     productId={product.id}
                                     colors={product.colors}
                                     selectedOffer={selectedOffer}
