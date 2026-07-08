@@ -385,7 +385,11 @@ export default function ProductClient({ product, relatedProducts }) {
                                                 {offer.savedMoney > 0 && (
                                                     <div className='flex items-center gap-1.5 text-green-600 text-sm font-medium'>
                                                         <Percent size={14} />
-                                                        <span>وفر {offer.savedMoney.toLocaleString()} دج</span>
+                                                        <span>وفر {offer.savedMoney.toLocaleString()} دج 
+                                                            {
+                                                                offer.freeDelivery && " + 600 دج توصيل مجاني "
+                                                            }
+                                                        </span>
                                                     </div>
                                                 )}
 
