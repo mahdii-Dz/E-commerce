@@ -648,7 +648,7 @@ export default function AddProductPage() {
         {/* Landing Page Image Section */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <label className="text-lg font-semibold text-black">صورة الصفحة الرئيسية (Landing Page):</label>
+            <label className="text-lg font-semibold text-black">صورة صفحة الهبوط (Landing Page):</label>
             {!landingPageImage && (
               <button
                 onClick={() => landingPageInputRef.current?.click()}

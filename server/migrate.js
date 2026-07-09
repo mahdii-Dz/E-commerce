@@ -48,6 +48,21 @@ async function migrate() {
       console.log('  - landing_page_image already exists, skipping');
     }
 
+    // Enlarge big_description column to MEDIUMTEXT for rich HTML content
+    const checkBigDescriptionRows = await conn.execute('SHOW COLUMNS FROM products LIKE ?', ['big_description']);
+    const hasBigDescription = Array.isArray(checkBigDescriptionRows) && checkBigDescriptionRows.length > 0;
+    if (hasBigDescription) {
+      const col = checkBigDescriptionRows[0];
+      const currentType = col.Type || '';
+      if (currentType.toLowerCase() === 'text') {
+        console.log('Enlarging big_description to MEDIUMTEXT...');
+        await conn.execute('ALTER TABLE products MODIFY big_description MEDIUMTEXT');
+        console.log('  ✓ big_description is now MEDIUMTEXT');
+      } else {
+        console.log(`  - big_description is already ${currentType}, skipping`);
+      }
+    }
+
     console.log('\nMigration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error.message);
