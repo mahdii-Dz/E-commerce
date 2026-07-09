@@ -73,6 +73,11 @@ export default function EditProductPage() {
   const [overallProgress, setOverallProgress] = useState(0);
   const [uploadStatusText, setUploadStatusText] = useState("");
 
+  // Landing page image state
+  const [landingPageImage, setLandingPageImage] = useState(null);
+  const landingPageInputRef = useRef(null);
+  const [isUploadingLanding, setIsUploadingLanding] = useState(false);
+
   // Offers state
   const [offers, setOffers] = useState([]);
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -131,6 +136,15 @@ export default function EditProductPage() {
         // Populate offers if they exist
         if (data.offers && Array.isArray(data.offers)) {
           setOffers(data.offers.map(o => ({ ...o, id: o.id || crypto.randomUUID() })));
+        }
+
+        // Populate landing page image if it exists
+        if (data.landing_page_image) {
+          setLandingPageImage({
+            url: data.landing_page_image,
+            publicId: null,
+            status: 'existing'
+          });
         }
 
         // Populate images if they exist
@@ -294,6 +308,28 @@ export default function EditProductPage() {
     e.target.value = '';
   };
 
+  const handleLandingPageSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setLandingPageImage({
+      file,
+      url: URL.createObjectURL(file),
+      publicId: null,
+      status: 'local'
+    });
+    e.target.value = '';
+  };
+
+  const handleDeleteLandingPageImage = () => {
+    if (landingPageImage?.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(landingPageImage.url);
+    }
+    if (landingPageImage?.publicId) {
+      axios.delete(`/api/cloudinary/${landingPageImage.publicId}`).catch(() => {});
+    }
+    setLandingPageImage(null);
+  };
+
   const handleDeleteImage = async (e, id) => {
     e.stopPropagation();
     const img = images.find(i => i.id === id);
@@ -382,6 +418,19 @@ export default function EditProductPage() {
         setIsUploadingImages(false);
       }
 
+      // Upload landing page image if local
+      let finalLandingPageUrl = landingPageImage?.url || null;
+      if (landingPageImage?.status === 'local') {
+        setIsUploadingLanding(true);
+        const formDataLanding = new FormData();
+        formDataLanding.append("image", landingPageImage.file);
+        const response = await axios.post("/api/cloudinary", formDataLanding, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        finalLandingPageUrl = response.data.data.url;
+        setIsUploadingLanding(false);
+      }
+
       // Map back to backend format
       const typeMapReverse = {
         "BestDeal": "Best Deal",
@@ -406,6 +455,7 @@ export default function EditProductPage() {
         discount_percentage: parseFloat(formData.discount) || 0,
         images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null })),
         thumbnail: getThumbnailUrl(finalImages[0]?.url),
+        landing_page_image: finalLandingPageUrl,
         colors: colors,
         offers: offers,
       });
@@ -660,6 +710,14 @@ export default function EditProductPage() {
         className="hidden"
       />
 
+      <input
+        ref={landingPageInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleLandingPageSelect}
+        className="hidden"
+      />
+
       <header className="flex items-center justify-between mb-14">
         <Link href="/admin/all-products">
           <button className="w-10 h-10 flex cursor-pointer items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors">
@@ -729,6 +787,55 @@ export default function EditProductPage() {
                 </div>
               </SortableContext>
             </DndContext>
+          )}
+        </div>
+
+        {/* Landing Page Image Section */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <label className="text-lg font-semibold text-black">صورة الصفحة الرئيسية (Landing Page):</label>
+            {!landingPageImage && (
+              <button
+                onClick={() => landingPageInputRef.current?.click()}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-4 py-2 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-lg transition-colors disabled:opacity-50 cursor-pointer text-sm"
+              >
+                <Upload size={16} />
+                <span>إضافة صورة</span>
+              </button>
+            )}
+          </div>
+          {landingPageImage ? (
+            <div className="relative w-full max-w-[494px] rounded-xl overflow-hidden group bg-gray-200">
+              <img
+                src={landingPageImage.url}
+                alt="Landing page"
+                className="w-full object-cover"
+              />
+              {!isSubmitting && (
+                <button
+                  onClick={handleDeleteLandingPageImage}
+                  className="absolute top-3 right-3 w-8 h-8 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+                >
+                  <X size={16} className="text-gray-700" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div
+              onClick={() => landingPageInputRef.current?.click()}
+              className="w-full max-w-[494px] aspect-[494/200] bg-gray-200 rounded-xl flex items-center justify-center overflow-hidden group cursor-pointer hover:bg-gray-300 transition-colors"
+            >
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-md">
+                  <Upload size={32} className="text-gray-400" />
+                </div>
+                <span className="text-sm text-gray-500">إضافة صورة</span>
+              </div>
+            </div>
+          )}
+          {isUploadingLanding && (
+            <p className="text-sm text-gray-600 mt-2">جاري رفع الصورة...</p>
           )}
         </div>
 
