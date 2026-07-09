@@ -441,6 +441,17 @@ export default function ProductClient({ product, relatedProducts }) {
                                     أضف إلى السلة
                                 </button>
                             )}
+
+                            {/* Landing Page Image */}
+                            {product.landing_page_image && (
+                                <div className="w-full mt-4">
+                                    <img
+                                        src={product.landing_page_image}
+                                        alt={`${product.name} - Landing`}
+                                        className="w-full object-cover rounded-lg"
+                                    />
+                                </div>
+                            )}
                         </div>
                     </div>
                 </section>
