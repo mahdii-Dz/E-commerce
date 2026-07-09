@@ -22,7 +22,7 @@ export default function RichTextEditor({ content = '', onChange }) {
       'superscript', 'subscript', '|',
       'ul', 'ol', '|',
       'outdent', 'indent', '|',
-      'font', 'fontsize', 'brush', '|',
+      'font', 'fontsize', '|',
       'paragraph', '|',
       'align', '|',
       'hr', 'eraser', '|',
@@ -40,7 +40,6 @@ export default function RichTextEditor({ content = '', onChange }) {
       fontFamily: 'Tajawal, system-ui, sans-serif',
       fontSize: '16px',
       lineHeight: '1.7',
-      background: '#fff',
     },
   }), [])
 
@@ -50,7 +49,10 @@ export default function RichTextEditor({ content = '', onChange }) {
         ref={editorRef}
         value={content}
         config={config}
-        onChange={(newContent) => onChange(newContent)}
+        onChange={(newContent) => onChange(
+          newContent.replace(/style="[^"]*background(?:-color)?:[^"]*"/gi, 'style=""')
+            .replace(/style="\s*"/g, '')
+        )}
       />
     </div>
   )
