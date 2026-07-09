@@ -37,6 +37,17 @@ async function migrate() {
       console.log('  - compare_price already exists, skipping');
     }
 
+    // Add landing_page_image column to products table
+    const checkLandingPageImageRows = await conn.execute('SHOW COLUMNS FROM products LIKE ?', ['landing_page_image']);
+    const hasLandingPageImage = Array.isArray(checkLandingPageImageRows) && checkLandingPageImageRows.length > 0;
+    if (!hasLandingPageImage) {
+      console.log('Adding landing_page_image column to products...');
+      await conn.execute('ALTER TABLE products ADD COLUMN landing_page_image VARCHAR(500) DEFAULT NULL AFTER images');
+      console.log('  ✓ landing_page_image column added');
+    } else {
+      console.log('  - landing_page_image already exists, skipping');
+    }
+
     console.log('\nMigration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error.message);
