@@ -335,6 +335,7 @@ export default function AddProductPage() {
           headers: { "Content-Type": "multipart/form-data" },
         });
         finalLandingPageUrl = response.data.data.url;
+        setLandingPageImage(prev => ({ ...prev, publicId: response.data.data.public_id }));
         setIsUploadingLanding(false);
       }
 

@@ -37,6 +37,16 @@ import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import AdminTestimonialForm from "@/components/AdminTestimonialForm";
 import RichTextEditor from "@/components/RichTextEditor";
 
+function extractPublicIdFromCloudinaryUrl(url) {
+  if (!url) return null;
+  const uploadIndex = url.indexOf('/upload/');
+  if (uploadIndex === -1) return null;
+  const afterUpload = url.slice(uploadIndex + 8);
+  const withoutVersion = afterUpload.replace(/^v\d+\//, '');
+  const lastDot = withoutVersion.lastIndexOf('.');
+  return lastDot !== -1 ? withoutVersion.slice(0, lastDot) : withoutVersion;
+}
+
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
@@ -142,7 +152,7 @@ export default function EditProductPage() {
         if (data.landing_page_image) {
           setLandingPageImage({
             url: data.landing_page_image,
-            publicId: null,
+            publicId: extractPublicIdFromCloudinaryUrl(data.landing_page_image),
             status: 'existing'
           });
         }
@@ -428,6 +438,7 @@ export default function EditProductPage() {
           headers: { "Content-Type": "multipart/form-data" },
         });
         finalLandingPageUrl = response.data.data.url;
+        setLandingPageImage(prev => ({ ...prev, publicId: response.data.data.public_id }));
         setIsUploadingLanding(false);
       }
 
