@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Search, Filter, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw } from 'lucide-react';
+import { Select as BaseSelect } from '@base-ui/react/select';
 import axios from 'axios';
 import { wilayaData } from '@/lib/wilayaData';
 import { Input } from '@/components/ui/input';
@@ -107,7 +108,11 @@ function StatusSelect({ value, onChange }) {
   );
 }
 
-const FILTER_TYPES = ['الكل', 'توصيل للمنزل', 'استلام من المكتب'];
+const FILTER_TYPES = [
+  { label: 'الكل', value: 'All' },
+  { label: 'توصيل للمنزل', value: 'domicile' },
+  { label: 'استلام من المكتب', value: 'stopDesk' },
+];
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -115,7 +120,23 @@ export default function OrdersPage() {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilterPopup, setShowFilterPopup] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const debounceTimer = useRef(null);
+
+  const handleSearchChange = (e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    setCurrentPage(1);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setDebouncedSearchQuery(val), 300);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+    setCurrentPage(1);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+  };
 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -141,10 +162,14 @@ export default function OrdersPage() {
 
   const [filters, setFilters] = useState({
     deliveryType: 'All',
+    currentStatus: '',
     minPrice: '',
     maxPrice: '',
     wilaya: '',
     baladiya: '',
+    startDate: '',
+    endDate: '',
+    product: '',
   });
 
   const [expandedOrders, setExpandedOrders] = useState(new Set());
@@ -209,55 +234,66 @@ export default function OrdersPage() {
   }, []);
 
   const filteredOrders = useMemo(() => {
-    let result = orders || [];
+    const list = orders || [];
+    const q = debouncedSearchQuery.toLowerCase().trim();
+    const dType = filters.deliveryType;
+    const minP = filters.minPrice !== '' ? Number(filters.minPrice) : null;
+    const maxP = filters.maxPrice !== '' ? Number(filters.maxPrice) : null;
+    const wilayaQ = filters.wilaya.toLowerCase().trim();
+    const baladiyaQ = filters.baladiya.toLowerCase().trim();
+    const cStatus = filters.currentStatus;
+    const startD = filters.startDate;
+    const endD = filters.endDate;
+    const prodQ = filters.product.toLowerCase().trim();
+    const result = [];
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(order =>
-        `${order.first_name} ${order.last_name}`.toLowerCase().includes(q) ||
-        order.phone?.includes(q) ||
-        order.items?.some(item => item.product_name.toLowerCase().includes(q)) ||
-        order.order_number?.toLowerCase().includes(q) ||
-        order.order_id?.toString().includes(q)
-      );
-    }
+    for (let i = 0; i < list.length; i++) {
+      const order = list[i];
 
-    if (filters.deliveryType !== 'All') {
-      result = result.filter(order => order.delivery_type?.toLowerCase().includes(filters.deliveryType.toLowerCase()));
-    }
+      if (q && !`${order.first_name} ${order.last_name}`.toLowerCase().includes(q) &&
+          !order.phone?.includes(q) &&
+          !order.items?.some(item => item.product_name.toLowerCase().includes(q)) &&
+          !order.order_number?.toLowerCase().includes(q) &&
+          !order.order_id?.toString().includes(q)) {
+        continue;
+      }
 
-    if (filters.minPrice !== '') {
-      result = result.filter(order => {
+      if (dType !== 'All' && order.delivery_type !== dType) continue;
+
+      if (minP !== null) {
         const price = Array.isArray(order.items) ? order.totalPrice : order.fullPrice;
-        return price >= Number(filters.minPrice);
-      });
-    }
-    if (filters.maxPrice !== '') {
-      result = result.filter(order => {
+        if (price < minP) continue;
+      }
+      if (maxP !== null) {
         const price = Array.isArray(order.items) ? order.totalPrice : order.fullPrice;
-        return price <= Number(filters.maxPrice);
-      });
-    }
+        if (price > maxP) continue;
+      }
 
-    if (filters.wilaya !== '') {
-      result = result.filter(order => order.wilaya?.toLowerCase().includes(filters.wilaya.toLowerCase()));
-    }
-    if (filters.baladiya !== '') {
-      result = result.filter(order => order.baladiya?.toLowerCase().includes(filters.baladiya.toLowerCase()));
+      if (wilayaQ && !order.wilaya?.toLowerCase().includes(wilayaQ)) continue;
+      if (baladiyaQ && !order.baladiya?.toLowerCase().includes(baladiyaQ)) continue;
+      if (cStatus && order.current_status !== cStatus) continue;
+
+      if (startD) {
+        const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+        if (orderDate < startD) continue;
+      }
+      if (endD) {
+        const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+        if (orderDate > endD) continue;
+      }
+
+      if (prodQ && !order.items?.some(item => item.product_name.toLowerCase().includes(prodQ))) continue;
+
+      result.push(order);
     }
 
     return result;
-  }, [orders, searchQuery, filters]);
+  }, [orders, debouncedSearchQuery, filters]);
 
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const currentOrders = filteredOrders.slice(startIndex, endIndex);
-
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-    setCurrentPage(1);
-  };
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -265,21 +301,20 @@ export default function OrdersPage() {
   };
 
   const clearFilters = () => {
-    setFilters({ deliveryType: 'All', minPrice: '', maxPrice: '', wilaya: '', baladiya: '' });
-    setCurrentPage(1);
-  };
-
-  const applyFilters = () => {
-    setShowFilterPopup(false);
+    setFilters({ deliveryType: 'All', currentStatus: '', minPrice: '', maxPrice: '', wilaya: '', baladiya: '', startDate: '', endDate: '', product: '' });
     setCurrentPage(1);
   };
 
   const hasActiveFilters =
     filters.deliveryType !== 'All' ||
+    filters.currentStatus !== '' ||
     filters.minPrice !== '' ||
     filters.maxPrice !== '' ||
     filters.wilaya !== '' ||
-    filters.baladiya !== '';
+    filters.baladiya !== '' ||
+    filters.startDate !== '' ||
+    filters.endDate !== '' ||
+    filters.product !== '';
 
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
@@ -657,83 +692,148 @@ export default function OrdersPage() {
         <h1 className="text-3xl font-semibold text-black tracking-tight">جميع الطلبات</h1>
       </header>
 
-      <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full">
-        <div className="flex items-center justify-between gap-4 mb-6 w-full">
-          <div className="relative w-8/10">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-            <input
-              type="text"
-              placeholder="بحث في الطلبات..."
-              value={searchQuery}
-              onChange={handleSearch}
-              className="w-full pr-10 pl-4 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:border-transparent"
-            />
-          </div>
-
-          <div className="relative w-2/10">
-            <button
-              onClick={() => setShowFilterPopup(!showFilterPopup)}
-              className={`flex items-center justify-center w-full gap-2 cursor-pointer px-4 py-2.5 border rounded-lg transition-colors ${hasActiveFilters ? 'border-[#FA3145] bg-red-50 text-[#FA3145]' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+      <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">الحالة الحالية</label>
+            <BaseSelect.Root
+              value={filters.currentStatus}
+              onValueChange={(value) => handleFilterChange('currentStatus', value)}
             >
-              <Filter size={20} />
-              <span>تصفية{hasActiveFilters && ' (مفعلة)'}</span>
-            </button>
-
-            {showFilterPopup && (
-              <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900">تصفية الطلبات</h3>
-                  <button onClick={() => setShowFilterPopup(false)} className="p-1 hover:bg-gray-100 rounded-lg transition-colors">
-                    <X size={18} className="text-gray-500" />
-                  </button>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">نوع التوصيل</label>
-                  <select
-                    value={filters.deliveryType}
-                    onChange={(e) => handleFilterChange('deliveryType', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]"
-                  >
-                    {FILTER_TYPES.map(type => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">نطاق السعر الإجمالي</label>
-                  <div className="flex gap-2">
-                    <input type="number" placeholder="الحد الأدنى" value={filters.minPrice}
-                      onChange={(e) => handleFilterChange('minPrice', e.target.value)}
-                      className="w-1/2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
-                    <input type="number" placeholder="الحد الأقصى" value={filters.maxPrice}
-                      onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
-                      className="w-1/2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">الولاية</label>
-                  <input type="text" placeholder="أدخل اسم الولاية..." value={filters.wilaya}
-                    onChange={(e) => handleFilterChange('wilaya', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
-                </div>
-
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">البلدية</label>
-                  <input type="text" placeholder="أدخل اسم البلدية..." value={filters.baladiya}
-                    onChange={(e) => handleFilterChange('baladiya', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
-                </div>
-
-                <div className="flex gap-2 mt-6">
-                  <button onClick={clearFilters} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">مسح</button>
-                  <button onClick={applyFilters} className="flex-1 px-4 py-2 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-lg transition-colors">تطبيق</button>
-                </div>
-              </div>
-            )}
+              <BaseSelect.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145] data-[open]:ring-2 data-[open]:ring-[#FA3145]/20 data-[open]:border-[#FA3145]">
+                <BaseSelect.Value placeholder="الكل">
+                  {(value) => {
+                    const s = STATUSES.find(st => st.value === value);
+                    return s ? s.label : 'الكل';
+                  }}
+                </BaseSelect.Value>
+                <ChevronDown size={16} className="text-gray-500 shrink-0" />
+              </BaseSelect.Trigger>
+              <BaseSelect.Portal>
+                <BaseSelect.Positioner side="bottom" align="start" alignItemWithTrigger={false} className="z-50">
+                  <BaseSelect.Popup className="max-h-60 overflow-y-auto rounded-xl border border-stroke bg-white py-2 shadow-lg"
+                    style={{ width: 'var(--anchor-width)' }}>
+                    <BaseSelect.List>
+                      <BaseSelect.Item value=""
+                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                        <BaseSelect.ItemText>الكل</BaseSelect.ItemText>
+                      </BaseSelect.Item>
+                      {STATUSES.map(s => (
+                        <BaseSelect.Item key={s.value} value={s.value}
+                          className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                            <BaseSelect.ItemText>{s.label}</BaseSelect.ItemText>
+                          </div>
+                        </BaseSelect.Item>
+                      ))}
+                    </BaseSelect.List>
+                  </BaseSelect.Popup>
+                </BaseSelect.Positioner>
+              </BaseSelect.Portal>
+            </BaseSelect.Root>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">الولاية</label>
+            <input type="text" placeholder="أدخل اسم الولاية..." value={filters.wilaya}
+              onChange={(e) => handleFilterChange('wilaya', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">البلدية</label>
+            <input type="text" placeholder="أدخل اسم البلدية..." value={filters.baladiya}
+              onChange={(e) => handleFilterChange('baladiya', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">نوع التوصيل</label>
+            <BaseSelect.Root
+              value={filters.deliveryType}
+              onValueChange={(value) => handleFilterChange('deliveryType', value)}
+            >
+              <BaseSelect.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145] data-[open]:ring-2 data-[open]:ring-[#FA3145]/20 data-[open]:border-[#FA3145]">
+                <BaseSelect.Value placeholder="الكل">
+                  {(value) => {
+                    const t = FILTER_TYPES.find(f => f.value === value);
+                    return t ? t.label : 'الكل';
+                  }}
+                </BaseSelect.Value>
+                <ChevronDown size={16} className="text-gray-500 shrink-0" />
+              </BaseSelect.Trigger>
+              <BaseSelect.Portal>
+                <BaseSelect.Positioner side="bottom" align="start" alignItemWithTrigger={false} className="z-50">
+                  <BaseSelect.Popup className="rounded-xl border border-stroke bg-white py-2 shadow-lg"
+                    style={{ width: 'var(--anchor-width)' }}>
+                    <BaseSelect.List>
+                      {FILTER_TYPES.map(t => (
+                        <BaseSelect.Item key={t.value} value={t.value}
+                          className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                          <BaseSelect.ItemText>{t.label}</BaseSelect.ItemText>
+                        </BaseSelect.Item>
+                      ))}
+                    </BaseSelect.List>
+                  </BaseSelect.Popup>
+                </BaseSelect.Positioner>
+              </BaseSelect.Portal>
+            </BaseSelect.Root>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">تاريخ البداية</label>
+            <input type="date" value={filters.startDate}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">تاريخ النهاية</label>
+            <input type="date" value={filters.endDate}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">المنتج</label>
+            <input type="text" placeholder="اسم المنتج..." value={filters.product}
+              onChange={(e) => handleFilterChange('product', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">نطاق السعر</label>
+            <div className="flex gap-2">
+              <input type="number" placeholder="الحد الأدنى" value={filters.minPrice}
+                onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                className="w-1/2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
+              <input type="number" placeholder="الحد الأقصى" value={filters.maxPrice}
+                onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                className="w-1/2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145]" />
+            </div>
+          </div>
+        </div>
+        {hasActiveFilters && (
+          <div className="flex justify-end mt-4">
+            <button onClick={clearFilters} className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm cursor-pointer">
+              مسح التصفية
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full">
+        <div className="relative w-full mb-6">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="بحث في الطلبات..."
+            value={searchQuery}
+              onChange={handleSearchChange}
+            className="w-full pr-10 pl-10 py-2.5 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FA3145] focus:border-transparent"
+          />
+          {searchQuery && (
+            <button
+              onClick={clearSearch}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
         {renderPagination(true)}
         <div ref={scrollRef} onScroll={updateScrollButtons} className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 max-w-full" style={{ boxSizing: 'border-box' }}>
@@ -1380,9 +1480,6 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {showFilterPopup && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowFilterPopup(false)} />
-      )}
     </div>
   );
 }
