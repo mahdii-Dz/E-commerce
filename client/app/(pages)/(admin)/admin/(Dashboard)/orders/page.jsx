@@ -35,16 +35,7 @@ function formatPhoneForWhatsApp(phone) {
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
-  const formatter = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Africa/Algiers',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23'
-  });
-  return formatter.format(d);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 function StatusSelect({ value, onChange }) {

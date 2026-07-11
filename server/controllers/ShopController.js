@@ -862,7 +862,7 @@ export const GetOrders = async (req, res) => {
         o.delivery_Price,
         o.free_delivery,
         o.current_status,
-        o.created_at,
+        DATE_FORMAT(DATE_ADD(o.created_at, INTERVAL 1 HOUR), '%Y-%m-%dT%H:%i:%s+01:00') AS created_at,
         oi.id AS item_id,
         oi.quantity,
         oi.color_name,
