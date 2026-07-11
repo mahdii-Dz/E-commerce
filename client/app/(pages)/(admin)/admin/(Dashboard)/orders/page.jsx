@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 50;
 
 const STATUSES = [
   { value: 'new', label: 'جديد', color: '#6366F1', icon: Clock },
@@ -309,6 +309,51 @@ export default function OrdersPage() {
     }
     return pages;
   };
+
+  const renderPagination = (isTop) => (
+    <footer className={`flex items-center justify-between ${isTop ? 'mb-4' : 'mt-6 pt-4 border-t border-gray-200'}`}>
+      <span className="text-sm text-gray-600">
+        عرض {filteredOrders.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredOrders.length)} من {filteredOrders.length} طلب
+      </span>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => goToPage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="inline-flex cursor-pointer items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight size={18} />
+          <span>السابق</span>
+        </button>
+
+        <div className="flex gap-1">
+          {getPageNumbers().map((page, index) => (
+            <div key={index}>
+              {page === '...' ? (
+                <span className="w-8 h-8 flex items-center justify-center text-gray-600">...</span>
+              ) : (
+                <button
+                  onClick={() => goToPage(page)}
+                  className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${currentPage === page ? 'bg-[#FA3145] text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {page}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages || totalPages === 0}
+          className="inline-flex cursor-pointer items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <span>التالي</span>
+          <ChevronLeft size={18} />
+        </button>
+      </div>
+    </footer>
+  );
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -690,9 +735,8 @@ export default function OrdersPage() {
             )}
           </div>
         </div>
-
-        <div>
-          <div ref={scrollRef} onScroll={updateScrollButtons} className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 max-w-full" style={{ boxSizing: 'border-box' }}>
+        {renderPagination(true)}
+        <div ref={scrollRef} onScroll={updateScrollButtons} className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 max-w-full" style={{ boxSizing: 'border-box' }}>
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
@@ -974,50 +1018,8 @@ export default function OrdersPage() {
               </div>
             )}
           </div>
-        </div>
 
-        <footer className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-          <span className="text-sm text-gray-600">
-            عرض {filteredOrders.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredOrders.length)} من {filteredOrders.length} طلب
-          </span>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="inline-flex cursor-pointer items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <ChevronRight size={18} />
-              <span>السابق</span>
-            </button>
-
-            <div className="flex gap-1">
-              {getPageNumbers().map((page, index) => (
-                <div key={index}>
-                  {page === '...' ? (
-                    <span className="w-8 h-8 flex items-center justify-center text-gray-600">...</span>
-                  ) : (
-                    <button
-                      onClick={() => goToPage(page)}
-                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${currentPage === page ? 'bg-[#FA3145] text-white' : 'text-gray-600 hover:bg-gray-100'}`}
-                    >
-                      {page}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className="inline-flex cursor-pointer items-center gap-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <span>التالي</span>
-              <ChevronLeft size={18} />
-            </button>
-          </div>
-        </footer>
+        {renderPagination(false)}
       </div>
 
       {/* View Modal */}
