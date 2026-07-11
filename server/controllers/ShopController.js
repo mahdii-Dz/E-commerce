@@ -68,6 +68,12 @@ const validateId = (id) => {
   return !isNaN(num) && num > 0 ? num : null;
 };
 
+function generateOrderNumber() {
+  const p1 = Math.random().toString(16).substring(2, 10).toUpperCase();
+  const p2 = Math.random().toString(16).substring(2, 8).toUpperCase();
+  return `${p1}-${p2}`;
+}
+
 const handleDbError = (res, error, context) => {
   console.error(`Error ${context}:`, error);
   return res.status(500).json({ error: `Error ${context}: ${error.message}` });
@@ -760,6 +766,7 @@ export const AddOrder = async (req, res) => {
       baladiya,
       delivery_type,
       delivery_Price,
+      free_delivery,
       items,
     } = req.body;
 
@@ -779,8 +786,8 @@ export const AddOrder = async (req, res) => {
     const orderInfo = await execute(
       `INSERT INTO order_info
        (first_name, last_name, phone, wilaya, baladiya,
-        delivery_type, delivery_Price, wilaya_code)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        delivery_type, delivery_Price, free_delivery, wilaya_code, current_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
       [
         first_name.trim(),
         last_name ? last_name.trim() : null,
@@ -789,6 +796,7 @@ export const AddOrder = async (req, res) => {
         baladiya,
         delivery_type,
         delivery_Price || 0,
+        free_delivery ? 1 : 0,
         wilaya_code
       ]
     );
@@ -803,6 +811,12 @@ export const AddOrder = async (req, res) => {
     if (!orderId || orderId === 0) {
       return res.status(500).json({ error: "Failed to retrieve order ID" });
     }
+
+    const orderNumber = generateOrderNumber();
+    await execute(
+      'UPDATE order_info SET order_number = ? WHERE id = ?',
+      [orderNumber, orderId]
+    );
 
     for (const item of items) {
       await execute(
@@ -823,7 +837,8 @@ export const AddOrder = async (req, res) => {
 
     return res.status(201).json({
       message: "Order created successfully",
-      orderId: orderId
+      orderId: orderId,
+      orderNumber: orderNumber
     });
   } catch (error) {
     return handleDbError(res, error, "creating order");
@@ -835,6 +850,7 @@ export const GetOrders = async (req, res) => {
     const rows = await query(`
       SELECT
         o.id AS order_id,
+        o.order_number,
         o.first_name,
         o.last_name,
         o.phone,
@@ -844,7 +860,10 @@ export const GetOrders = async (req, res) => {
         o.wilaya_code,
         o.delivery_type,
         o.delivery_Price,
-        o.status,
+        o.free_delivery,
+        o.current_status,
+        o.created_at,
+        oi.id AS item_id,
         oi.quantity,
         oi.color_name,
         oi.color_hex,
@@ -857,7 +876,6 @@ export const GetOrders = async (req, res) => {
         order_info o
         JOIN order_items oi ON o.id = oi.order_id
         JOIN products p ON oi.product_id = p.id 
-        WHERE o.status = 'pending'
       ORDER BY o.id DESC
     `);
 
@@ -873,6 +891,7 @@ export const GetOrders = async (req, res) => {
       if (!ordersMap.has(orderId)) {
         ordersMap.set(orderId, {
           order_id: orderId,
+          order_number: row.order_number,
           first_name: row.first_name,
           last_name: row.last_name,
           phone: row.phone,
@@ -882,7 +901,9 @@ export const GetOrders = async (req, res) => {
           wilaya_code: row.wilaya_code,
           delivery_type: row.delivery_type,
           delivery_Price: Number(row.delivery_Price) || 0,
-          status: row.status,
+          free_delivery: row.free_delivery === 1 || row.free_delivery === true,
+          current_status: row.current_status || 'new',
+          created_at: row.created_at,
           items: [],
           totalPrice: 0
         });
@@ -894,6 +915,7 @@ export const GetOrders = async (req, res) => {
       let item = order.items.find(i => i.product_id === row.product_id && i.offer_text === (row.offer_text || ''));
       if (!item) {
         item = {
+          item_id: row.item_id,
           product_id: row.product_id,
           product_name: row.product_name,
           quantity: 0,
@@ -920,7 +942,7 @@ export const GetOrders = async (req, res) => {
     // Calculate total price for each order
     for (const order of ordersMap.values()) {
       const subtotal = order.items.reduce((sum, item) => sum + Number(item.fullPrice), 0);
-      order.totalPrice = subtotal + Number(order.delivery_Price || 0);
+      order.totalPrice = subtotal + (order.free_delivery ? 0 : Number(order.delivery_Price || 0));
     }
 
     const groupedOrders = Array.from(ordersMap.values());
@@ -947,21 +969,20 @@ export const UpdateOrder = async (req, res) => {
       baladiya,
       delivery_type,
       delivery_Price,
-      wilaya_code
+      free_delivery,
+      wilaya_code,
+      current_status,
+      items
     } = req.body;
 
-    // Check if order exists and is pending
+    // Check if order exists
     const orderCheck = await query(
-      "SELECT status FROM order_info WHERE id = ?",
+      "SELECT id FROM order_info WHERE id = ?",
       [orderId]
     );
 
     if (!orderCheck || orderCheck.length === 0) {
       return res.status(404).json({ error: "Order not found" });
-    }
-
-    if (orderCheck[0].status !== 'pending') {
-      return res.status(403).json({ error: "Only pending orders can be edited" });
     }
 
     // Build update query dynamically
@@ -970,7 +991,8 @@ export const UpdateOrder = async (req, res) => {
 
     const allowedFields = [
       'first_name', 'last_name', 'phone', 'wilaya',
-      'baladiya', 'delivery_type', 'delivery_Price', 'wilaya_code'
+      'baladiya', 'delivery_type', 'delivery_Price',
+      'free_delivery', 'wilaya_code', 'current_status'
     ];
 
     allowedFields.forEach(field => {
@@ -981,17 +1003,42 @@ export const UpdateOrder = async (req, res) => {
       }
     });
 
-    if (updates.length === 0) {
-      return res.status(400).json({ error: "No fields to update" });
+    if (updates.length > 0) {
+      values.push(orderId);
+      await execute(
+        `UPDATE order_info SET ${updates.join(', ')} WHERE id = ?`,
+        values
+      );
     }
 
-    values.push(orderId);
+    // Delete and re-insert order items if provided
+    if (Array.isArray(items) && items.length > 0) {
+      await execute('DELETE FROM order_items WHERE order_id = ?', [orderId]);
 
-    // Execute update — if no error, it succeeded
-    await execute(
-      `UPDATE order_info SET ${updates.join(', ')} WHERE id = ?`,
-      values
-    );
+      for (const item of items) {
+        const rows = (item.colors && item.colors.length > 0) ? item.colors : [{
+          color_name: item.color_name || null,
+          color_hex: item.color_hex || null,
+          quantity: item.quantity
+        }];
+
+        for (const row of rows) {
+          await execute(
+            `INSERT INTO order_items (order_id, product_id, quantity, price_per_unit, color_name, color_hex, offer_text)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              orderId,
+              item.product_id,
+              row.quantity,
+              item.price_per_unit,
+              row.color_name || null,
+              row.color_hex || null,
+              item.offer_text || null
+            ]
+          );
+        }
+      }
+    }
 
     return res.status(200).json({ message: "Order updated successfully" });
   } catch (error) {
@@ -1008,9 +1055,9 @@ export const AcceptOrder = async (req, res) => {
       return res.status(400).json({ error: "Invalid order ID" });
     }
 
-    // Verify order exists and get current status
+    // Verify order exists
     const orderCheck = await query(
-      "SELECT id, status FROM order_info WHERE id = ?",
+      "SELECT id FROM order_info WHERE id = ?",
       [orderId]
     );
 
@@ -1018,13 +1065,8 @@ export const AcceptOrder = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    // Prevent re-accepting already accepted orders
-    if (orderCheck[0].status === 'accepted') {
-      return res.status(409).json({ error: "Order is already accepted" });
-    }
-
     await execute(
-      "UPDATE order_info SET status = 'accepted' WHERE id = ?",
+      "UPDATE order_info SET current_status = 'confirmed' WHERE id = ?",
       [orderId]
     );
 
@@ -1045,7 +1087,7 @@ export const RejectOrder = async (req, res) => {
 
     // Verify order exists first
     const orderCheck = await query(
-      "SELECT id, status FROM order_info WHERE id = ?",
+      "SELECT id FROM order_info WHERE id = ?",
       [orderId]
     );
 
@@ -1053,15 +1095,8 @@ export const RejectOrder = async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    const currentStatus = orderCheck[0].status;
-    
-    // Prevent rejecting already rejected orders
-    if (currentStatus === 'rejected') {
-      return res.status(409).json({ error: "Order is already rejected" });
-    }
-
     await execute(
-      "UPDATE order_info SET status = 'rejected' WHERE id = ?",
+      "UPDATE order_info SET current_status = 'ملغي من المتجر' WHERE id = ?",
       [orderId]
     );
 
@@ -1404,7 +1439,7 @@ export const GetDashboardStats = async (req, res) => {
       `SELECT SUM(oi.quantity) AS total_sold_products
        FROM order_items oi
        JOIN order_info o ON oi.order_id = o.id
-       WHERE o.status = 'completed'`
+       WHERE o.current_status = 'تم التوصيل'`
     );
     
     // Get bar chart data

@@ -9,58 +9,113 @@ async function migrate() {
     console.log('Connecting to TiDB...');
     
 
+    
 
-    // Make last_name nullable in order_info
-    const checkLastNameRows = await conn.execute('SHOW COLUMNS FROM order_info LIKE ?', ['last_name']);
-    const hasLastName = Array.isArray(checkLastNameRows) && checkLastNameRows.length > 0;
-    if (hasLastName) {
-      const lastCol = checkLastNameRows[0];
-      if (lastCol.Null === 'NO') {
-        console.log('Making last_name nullable...');
-        await conn.execute(`ALTER TABLE order_info MODIFY last_name VARCHAR(255) NULL`);
-        console.log('  ✓ last_name is now nullable');
-      } else {
-        console.log('  - last_name already nullable, skipping');
+    // ============ ORDERS TABLE MIGRATION ============
+
+    // Add order_number column to order_info (UNIQUE added separately since TiDB doesn't support it in ADD COLUMN)
+    const checkOrderNumberRows = await conn.execute('SHOW COLUMNS FROM order_info LIKE ?', ['order_number']);
+    const hasOrderNumber = Array.isArray(checkOrderNumberRows) && checkOrderNumberRows.length > 0;
+    if (!hasOrderNumber) {
+      console.log('Adding order_number column to order_info...');
+      await conn.execute('ALTER TABLE order_info ADD COLUMN order_number VARCHAR(20) AFTER id');
+      console.log('  ✓ order_number column added');
+
+      // Add unique index on order_number separately
+      console.log('Adding unique index on order_number...');
+      try {
+        await conn.execute('ALTER TABLE order_info ADD UNIQUE INDEX idx_order_number (order_number)');
+        console.log('  ✓ unique index added');
+      } catch (err) {
+        console.log(`  - Could not add unique index: ${err.message}`);
       }
     } else {
-      console.log('  - last_name column not found in order_info, skipping');
-    }
-
-    // Add compare_price column to products table
-    const checkComparePriceRows = await conn.execute('SHOW COLUMNS FROM products LIKE ?', ['compare_price']);
-    const hasComparePrice = Array.isArray(checkComparePriceRows) && checkComparePriceRows.length > 0;
-    if (!hasComparePrice) {
-      console.log('Adding compare_price column to products...');
-      await conn.execute('ALTER TABLE products ADD COLUMN compare_price DECIMAL(10,2) DEFAULT 0 AFTER price');
-      console.log('  ✓ compare_price column added');
-    } else {
-      console.log('  - compare_price already exists, skipping');
-    }
-
-    // Add landing_page_image column to products table
-    const checkLandingPageImageRows = await conn.execute('SHOW COLUMNS FROM products LIKE ?', ['landing_page_image']);
-    const hasLandingPageImage = Array.isArray(checkLandingPageImageRows) && checkLandingPageImageRows.length > 0;
-    if (!hasLandingPageImage) {
-      console.log('Adding landing_page_image column to products...');
-      await conn.execute('ALTER TABLE products ADD COLUMN landing_page_image VARCHAR(500) DEFAULT NULL AFTER images');
-      console.log('  ✓ landing_page_image column added');
-    } else {
-      console.log('  - landing_page_image already exists, skipping');
-    }
-
-    // Enlarge big_description column to MEDIUMTEXT for rich HTML content
-    const checkBigDescriptionRows = await conn.execute('SHOW COLUMNS FROM products LIKE ?', ['big_description']);
-    const hasBigDescription = Array.isArray(checkBigDescriptionRows) && checkBigDescriptionRows.length > 0;
-    if (hasBigDescription) {
-      const col = checkBigDescriptionRows[0];
-      const currentType = col.Type || '';
-      if (currentType.toLowerCase() === 'text') {
-        console.log('Enlarging big_description to MEDIUMTEXT...');
-        await conn.execute('ALTER TABLE products MODIFY big_description MEDIUMTEXT');
-        console.log('  ✓ big_description is now MEDIUMTEXT');
+      console.log('  - order_number already exists, checking unique index...');
+      const checkUniqueRows = await conn.execute('SHOW INDEX FROM order_info WHERE Column_name = ?', ['order_number']);
+      const hasUniqueIndex = Array.isArray(checkUniqueRows) && checkUniqueRows.length > 0;
+      if (!hasUniqueIndex) {
+        console.log('Adding unique index on order_number...');
+        try {
+          await conn.execute('ALTER TABLE order_info ADD UNIQUE INDEX idx_order_number (order_number)');
+          console.log('  ✓ unique index added');
+        } catch (err) {
+          console.log(`  - Could not add unique index: ${err.message}`);
+        }
       } else {
-        console.log(`  - big_description is already ${currentType}, skipping`);
+        console.log('  - unique index already exists, skipping');
       }
+    }
+
+    // Add current_status column to order_info (after status)
+    const checkCurrentStatusRows = await conn.execute('SHOW COLUMNS FROM order_info LIKE ?', ['current_status']);
+    const hasCurrentStatus = Array.isArray(checkCurrentStatusRows) && checkCurrentStatusRows.length > 0;
+    if (!hasCurrentStatus) {
+      console.log('Adding current_status column to order_info...');
+      await conn.execute("ALTER TABLE order_info ADD COLUMN current_status VARCHAR(50) DEFAULT 'new' AFTER status");
+      console.log('  ✓ current_status column added');
+    } else {
+      console.log('  - current_status already exists, skipping');
+    }
+
+    // Backfill existing orders with order_number and migrate status
+    const existingOrders = await conn.execute('SELECT id FROM order_info WHERE order_number IS NULL');
+    const ordersToMigrate = Array.isArray(existingOrders) ? existingOrders : (existingOrders[0] || []);
+    
+    if (ordersToMigrate.length > 0) {
+      console.log(`Backfilling ${ordersToMigrate.length} orders...`);
+      
+      for (const order of ordersToMigrate) {
+        const id = order.id || order;
+        // Generate random order number: 8 hex chars - 6 hex chars
+        const p1 = Math.random().toString(16).substring(2, 10).toUpperCase();
+        const p2 = Math.random().toString(16).substring(2, 8).toUpperCase();
+        const orderNumber = `${p1}-${p2}`;
+        
+        await conn.execute(
+          'UPDATE order_info SET order_number = ? WHERE id = ?',
+          [orderNumber, id]
+        );
+      }
+      
+      // Migrate old status values to current_status (only if status column still exists)
+      const checkOldStatus = await conn.execute('SHOW COLUMNS FROM order_info LIKE ?', ['status']);
+      const hasOldStatus = Array.isArray(checkOldStatus) && checkOldStatus.length > 0;
+      if (hasOldStatus) {
+        await conn.execute("UPDATE order_info SET current_status = 'new' WHERE status = 'pending' AND current_status = 'new'");
+        await conn.execute("UPDATE order_info SET current_status = 'confirmed' WHERE status = 'accepted'");
+        await conn.execute("UPDATE order_info SET current_status = 'ملغي من المتجر' WHERE status = 'rejected'");
+        await conn.execute("UPDATE order_info SET current_status = 'تم التوصيل' WHERE status = 'completed'");
+      }
+      
+      console.log('  ✓ Orders backfilled with order numbers and current_status');
+    } else {
+      console.log('  - All orders already have order numbers, skipping backfill');
+    }
+
+    // Drop old status column
+    const checkStatusRows = await conn.execute('SHOW COLUMNS FROM order_info LIKE ?', ['status']);
+    const hasStatus = Array.isArray(checkStatusRows) && checkStatusRows.length > 0;
+    if (hasStatus) {
+      console.log('Dropping old status column...');
+      try {
+        await conn.execute('ALTER TABLE order_info DROP COLUMN status');
+        console.log('  ✓ status column dropped');
+      } catch (err) {
+        console.log(`  - Could not drop status column: ${err.message}`);
+      }
+    } else {
+      console.log('  - status column already removed, skipping');
+    }
+
+    // ============ FREE DELIVERY COLUMN ============
+    const checkFreeDeliveryRows = await conn.execute('SHOW COLUMNS FROM order_info LIKE ?', ['free_delivery']);
+    const hasFreeDelivery = Array.isArray(checkFreeDeliveryRows) && checkFreeDeliveryRows.length > 0;
+    if (!hasFreeDelivery) {
+      console.log('Adding free_delivery column to order_info...');
+      await conn.execute("ALTER TABLE order_info ADD COLUMN free_delivery BOOLEAN DEFAULT 0 AFTER delivery_Price");
+      console.log('  ✓ free_delivery column added');
+    } else {
+      console.log('  - free_delivery already exists, skipping');
     }
 
     console.log('\nMigration completed successfully!');
