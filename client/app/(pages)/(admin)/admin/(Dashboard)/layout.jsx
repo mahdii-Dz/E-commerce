@@ -70,7 +70,7 @@ export default function RootLayout({ children }) {
                     {/* Main content area */}
                     <main
                         className={`
-                            flex-1
+                            flex-1 min-w-0
                             ${sidebarCollapsed ? 'md:mr-20' : 'md:mr-64'}
                             mr-0
                             w-full
