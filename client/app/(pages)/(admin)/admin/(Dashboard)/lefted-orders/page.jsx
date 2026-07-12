@@ -609,11 +609,12 @@ export default function LeftedOrdersPage() {
                           {(() => {
                             const ppu = Number(order.price_per_unit || order.product_price || 0);
                             const offer = order.offer_text;
-                            let total = ppu * Number(order.quantity || 1);
+                            let productTotal = ppu * Number(order.quantity || 1);
                             if (offer) {
                               const match = offer.match(/(\d+)\s*for\s*(\d+)/);
-                              if (match) total = Number(match[2]);
+                              if (match) productTotal = Number(match[2]);
                             }
+                            const total = productTotal + Number(order.delivery_price || 0);
                             return total.toFixed(2);
                           })()} دج
                         </td>
@@ -674,11 +675,12 @@ export default function LeftedOrdersPage() {
                             {(() => {
                               const ppu = Number(order.price_per_unit || order.product_price || 0);
                               const offer = order.offer_text;
-                              let total = ppu * Number(order.quantity || 1);
+                              let productTotal = ppu * Number(order.quantity || 1);
                               if (offer) {
                                 const match = offer.match(/(\d+)\s*for\s*(\d+)/);
-                                if (match) total = Number(match[2]);
+                                if (match) productTotal = Number(match[2]);
                               }
+                              const total = productTotal + Number(order.delivery_price || 0);
                               return total.toFixed(2);
                             })()} دج
                           </span>
