@@ -48,6 +48,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     const successModalRef = useRef(null);
     const leftedTimerRef = useRef(null);
     const submittedRef = useRef(false);
+    const hasSavedOnce = useRef(false);
 
     // Initialize colorQuantities when colors change
     useEffect(() => {
@@ -93,11 +94,19 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         };
     }, [showSuccess]);
 
-    // Save lefted order immediately after 20s of stable phone entry
+
+    // Effective price based on selected offer
+    const effectivePrice = useMemo(() => {
+        if (!selectedOffer) return productPrice;
+        return selectedOffer.price / selectedOffer.quantity;
+    }, [selectedOffer, productPrice]);
+
+    // Save / update lefted order when form fields change
     useEffect(() => {
         const digits = formData.phoneNumber.replace(/[^\d]/g, '');
         if (digits.length >= 8 && !submittedRef.current) {
             if (leftedTimerRef.current) clearTimeout(leftedTimerRef.current);
+            const debounceMs = hasSavedOnce.current ? 2000 : 20000;
             leftedTimerRef.current = setTimeout(async () => {
                 const colorsArr = colors.length > 0
                   ? colors
@@ -132,24 +141,22 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                         body: JSON.stringify(payload),
                     });
                     const data = await res.json();
-                    if (data.id) setLeftedOrderId(data.id);
+                    if (data.id) {
+                        setLeftedOrderId(data.id);
+                        hasSavedOnce.current = true;
+                    }
                 } catch (err) {
                     // silent
                 }
-            }, 20000);
+            }, debounceMs);
         } else if (digits.length < 8) {
             setLeftedOrderId(null);
+            hasSavedOnce.current = false;
         }
         return () => {
             if (leftedTimerRef.current) clearTimeout(leftedTimerRef.current);
         };
-    }, [formData.phoneNumber]);
-
-    // Effective price based on selected offer
-    const effectivePrice = useMemo(() => {
-        if (!selectedOffer) return productPrice;
-        return selectedOffer.price / selectedOffer.quantity;
-    }, [selectedOffer, productPrice]);
+    }, [formData.phoneNumber, formData.wilaya, formData.baladiya, formData.delivery, formData.firstName, formData.lastName, colorQuantities, selectedOffer, colors, deliveryPrice, effectivePrice, productId, productName]);
 
     // Total allocated quantity across colors
     const totalAllocated = useMemo(() => {
