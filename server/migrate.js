@@ -7,6 +7,13 @@ async function migrate() {
   
   try {
     console.log('Connecting to TiDB...');
+
+    // ============ CLEANUP ORPHAN ORDERS ============
+    console.log('Deleting orphan orders (no order_number)...');
+    const orphanResult = await conn.execute("DELETE FROM order_info WHERE order_number IS NULL OR order_number = ''");
+    const orphanData = Array.isArray(orphanResult) ? orphanResult[0] : orphanResult;
+    const orphanCount = orphanData?.affectedRows || orphanData?.rowsAffected || orphanData?.numRows || 0;
+    console.log(`  ✓ Deleted ${orphanCount} orphan order(s)`);
     
 
     

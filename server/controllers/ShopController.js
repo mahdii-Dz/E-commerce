@@ -756,6 +756,7 @@ export const DeleteProduct = async (req, res) => {
 // ==================== ORDER CONTROLLERS ====================
 
 export const AddOrder = async (req, res) => {
+  let orderId = null;
   try {
     const {
       first_name,
@@ -783,11 +784,13 @@ export const AddOrder = async (req, res) => {
       }
     }
 
+    const orderNumber = generateOrderNumber();
+
     const orderInfo = await execute(
       `INSERT INTO order_info
        (first_name, last_name, phone, wilaya, baladiya,
-        delivery_type, delivery_Price, free_delivery, wilaya_code, current_status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')`,
+        delivery_type, delivery_Price, free_delivery, wilaya_code, current_status, order_number)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)`,
       [
         first_name.trim(),
         last_name ? last_name.trim() : null,
@@ -797,26 +800,16 @@ export const AddOrder = async (req, res) => {
         delivery_type,
         delivery_Price || 0,
         free_delivery ? 1 : 0,
-        wilaya_code
+        wilaya_code,
+        orderNumber
       ]
     );
 
-    let orderId = orderInfo.insertId;
-    
-    if (!orderId || orderId === 0) {
-      const lastIdResult = await query('SELECT LAST_INSERT_ID() as id');
-      orderId = lastIdResult && lastIdResult[0] ? lastIdResult[0].id : 0;
-    }
+    orderId = orderInfo.insertId;
     
     if (!orderId || orderId === 0) {
       return res.status(500).json({ error: "Failed to retrieve order ID" });
     }
-
-    const orderNumber = generateOrderNumber();
-    await execute(
-      'UPDATE order_info SET order_number = ? WHERE id = ?',
-      [orderNumber, orderId]
-    );
 
     for (const item of items) {
       await execute(
@@ -841,6 +834,9 @@ export const AddOrder = async (req, res) => {
       orderNumber: orderNumber
     });
   } catch (error) {
+    if (orderId) {
+      try { await execute('DELETE FROM order_info WHERE id = ?', [orderId]); } catch (_) {}
+    }
     return handleDbError(res, error, "creating order");
   }
 };
@@ -1431,7 +1427,7 @@ export const GetDashboardStats = async (req, res) => {
     
     // Get total orders
     const totalOrdersResult = await query(
-      "SELECT COUNT(*) AS total_orders FROM order_info"
+      "SELECT COUNT(*) AS total_orders FROM order_info WHERE order_number IS NOT NULL"
     );
     
     // Get total sold products
@@ -1466,6 +1462,7 @@ export const GetDashboardStats = async (req, res) => {
     const wilayaStats = await query(`
       SELECT wilaya, COUNT(*) AS totalOrders
       FROM order_info
+      WHERE order_number IS NOT NULL
       GROUP BY wilaya
       ORDER BY totalOrders DESC
       LIMIT 10
