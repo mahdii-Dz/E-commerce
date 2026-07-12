@@ -61,6 +61,7 @@ export default function LeftedOrdersPage() {
   const [editForm, setEditForm] = useState({
     first_name: '', last_name: '', phone: '',
     wilaya: 'Alger', baladiya: '', delivery_type: 'domicile',
+    delivery_price: 0,
   });
   const [editItems, setEditItems] = useState([]);
   const [productColorsMap, setProductColorsMap] = useState({});
@@ -261,6 +262,7 @@ export default function LeftedOrdersPage() {
       wilaya: order.wilaya || 'Alger',
       baladiya,
       delivery_type: order.delivery_type || 'domicile',
+      delivery_price: Number(order.delivery_price) || 0,
     });
     const items = [{
       product_id: order.product_id,
@@ -378,6 +380,18 @@ export default function LeftedOrdersPage() {
     const code = Object.keys(wilayaData).find(key => wilayaData[key].name === editForm.wilaya);
     return code ? (wilayaData[code]?.municipalities || []) : [];
   }, [editForm.wilaya]);
+
+  // Auto-calculate delivery price when wilaya or delivery type changes
+  useEffect(() => {
+    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === editForm.wilaya);
+    if (code) {
+      const wilayaInfo = wilayaData[code];
+      const autoPrice = editForm.delivery_type === 'domicile'
+        ? (wilayaInfo.domicilePrice || 0)
+        : (wilayaInfo.stopDeskPrice || 0);
+      setEditForm(prev => ({ ...prev, delivery_price: autoPrice }));
+    }
+  }, [editForm.wilaya, editForm.delivery_type]);
 
   const handleSaveEdit = async () => {
     const item = editItems[0];
@@ -796,6 +810,7 @@ export default function LeftedOrdersPage() {
                 <div><span className="text-gray-500">الولاية: </span><span>{viewingOrder.wilaya}</span></div>
                 <div><span className="text-gray-500">البلدية: </span><span>{viewingOrder.baladiya || '-'}</span></div>
                 <div><span className="text-gray-500">التوصيل: </span><span>{viewingOrder.delivery_type === 'domicile' ? 'توصيل للمنزل' : 'استلام من المكتب'}</span></div>
+                <div><span className="text-gray-500">سعر التوصيل: </span><span>{Number(viewingOrder.delivery_price || 0).toFixed(2)} دج</span></div>
               </div>
               <hr className="border-gray-200" />
               <div><span className="text-gray-500">التاريخ: </span><span>{formatDate(viewingOrder.created_at)}</span></div>
@@ -875,6 +890,15 @@ export default function LeftedOrdersPage() {
                       <SelectItem value="stopDesk">استلام من المكتب</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">سعر التوصيل (دج)</label>
+                  <Input
+                    type="number"
+                    value={editForm.delivery_price}
+                    onChange={(e) => setEditForm({ ...editForm, delivery_price: Number(e.target.value) })}
+                    className="w-full h-11"
+                  />
                 </div>
               </div>
 

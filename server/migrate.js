@@ -147,6 +147,7 @@ async function migrate() {
           color_name VARCHAR(255) DEFAULT '',
           color_hex VARCHAR(100) DEFAULT '',
           colors TEXT DEFAULT NULL,
+          delivery_price DECIMAL(10,2) DEFAULT 0,
           offer_text VARCHAR(255) DEFAULT '',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -157,6 +158,20 @@ async function migrate() {
 
       try { await conn.execute("ALTER TABLE lefted_orders MODIFY COLUMN color_name VARCHAR(255) DEFAULT ''"); console.log('  ✓ color_name widened'); } catch (_) {}
       try { await conn.execute("ALTER TABLE lefted_orders MODIFY COLUMN color_hex VARCHAR(100) DEFAULT ''"); console.log('  ✓ color_hex widened'); } catch (_) {}
+
+      const checkDeliveryPrice = await conn.execute("SHOW COLUMNS FROM lefted_orders LIKE 'delivery_price'");
+      const hasDeliveryPrice = Array.isArray(checkDeliveryPrice) && checkDeliveryPrice.length > 0;
+      if (!hasDeliveryPrice) {
+        console.log('Adding delivery_price column...');
+        try {
+          await conn.execute("ALTER TABLE lefted_orders ADD COLUMN delivery_price DECIMAL(10,2) DEFAULT 0 AFTER colors");
+          console.log('  ✓ delivery_price column added');
+        } catch (err) {
+          console.log(`  - Could not add delivery_price column: ${err.message}`);
+        }
+      } else {
+        console.log('  - delivery_price already exists, skipping');
+      }
     }
 
     const checkColorsColumn = await conn.execute("SHOW COLUMNS FROM lefted_orders LIKE 'colors'");

@@ -1503,7 +1503,7 @@ export const GetDashboardStats = async (req, res) => {
 
 export const AddLeftedOrder = async (req, res) => {
   try {
-    const { phone, first_name, last_name, wilaya, wilaya_code, baladiya, delivery_type, product_id, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text } = req.body;
+    const { phone, first_name, last_name, wilaya, wilaya_code, baladiya, delivery_type, product_id, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text, delivery_price } = req.body;
 
     if (!phone) {
       return res.status(400).json({ error: "Phone number is required" });
@@ -1517,6 +1517,7 @@ export const AddLeftedOrder = async (req, res) => {
     const finalColorName = colorsArr ? colorsArr.map(c => c.name).filter(Boolean).join(', ') : (color_name || '');
     const finalColorHex = colorsArr ? colorsArr.map(c => c.hex).filter(Boolean).join(',') : (color_hex || '');
     const finalQuantity = colorsArr ? colorsArr.reduce((s, c) => s + (Number(c.quantity) || 0), 0) : (quantity || 1);
+    const finalDeliveryPrice = Number(delivery_price) || 0;
 
     const existing = await query(
       "SELECT id FROM lefted_orders WHERE phone = ? AND created_at > NOW() - INTERVAL 1 DAY",
@@ -1528,14 +1529,14 @@ export const AddLeftedOrder = async (req, res) => {
         `UPDATE lefted_orders SET
          first_name = ?, last_name = ?, wilaya = ?, wilaya_code = ?, baladiya = ?,
          delivery_type = ?, product_id = ?, product_name = ?, product_price = ?,
-         quantity = ?, color_name = ?, color_hex = ?, colors = ?, offer_text = ?,
+         quantity = ?, color_name = ?, color_hex = ?, colors = ?, delivery_price = ?, offer_text = ?,
          created_at = CURRENT_TIMESTAMP
          WHERE phone = ?`,
         [
           first_name || '', last_name || '', wilaya || '', wilaya_code || '', baladiya || '',
           delivery_type || 'domicile', product_id || null, product_name || '',
           price_per_unit || product_price || 0, finalQuantity,
-          finalColorName, finalColorHex, colorsJson, offer_text || '', phone
+          finalColorName, finalColorHex, colorsJson, finalDeliveryPrice, offer_text || '', phone
         ]
       );
       return res.status(200).json({ message: "Lefted order updated", id: existing[0].id });
@@ -1544,8 +1545,9 @@ export const AddLeftedOrder = async (req, res) => {
     const result = await execute(
       `INSERT INTO lefted_orders
        (phone, first_name, last_name, wilaya, wilaya_code, baladiya, delivery_type,
-        product_id, product_name, product_price, quantity, color_name, color_hex, colors, offer_text)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        product_id, product_name, product_price, quantity, color_name, color_hex, colors,
+        delivery_price, offer_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         phone,
         first_name || '',
@@ -1561,6 +1563,7 @@ export const AddLeftedOrder = async (req, res) => {
         finalColorName,
         finalColorHex,
         colorsJson,
+        finalDeliveryPrice,
         offer_text || '',
       ]
     );
@@ -1574,7 +1577,7 @@ export const AddLeftedOrder = async (req, res) => {
 export const GetLeftedOrders = async (req, res) => {
   try {
     const rows = await query(
-      "SELECT * FROM lefted_orders WHERE created_at <= NOW() - INTERVAL 10 MINUTE ORDER BY created_at DESC"
+      "SELECT * FROM lefted_orders WHERE created_at <= NOW() - INTERVAL 5 MINUTE ORDER BY created_at DESC"
     );
 
     const parsed = (rows || []).map(row => ({
@@ -1591,7 +1594,7 @@ export const GetLeftedOrders = async (req, res) => {
 export const UpdateLeftedOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { first_name, last_name, phone, wilaya, baladiya, delivery_type, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text } = req.body;
+    const { first_name, last_name, phone, wilaya, baladiya, delivery_type, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text, delivery_price } = req.body;
 
     const colorsArr = colors && Array.isArray(colors) && colors.length > 0
       ? colors
@@ -1601,18 +1604,19 @@ export const UpdateLeftedOrder = async (req, res) => {
     const finalColorName = colorsArr ? colorsArr.map(c => c.name).filter(Boolean).join(', ') : (color_name || '');
     const finalColorHex = colorsArr ? colorsArr.map(c => c.hex).filter(Boolean).join(',') : (color_hex || '');
     const finalQuantity = colorsArr ? colorsArr.reduce((s, c) => s + (Number(c.quantity) || 0), 0) : (quantity || 1);
+    const finalDeliveryPrice = Number(delivery_price) || 0;
 
     await execute(
       `UPDATE lefted_orders SET
        first_name = ?, last_name = ?, phone = ?, wilaya = ?, baladiya = ?,
        delivery_type = ?, product_name = ?, product_price = ?, quantity = ?,
-       color_name = ?, color_hex = ?, colors = ?, offer_text = ?
+       color_name = ?, color_hex = ?, colors = ?, delivery_price = ?, offer_text = ?
        WHERE id = ?`,
       [
         first_name || '', last_name || '', phone || '', wilaya || '', baladiya || '',
         delivery_type || 'domicile', product_name || '',
         price_per_unit || product_price || 0, finalQuantity,
-        finalColorName, finalColorHex, colorsJson, offer_text || '', id
+        finalColorName, finalColorHex, colorsJson, finalDeliveryPrice, offer_text || '', id
       ]
     );
 
@@ -1669,6 +1673,7 @@ export const ConvertLeftedOrder = async (req, res) => {
     const lo = leftedRows[0];
 
     const orderNumber = generateOrderNumber();
+    const deliveryPrice = Number(lo.delivery_price) || 0;
     const insertParams = [
       lo.first_name || 'غير محدد',
       lo.last_name || '',
@@ -1676,8 +1681,8 @@ export const ConvertLeftedOrder = async (req, res) => {
       lo.wilaya || '',
       lo.baladiya || '',
       lo.delivery_type || 'domicile',
-      0,
-      0,
+      deliveryPrice,
+      deliveryPrice === 0 ? 1 : 0,
       lo.wilaya_code || 0,
       orderNumber,
     ];

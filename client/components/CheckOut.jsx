@@ -115,6 +115,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                     wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya) || '',
                     baladiya: formData.baladiya,
                     delivery_type: formData.delivery,
+                    delivery_price: deliveryPrice,
                     product_id: productId,
                     product_name: productName,
                     quantity: qty,
