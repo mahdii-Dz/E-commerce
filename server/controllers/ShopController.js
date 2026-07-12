@@ -828,6 +828,11 @@ export const AddOrder = async (req, res) => {
       );
     }
 
+    // Delete all lefted orders with this phone number
+    try {
+      await execute('DELETE FROM lefted_orders WHERE phone = ?', [phone]);
+    } catch (_) {}
+
     return res.status(201).json({
       message: "Order created successfully",
       orderId: orderId,
@@ -1491,5 +1496,265 @@ export const GetDashboardStats = async (req, res) => {
     });
   } catch (error) {
     return handleDbError(res, error, "fetching dashboard stats");
+  }
+};
+
+// ==================== LEFTED ORDERS CONTROLLERS ====================
+
+export const AddLeftedOrder = async (req, res) => {
+  try {
+    const { phone, first_name, last_name, wilaya, wilaya_code, baladiya, delivery_type, product_id, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({ error: "Phone number is required" });
+    }
+
+    const colorsArr = colors && Array.isArray(colors) && colors.length > 0
+      ? colors
+      : (color_name ? [{ name: color_name, hex: color_hex || '', quantity: quantity || 1 }] : null);
+
+    const colorsJson = colorsArr ? JSON.stringify(colorsArr) : null;
+    const finalColorName = colorsArr ? colorsArr.map(c => c.name).filter(Boolean).join(', ') : (color_name || '');
+    const finalColorHex = colorsArr ? colorsArr.map(c => c.hex).filter(Boolean).join(',') : (color_hex || '');
+    const finalQuantity = colorsArr ? colorsArr.reduce((s, c) => s + (Number(c.quantity) || 0), 0) : (quantity || 1);
+
+    const existing = await query(
+      "SELECT id FROM lefted_orders WHERE phone = ? AND created_at > NOW() - INTERVAL 1 DAY",
+      [phone]
+    );
+
+    if (existing && existing.length > 0) {
+      await execute(
+        `UPDATE lefted_orders SET
+         first_name = ?, last_name = ?, wilaya = ?, wilaya_code = ?, baladiya = ?,
+         delivery_type = ?, product_id = ?, product_name = ?, product_price = ?,
+         quantity = ?, color_name = ?, color_hex = ?, colors = ?, offer_text = ?,
+         created_at = CURRENT_TIMESTAMP
+         WHERE phone = ?`,
+        [
+          first_name || '', last_name || '', wilaya || '', wilaya_code || '', baladiya || '',
+          delivery_type || 'domicile', product_id || null, product_name || '',
+          price_per_unit || product_price || 0, finalQuantity,
+          finalColorName, finalColorHex, colorsJson, offer_text || '', phone
+        ]
+      );
+      return res.status(200).json({ message: "Lefted order updated", id: existing[0].id });
+    }
+
+    const result = await execute(
+      `INSERT INTO lefted_orders
+       (phone, first_name, last_name, wilaya, wilaya_code, baladiya, delivery_type,
+        product_id, product_name, product_price, quantity, color_name, color_hex, colors, offer_text)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        phone,
+        first_name || '',
+        last_name || '',
+        wilaya || '',
+        wilaya_code || '',
+        baladiya || '',
+        delivery_type || 'domicile',
+        product_id || null,
+        product_name || '',
+        price_per_unit || product_price || 0,
+        finalQuantity,
+        finalColorName,
+        finalColorHex,
+        colorsJson,
+        offer_text || '',
+      ]
+    );
+
+    return res.status(201).json({ message: "Lefted order saved", id: result.insertId });
+  } catch (error) {
+    return handleDbError(res, error, "saving lefted order");
+  }
+};
+
+export const GetLeftedOrders = async (req, res) => {
+  try {
+    const rows = await query(
+      "SELECT * FROM lefted_orders WHERE created_at <= NOW() - INTERVAL 10 MINUTE ORDER BY created_at DESC"
+    );
+
+    const parsed = (rows || []).map(row => ({
+      ...row,
+      colors: row.colors ? (() => { try { return JSON.parse(row.colors); } catch { return null; } })() : null,
+    }));
+
+    return res.status(200).json(parsed || []);
+  } catch (error) {
+    return handleDbError(res, error, "fetching lefted orders");
+  }
+};
+
+export const UpdateLeftedOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { first_name, last_name, phone, wilaya, baladiya, delivery_type, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text } = req.body;
+
+    const colorsArr = colors && Array.isArray(colors) && colors.length > 0
+      ? colors
+      : (color_name ? [{ name: color_name, hex: color_hex || '', quantity: quantity || 1 }] : null);
+
+    const colorsJson = colorsArr ? JSON.stringify(colorsArr) : null;
+    const finalColorName = colorsArr ? colorsArr.map(c => c.name).filter(Boolean).join(', ') : (color_name || '');
+    const finalColorHex = colorsArr ? colorsArr.map(c => c.hex).filter(Boolean).join(',') : (color_hex || '');
+    const finalQuantity = colorsArr ? colorsArr.reduce((s, c) => s + (Number(c.quantity) || 0), 0) : (quantity || 1);
+
+    await execute(
+      `UPDATE lefted_orders SET
+       first_name = ?, last_name = ?, phone = ?, wilaya = ?, baladiya = ?,
+       delivery_type = ?, product_name = ?, product_price = ?, quantity = ?,
+       color_name = ?, color_hex = ?, colors = ?, offer_text = ?
+       WHERE id = ?`,
+      [
+        first_name || '', last_name || '', phone || '', wilaya || '', baladiya || '',
+        delivery_type || 'domicile', product_name || '',
+        price_per_unit || product_price || 0, finalQuantity,
+        finalColorName, finalColorHex, colorsJson, offer_text || '', id
+      ]
+    );
+
+    return res.status(200).json({ message: "Lefted order updated" });
+  } catch (error) {
+    return handleDbError(res, error, "updating lefted order");
+  }
+};
+
+export const DeleteLeftedOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await execute('DELETE FROM lefted_orders WHERE id = ?', [id]);
+    return res.status(200).json({ message: "Lefted order dismissed" });
+  } catch (error) {
+    return handleDbError(res, error, "deleting lefted order");
+  }
+};
+
+export const DeleteLeftedOrderPublic = async (req, res) => {
+  try {
+    const { id, phone } = req.body;
+
+    if (phone && !id) {
+      await execute('DELETE FROM lefted_orders WHERE phone = ?', [phone]);
+      return res.status(200).json({ message: "All lefted orders deleted for this phone" });
+    }
+
+    if (!id || !phone) {
+      return res.status(400).json({ error: "ID and phone are required" });
+    }
+    const rows = await query('SELECT * FROM lefted_orders WHERE id = ?', [id]);
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    if (rows[0].phone !== phone) {
+      return res.status(403).json({ error: "Phone mismatch" });
+    }
+    await execute('DELETE FROM lefted_orders WHERE id = ?', [id]);
+    return res.status(200).json({ message: "Lefted order deleted" });
+  } catch (error) {
+    return handleDbError(res, error, "deleting lefted order publicly");
+  }
+};
+
+export const ConvertLeftedOrder = async (req, res) => {
+  let orderId = null;
+  try {
+    const { id } = req.params;
+    const leftedRows = await query('SELECT * FROM lefted_orders WHERE id = ?', [id]);
+    if (!leftedRows || leftedRows.length === 0) {
+      return res.status(404).json({ error: "Lefted order not found" });
+    }
+    const lo = leftedRows[0];
+
+    const orderNumber = generateOrderNumber();
+    const insertParams = [
+      lo.first_name || 'غير محدد',
+      lo.last_name || '',
+      lo.phone || '',
+      lo.wilaya || '',
+      lo.baladiya || '',
+      lo.delivery_type || 'domicile',
+      0,
+      0,
+      lo.wilaya_code || 0,
+      orderNumber,
+    ];
+    console.log('[ConvertLeftedOrder] insertParams:', JSON.stringify(insertParams));
+
+    const orderInfo = await execute(
+      `INSERT INTO order_info
+       (first_name, last_name, phone, wilaya, baladiya,
+        delivery_type, delivery_Price, free_delivery, wilaya_code, current_status, order_number)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)`,
+      insertParams
+    );
+
+    orderId = orderInfo.insertId;
+    if (!orderId || orderId === 0) {
+      return res.status(500).json({ error: "Failed to create order" });
+    }
+
+    if (lo.wilaya_code != null && lo.wilaya_code !== '') {
+      try {
+        await execute('UPDATE order_info SET wilaya_code = ? WHERE id = ?', [String(lo.wilaya_code), orderId]);
+      } catch (_) {}
+    }
+
+    let colorsArr = null;
+    try { colorsArr = lo.colors ? JSON.parse(lo.colors) : null; } catch { colorsArr = null; }
+    if (!colorsArr || !Array.isArray(colorsArr) || colorsArr.length === 0) {
+      colorsArr = lo.color_name
+        ? [{ name: lo.color_name, hex: lo.color_hex || '', quantity: lo.quantity || 1 }]
+        : null;
+    }
+
+    if (colorsArr && colorsArr.length > 0) {
+      for (const c of colorsArr) {
+        await execute(
+          `INSERT INTO order_items
+           (order_id, product_id, quantity, price_per_unit, color_name, color_hex, offer_text)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            orderId,
+            lo.product_id,
+            Number(c.quantity) || 1,
+            lo.price_per_unit || lo.product_price || 0,
+            c.name || null,
+            c.hex || null,
+            lo.offer_text || null
+          ]
+        );
+      }
+    } else {
+      await execute(
+        `INSERT INTO order_items
+         (order_id, product_id, quantity, price_per_unit, color_name, color_hex, offer_text)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          orderId,
+          lo.product_id,
+          lo.quantity || 1,
+          lo.price_per_unit || lo.product_price || 0,
+          lo.color_name || null,
+          lo.color_hex || null,
+          lo.offer_text || null
+        ]
+      );
+    }
+
+    await execute('DELETE FROM lefted_orders WHERE id = ?', [id]);
+
+    return res.status(200).json({
+      message: "Order created from lefted order",
+      orderId,
+      orderNumber
+    });
+  } catch (error) {
+    if (orderId) {
+      try { await execute('DELETE FROM order_info WHERE id = ?', [orderId]); } catch (_) {}
+    }
+    return handleDbError(res, error, "converting lefted order");
   }
 };

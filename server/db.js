@@ -56,9 +56,26 @@ export const query = async (sql, params = []) => {
 export const execute = async (sql, params = []) => {
   const conn = await getConnection();
   try {
-    const result = await conn.execute(sql, params);
-
+    const raw = await conn.execute(sql, params);
+    const isInsert = sql.trim().toUpperCase().startsWith('INSERT');
     
+    // The @tidbcloud/serverless v0.3.0 driver returns [] for all mutation queries
+    const isEmptyArray = Array.isArray(raw) && raw.length === 0;
+    
+    if (isEmptyArray) {
+      // Fall back to LAST_INSERT_ID() / ROW_COUNT() to get metadata
+      const metaRaw = await conn.execute('SELECT LAST_INSERT_ID() AS insertId, ROW_COUNT() AS rowCount');
+      const meta = Array.isArray(metaRaw) && Array.isArray(metaRaw[0]) ? metaRaw[0][0] : (Array.isArray(metaRaw) ? metaRaw[0] : metaRaw);
+      
+      return {
+        affectedRows: Number(meta?.rowCount || 0),
+        insertId: isInsert ? Number(meta?.insertId || 0) : 0,
+        changedRows: Number(meta?.rowCount || 0),
+      };
+    }
+
+    const result = Array.isArray(raw) ? raw[0] : raw;
+
     // Normalize the result - handle various response formats
     let affectedRows = 0;
     let insertId = 0;
@@ -89,8 +106,7 @@ export const execute = async (sql, params = []) => {
         changedRows = result.numRows;
       }
     }
-    
-    
+
     return {
       affectedRows,
       insertId,

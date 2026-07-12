@@ -667,14 +667,6 @@ export default function OrdersPage() {
     );
   }
 
-  if (!orders || orders.length === 0) {
-    return (
-      <div className="w-full pt-6 px-9 pb-16 flex items-center justify-center h-96">
-        <p className="text-gray-500">لا توجد طلبات متاحة</p>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full pt-6 px-9 pb-16 relative">
       {toast.show && (

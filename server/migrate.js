@@ -125,6 +125,73 @@ async function migrate() {
       console.log('  - free_delivery already exists, skipping');
     }
 
+    // ============ LEFTED ORDERS TABLE ============
+    const checkLeftedTable = await conn.execute("SHOW TABLES LIKE 'lefted_orders'");
+    const hasLeftedTable = Array.isArray(checkLeftedTable) && checkLeftedTable.length > 0;
+    if (!hasLeftedTable) {
+      console.log('Creating lefted_orders table...');
+      await conn.execute(`
+        CREATE TABLE lefted_orders (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          phone VARCHAR(20) NOT NULL DEFAULT '',
+          first_name VARCHAR(100) DEFAULT '',
+          last_name VARCHAR(100) DEFAULT '',
+          wilaya VARCHAR(100) DEFAULT '',
+          wilaya_code VARCHAR(10) DEFAULT '',
+          baladiya VARCHAR(100) DEFAULT '',
+          delivery_type VARCHAR(20) DEFAULT 'domicile',
+          product_id INT,
+          product_name VARCHAR(255) DEFAULT '',
+          product_price DECIMAL(10,2) DEFAULT 0,
+          quantity INT DEFAULT 1,
+          color_name VARCHAR(255) DEFAULT '',
+          color_hex VARCHAR(100) DEFAULT '',
+          colors TEXT DEFAULT NULL,
+          offer_text VARCHAR(255) DEFAULT '',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('  ✓ lefted_orders table created');
+    } else {
+      console.log('  - lefted_orders already exists, checking column sizes...');
+
+      try { await conn.execute("ALTER TABLE lefted_orders MODIFY COLUMN color_name VARCHAR(255) DEFAULT ''"); console.log('  ✓ color_name widened'); } catch (_) {}
+      try { await conn.execute("ALTER TABLE lefted_orders MODIFY COLUMN color_hex VARCHAR(100) DEFAULT ''"); console.log('  ✓ color_hex widened'); } catch (_) {}
+    }
+
+    const checkColorsColumn = await conn.execute("SHOW COLUMNS FROM lefted_orders LIKE 'colors'");
+    const hasColorsColumn = Array.isArray(checkColorsColumn) && checkColorsColumn.length > 0;
+    if (!hasColorsColumn) {
+      console.log('Adding colors JSON column to lefted_orders...');
+      try {
+        await conn.execute("ALTER TABLE lefted_orders ADD COLUMN colors TEXT DEFAULT NULL AFTER color_hex");
+        console.log('  ✓ colors column added');
+
+        const backfillRows = await conn.execute("SELECT id, color_name, color_hex, quantity FROM lefted_orders WHERE color_name != '' AND colors IS NULL");
+        const backfillData = Array.isArray(backfillRows) ? backfillRows : (backfillRows[0] || []);
+        if (backfillData.length > 0) {
+          console.log(`  Backfilling ${backfillData.length} rows with colors data...`);
+          for (const row of backfillData) {
+            const names = (row.color_name || '').split(/,\s*/).filter(Boolean);
+            const hexes = (row.color_hex || '').split(',').filter(Boolean);
+            const totalQty = Number(row.quantity) || 1;
+            const perQty = Math.floor(totalQty / (names.length || 1));
+            const colorsArr = names.map((name, i) => ({
+              name,
+              hex: hexes[i] || '',
+              quantity: i === names.length - 1 ? totalQty - perQty * (names.length - 1) : perQty
+            }));
+            await conn.execute('UPDATE lefted_orders SET colors = ? WHERE id = ?', [JSON.stringify(colorsArr), row.id]);
+          }
+          console.log('  ✓ existing data backfilled');
+        }
+      } catch (err) {
+        console.log(`  - Could not add colors column: ${err.message}`);
+      }
+    } else {
+      console.log('  - colors column already exists, skipping');
+    }
+
     console.log('\nMigration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error.message);

@@ -1,5 +1,5 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, getBanners, updateBanners, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, getBanners, updateBanners, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic } from '../controllers/ShopController.js';
 import { verifyAdminSession } from '../middleware/sessionAuth.js';
 
 const router = express.Router();
@@ -19,9 +19,19 @@ router.post('/add-product/:id/review', AddUserReview);
 // Customer order placement - public
 router.post('/add-order', AddOrder);
 
+// Lefted orders - public
+router.post('/add-lefted-order', AddLeftedOrder);
+router.post('/delete-lefted-order', DeleteLeftedOrderPublic);
+
 // Protected GET routes - require admin session (expose sensitive data)
 router.get('/get-orders', verifyAdminSession, GetOrders);
 router.get('/get-stats', verifyAdminSession,GetDashboardStats);
+
+// Lefted orders - admin
+router.get('/get-lefted-orders', verifyAdminSession, GetLeftedOrders);
+router.put('/update-lefted-order/:id', verifyAdminSession, UpdateLeftedOrder);
+router.delete('/delete-lefted-order/:id', verifyAdminSession, DeleteLeftedOrder);
+router.post('/convert-lefted-order/:id', verifyAdminSession, ConvertLeftedOrder);
 
 // Protected write routes - require admin session
 router.post('/add-category', verifyAdminSession, AddCategory);
