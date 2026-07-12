@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import axios from 'axios';
 import { wilayaData } from '@/lib/wilayaData';
@@ -116,6 +116,7 @@ const FILTER_TYPES = [
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
+  const [leftedCount, setLeftedCount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -231,6 +232,10 @@ export default function OrdersPage() {
       }
     };
     fetchOrders();
+    fetch('/api/shop/lefted-orders')
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setLeftedCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => setLeftedCount(0));
   }, []);
 
   const filteredOrders = useMemo(() => {
@@ -691,6 +696,22 @@ export default function OrdersPage() {
       <header className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold text-black tracking-tight">جميع الطلبات</h1>
       </header>
+
+      {leftedCount > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 w-full mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="text-amber-600" size={24} />
+            <div>
+              <p className="text-amber-800 font-medium">لديك {leftedCount} طلب متروك</p>
+              <p className="text-amber-600 text-sm">هناك طلبات لم يتم إكمالها من طرف الزبائن</p>
+            </div>
+          </div>
+          <a href="/admin/lefted-orders"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium cursor-pointer">
+            عرض الطلبات المتروكة
+          </a>
+        </div>
+      )}
 
       <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

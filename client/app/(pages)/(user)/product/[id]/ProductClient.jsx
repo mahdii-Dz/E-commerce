@@ -407,6 +407,7 @@ export default function ProductClient({ product, relatedProducts }) {
                                 <CheckOut
                                     productPrice={product.price}
                                     productId={product.id}
+                                    productName={product.name}
                                     colors={product.colors}
                                     selectedOffer={selectedOffer}
                                 />

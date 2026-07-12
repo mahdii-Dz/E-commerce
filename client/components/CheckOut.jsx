@@ -26,7 +26,7 @@ const submitOrder = async (orderData) => {
     return response.json();
 };
 
-export default function CheckOut({ productPrice, productId, colors = [], selectedOffer = null }) {
+export default function CheckOut({ productPrice, productId, colors = [], selectedOffer = null, productName = '' }) {
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -44,7 +44,10 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     const [errorMessage, setErrorMessage] = useState('');
     const [submitError, setSubmitError] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
+    const [leftedOrderId, setLeftedOrderId] = useState(null);
     const successModalRef = useRef(null);
+    const leftedTimerRef = useRef(null);
+    const submittedRef = useRef(false);
 
     // Initialize colorQuantities when colors change
     useEffect(() => {
@@ -89,6 +92,57 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             document.removeEventListener('touchstart', handleClickOutside);
         };
     }, [showSuccess]);
+
+    // Save lefted order immediately after 20s of stable phone entry
+    useEffect(() => {
+        const digits = formData.phoneNumber.replace(/[^\d]/g, '');
+        if (digits.length >= 8 && !submittedRef.current) {
+            if (leftedTimerRef.current) clearTimeout(leftedTimerRef.current);
+            leftedTimerRef.current = setTimeout(async () => {
+                const colorsArr = colors.length > 0
+                  ? colors
+                      .map(c => ({ name: c.name, hex: c.hex, quantity: colorQuantities[c.hex] || 0 }))
+                      .filter(c => c.quantity > 0)
+                  : [];
+                const qty = colorsArr.length > 0
+                  ? colorsArr.reduce((s, c) => s + c.quantity, 0)
+                  : (selectedOffer?.quantity || 1);
+                const payload = {
+                    phone: formData.phoneNumber,
+                    first_name: formData.firstName,
+                    last_name: formData.lastName,
+                    wilaya: formData.wilaya,
+                    wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya) || '',
+                    baladiya: formData.baladiya,
+                    delivery_type: formData.delivery,
+                    product_id: productId,
+                    product_name: productName,
+                    quantity: qty,
+                    price_per_unit: effectivePrice,
+                    colors: colorsArr.length > 0 ? colorsArr : undefined,
+                    color_name: colorsArr.length === 1 ? colorsArr[0].name : null,
+                    color_hex: colorsArr.length === 1 ? colorsArr[0].hex : null,
+                    offer_text: selectedOffer ? `${selectedOffer.quantity} for ${selectedOffer.price} DA` : null,
+                };
+                try {
+                    const res = await fetch('/api/shop/lefted-orders', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await res.json();
+                    if (data.id) setLeftedOrderId(data.id);
+                } catch (err) {
+                    // silent
+                }
+            }, 20000);
+        } else if (digits.length < 8) {
+            setLeftedOrderId(null);
+        }
+        return () => {
+            if (leftedTimerRef.current) clearTimeout(leftedTimerRef.current);
+        };
+    }, [formData.phoneNumber]);
 
     // Effective price based on selected offer
     const effectivePrice = useMemo(() => {
@@ -233,6 +287,14 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         mutationFn: submitOrder,
         onSuccess: () => {
             setShowSuccess(true);
+            if (leftedOrderId) {
+                fetch('/api/shop/delete-lefted-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: formData.phoneNumber }),
+                }).catch(() => {});
+                setLeftedOrderId(null);
+            }
             // Reset color quantities
             if (colors && colors.length > 0) {
                 const reset = {};
@@ -248,6 +310,9 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        submittedRef.current = true;
+        if (leftedTimerRef.current) clearTimeout(leftedTimerRef.current);
+        setLeftedOrderId(null);
         setSubmitError('');
         setFieldErrors({});
 

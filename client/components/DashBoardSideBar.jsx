@@ -9,7 +9,8 @@ import {
   X,
   Menu,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
@@ -19,7 +20,15 @@ import Image from "next/image";
 const menuItemsData = [
   { icon: LayoutGrid, label: "لوحة التحكم", href: "/admin/dashboard" },
   { icon: Package, label: "جميع المنتجات", href: "/admin/all-products" },
-  { icon: ShoppingCart, label: "الطلبات", href: "/admin/orders" },
+  {
+    icon: ShoppingCart,
+    label: "الطلبات",
+    href: "/admin/orders",
+    children: [
+      { label: "الطلبات", href: "/admin/orders" },
+      { label: "الطلبات المتروكة", href: "/admin/lefted-orders" },
+    ],
+  },
   { icon: ImageIcon, label: "إضافات", href: "/admin/extra" },
   { icon: Star, label: "التقييمات", href: "/admin/reviews" }
 ];
@@ -27,7 +36,12 @@ const menuItemsData = [
 export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar, toggleSidebar }) => {
   const pathname = usePathname();
   const [hoveredItem, setHoveredItem] = useState(null);
+  const [submenuOpen, setSubmenuOpen] = useState({});
   const previousPathnameRef = useRef(pathname);
+
+  const toggleSubmenu = (label) => {
+    setSubmenuOpen(prev => ({ ...prev, [label]: !prev[label] }));
+  };
 
   useEffect(() => {
     if (previousPathnameRef.current !== pathname && isMobileOpen) {
@@ -75,35 +89,41 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
             <nav className="flex flex-col gap-1">
               {menuItemsData.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = item.children
+                  ? item.children.some(c => pathname === c.href)
+                  : pathname === item.href;
                 return (
-                  <Link href={item.href} key={item.label}>
-                    <div
-                      className={`
-                        cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium
-                        transition-all duration-200 w-full justify-center px-2
-                        ${isActive
-                          ? "bg-[#FA3145] text-white shadow-md hover:bg-[#e02a3b]"
-                          : "text-gray-700 hover:bg-red-50 hover:text-[#FA3145]"
-                        }
-                      `}
+                  <div key={item.label}>
+                    <Link
+                      href={item.children ? item.children[0].href : item.href}
                       title={item.label}
                     >
-                      <Icon
-                        size={20}
-                        strokeWidth={2}
+                      <div
                         className={`
-                          transition-colors duration-200
+                          cursor-pointer flex items-center gap-3 py-3 rounded-xl text-base font-medium
+                          transition-all duration-200 w-full justify-center px-2
                           ${isActive
-                            ? "text-white"
-                            : hoveredItem === item.label
-                              ? "text-[#FA3145]"
-                              : "text-gray-500"
+                            ? "bg-[#FA3145] text-white shadow-md hover:bg-[#e02a3b]"
+                            : "text-gray-700 hover:bg-red-50 hover:text-[#FA3145]"
                           }
                         `}
-                      />
-                    </div>
-                  </Link>
+                      >
+                        <Icon
+                          size={20}
+                          strokeWidth={2}
+                          className={`
+                            transition-colors duration-200
+                            ${isActive
+                              ? "text-white"
+                              : hoveredItem === item.label
+                                ? "text-[#FA3145]"
+                                : "text-gray-500"
+                            }
+                          `}
+                        />
+                      </div>
+                    </Link>
+                  </div>
                 );
               })}
             </nav>
@@ -126,40 +146,107 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
             <nav className="flex flex-col gap-1 flex-1">
               {menuItemsData.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = item.children
+                  ? item.children.some(c => pathname === c.href)
+                  : pathname === item.href;
+                const isSubmenuOpen = submenuOpen[item.label] || (item.children && item.children.some(c => pathname === c.href));
                 return (
-                  <Link
-                    href={item.href}
-                    key={item.label}
-                    onMouseEnter={() => setHoveredItem(item.label)}
-                    onMouseLeave={() => setHoveredItem(null)}
-                  >
-                    <div
-                      className={`
-                        cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium
-                        transition-all duration-200 w-full
-                        ${isActive
-                          ? "bg-[#FA3145] text-white shadow-md hover:bg-[#e02a3b]"
-                          : "text-gray-700 hover:bg-red-50 hover:text-[#FA3145]"
-                        }
-                      `}
-                    >
-                      <Icon
-                        size={20}
-                        strokeWidth={2}
-                        className={`
-                          transition-colors duration-200
-                          ${isActive
-                            ? "text-white"
-                            : hoveredItem === item.label
-                              ? "text-[#FA3145]"
-                              : "text-gray-500"
-                          }
-                        `}
-                      />
-                      <span>{item.label}</span>
-                    </div>
-                  </Link>
+                  <div key={item.label}>
+                    {item.children ? (
+                      <>
+                        <button
+                          onClick={() => toggleSubmenu(item.label)}
+                          onMouseEnter={() => setHoveredItem(item.label)}
+                          onMouseLeave={() => setHoveredItem(null)}
+                          className={`
+                            cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium
+                            transition-all duration-200 w-full text-right
+                            ${isActive
+                              ? "bg-[#FA3145] text-white shadow-md hover:bg-[#e02a3b]"
+                              : "text-gray-700 hover:bg-red-50 hover:text-[#FA3145]"
+                            }
+                          `}
+                        >
+                          <Icon
+                            size={20}
+                            strokeWidth={2}
+                            className={`
+                              transition-colors duration-200
+                              ${isActive
+                                ? "text-white"
+                                : hoveredItem === item.label
+                                  ? "text-[#FA3145]"
+                                  : "text-gray-500"
+                              }
+                            `}
+                          />
+                          <span className="flex-1 text-right">{item.label}</span>
+                          <ChevronDown
+                            size={16}
+                            className={`transition-transform duration-200 ${isSubmenuOpen ? 'rotate-180' : ''}`}
+                          />
+                        </button>
+                        <div className={`overflow-hidden transition-all duration-200 ${isSubmenuOpen ? 'max-h-40' : 'max-h-0'}`}>
+                          <div className="mr-4 pr-3 mt-1 flex flex-col gap-1">
+                            {item.children.map((child) => {
+                              const isChildActive = pathname === child.href;
+                              return (
+                                <Link
+                                  href={child.href}
+                                  key={child.label}
+                                >
+                                  <div
+                                    className={`
+                                      cursor-pointer flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium
+                                      transition-all duration-200 w-full
+                                      ${isChildActive
+                                        ? "bg-[#FA3145]/10 text-[#FA3145]"
+                                        : "text-gray-600 hover:bg-red-50 hover:text-[#FA3145]"
+                                      }
+                                    `}
+                                  >
+                                    <span>{child.label}</span>
+                                  </div>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        onMouseEnter={() => setHoveredItem(item.label)}
+                        onMouseLeave={() => setHoveredItem(null)}
+                      >
+                        <div
+                          className={`
+                            cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium
+                            transition-all duration-200 w-full
+                            ${isActive
+                              ? "bg-[#FA3145] text-white shadow-md hover:bg-[#e02a3b]"
+                              : "text-gray-700 hover:bg-red-50 hover:text-[#FA3145]"
+                            }
+                          `}
+                        >
+                          <Icon
+                            size={20}
+                            strokeWidth={2}
+                            className={`
+                              transition-colors duration-200
+                              ${isActive
+                                ? "text-white"
+                                : hoveredItem === item.label
+                                  ? "text-[#FA3145]"
+                                  : "text-gray-500"
+                              }
+                            `}
+                          />
+                          <span>{item.label}</span>
+                        </div>
+                      </Link>
+                    )}
+                  </div>
                 );
               })}
             </nav>
