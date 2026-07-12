@@ -73,13 +73,16 @@ function Footer() {
         {/* Social Links */}
         <ul className='flex flex-col gap-2 text-sm order-4'>
           <li className='hover:underline hover:text-primary transition-colors'>
-            <a target='_blank' rel="noopener noreferrer" href="https://www.facebook.com">فيسبوك</a>
+            <a target='_blank' rel="noopener noreferrer" href="https://www.facebook.com/people/Mafrouchat-La-Maison-dOr-%D9%85%D9%81%D8%B1%D9%88%D8%B4%D8%A7%D8%AA-%D8%A7%D9%84%D8%A8%D9%8A%D8%AA-%D8%A7%D9%84%D8%B0%D9%87%D8%A8%D9%8A/61583222131705/">فيسبوك</a>
           </li>
           <li className='hover:underline hover:text-primary transition-colors'>
-            <a target='_blank' rel="noopener noreferrer" href="https://www.instagram.com">إنستغرام</a>
+            <a target='_blank' rel="noopener noreferrer" href="https://www.instagram.com/mafrouchat_la_maison_dor_off">إنستغرام</a>
           </li>
           <li className='hover:underline hover:text-primary transition-colors'>
-            <a target='_blank' rel="noopener noreferrer" href="https://www.tiktok.com">تيك توك</a>
+            <a target='_blank' rel="noopener noreferrer" href="https://www.tiktok.com/@mafrouchat_la_maison_dor">تيك توك</a>
+          </li>
+          <li className='hover:underline hover:text-primary transition-colors'>
+            <a target='_blank' rel="noopener noreferrer" href="https://wa.me/213541355919">واتس اب</a>
           </li>
         </ul>
 
