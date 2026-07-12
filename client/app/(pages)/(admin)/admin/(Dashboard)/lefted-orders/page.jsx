@@ -264,13 +264,21 @@ export default function LeftedOrdersPage() {
       delivery_type: order.delivery_type || 'domicile',
       delivery_price: Number(order.delivery_price) || 0,
     });
+    const initialColors = order.colors && Array.isArray(order.colors) && order.colors.length > 0
+      ? order.colors.map(c => ({ color_name: c.name, color_hex: c.hex || '', quantity: Number(c.quantity) || 1 }))
+      : order.color_name
+        ? [{ color_name: order.color_name, color_hex: order.color_hex || '', quantity: order.quantity || 1 }]
+        : [];
+    const totalQty = initialColors.length > 0
+      ? initialColors.reduce((s, c) => s + c.quantity, 0)
+      : (order.quantity || 1);
     const items = [{
       product_id: order.product_id,
       product_name: order.product_name || '',
-      quantity: order.quantity || 1,
+      quantity: totalQty,
       price_per_unit: Number(order.price_per_unit || order.product_price || 0),
       offer_text: order.offer_text || '',
-      colors: order.color_name ? [{ color_name: order.color_name, color_hex: order.color_hex || '', quantity: order.quantity || 1 }] : [],
+      colors: initialColors,
     }];
     setEditItems(JSON.parse(JSON.stringify(items)));
 
@@ -417,6 +425,7 @@ export default function LeftedOrdersPage() {
 
       const payload = {
         ...editForm,
+        product_id: item.product_id,
         product_name: item.product_name,
         price_per_unit: item.price_per_unit,
         quantity: totalQty,
