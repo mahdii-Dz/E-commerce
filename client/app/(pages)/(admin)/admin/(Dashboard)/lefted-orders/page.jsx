@@ -160,11 +160,13 @@ export default function LeftedOrdersPage() {
       if (baladiyaQ && !order.baladiya?.toLowerCase().includes(baladiyaQ)) continue;
 
       if (startD) {
-        const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+        const d = new Date(order.created_at);
+        const orderDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (orderDate < startD) continue;
       }
       if (endD) {
-        const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+        const d = new Date(order.created_at);
+        const orderDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         if (orderDate > endD) continue;
       }
 
