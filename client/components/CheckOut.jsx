@@ -291,10 +291,33 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         setSubmitError('');
     };
 
+    const orderDataRef = useRef(null);
+
     const mutation = useMutation({
         mutationFn: submitOrder,
-        onSuccess: () => {
+        onSuccess: (data) => {
             setShowSuccess(true);
+            const od = orderDataRef.current;
+            if (od) {
+                window.dataLayer = window.dataLayer || [];
+                window.dataLayer.push({ ecommerce: null });
+                window.dataLayer.push({
+                    event: 'purchase',
+                    ecommerce: {
+                        transaction_id: data?.order_number || data?.order_id || '',
+                        value: od.items.reduce(
+                            (sum, item) => sum + (item.price_per_unit * item.quantity), 0
+                        ) + (od.delivery_Price || 0),
+                        currency: 'DZD',
+                        items: od.items.map(item => ({
+                            item_id: item.product_id,
+                            item_name: productName,
+                            price: item.price_per_unit,
+                            quantity: item.quantity,
+                        }))
+                    }
+                });
+            }
             if (leftedOrderId) {
                 fetch('/api/shop/delete-lefted-order', {
                     method: 'POST',
@@ -407,6 +430,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             delivery_Price: deliveryPrice,
             items,
         };
+        orderDataRef.current = orderData;
         mutation.mutate(orderData);
     };
 

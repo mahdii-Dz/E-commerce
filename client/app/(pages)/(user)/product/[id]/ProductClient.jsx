@@ -36,6 +36,26 @@ export default function ProductClient({ product, relatedProducts }) {
         setMounted(true)
     }, [])
 
+    useEffect(() => {
+        if (!product) return;
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ ecommerce: null });
+        window.dataLayer.push({
+            event: 'view_item',
+            ecommerce: {
+                currency: 'DZD',
+                value: product.price,
+                items: [{
+                    item_id: product.id,
+                    item_name: product.name,
+                    price: product.price,
+                    quantity: 1,
+                    item_category: product.categories?.[0]?.name || '',
+                }]
+            }
+        });
+    }, [product]);
+
     // Offers state
     const [offers, setOffers] = useState([]);
     const [selectedOffer, setSelectedOffer] = useState(null);
@@ -105,6 +125,22 @@ export default function ProductClient({ product, relatedProducts }) {
         setCart(prevCart => {
             const newCart = [...prevCart, product];
             localStorage.setItem('Cart', JSON.stringify(newCart));
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({ ecommerce: null });
+            window.dataLayer.push({
+                event: 'add_to_cart',
+                ecommerce: {
+                    currency: 'DZD',
+                    value: product.price,
+                    items: [{
+                        item_id: product.id,
+                        item_name: product.name,
+                        price: product.price,
+                        quantity: 1,
+                        item_category: product.categories?.[0]?.name || '',
+                    }]
+                }
+            });
             return newCart;
         });
     }

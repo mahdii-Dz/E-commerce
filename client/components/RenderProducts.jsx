@@ -21,6 +21,22 @@ function ProductCard({ product, isCart, Cart, setCart }) {
     setCart(prevCart => {
       const newCart = [...prevCart, product];
       localStorage.setItem('Cart', JSON.stringify(newCart));
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ ecommerce: null });
+      window.dataLayer.push({
+        event: 'add_to_cart',
+        ecommerce: {
+          currency: 'DZD',
+          value: product.price,
+          items: [{
+            item_id: product.id,
+            item_name: product.name,
+            price: product.price,
+            quantity: 1,
+            item_category: product.categories?.[0]?.name || '',
+          }]
+        }
+      });
       return newCart;
     });
   }
