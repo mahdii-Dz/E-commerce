@@ -768,6 +768,7 @@ export const AddOrder = async (req, res) => {
       delivery_type,
       delivery_Price,
       free_delivery,
+      current_status,
       items,
     } = req.body;
 
@@ -790,7 +791,7 @@ export const AddOrder = async (req, res) => {
       `INSERT INTO order_info
        (first_name, last_name, phone, wilaya, baladiya,
         delivery_type, delivery_Price, free_delivery, wilaya_code, current_status, order_number)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         first_name.trim(),
         last_name ? last_name.trim() : null,
@@ -801,6 +802,7 @@ export const AddOrder = async (req, res) => {
         delivery_Price || 0,
         free_delivery ? 1 : 0,
         wilaya_code,
+        current_status || 'new',
         orderNumber
       ]
     );
@@ -1443,12 +1445,13 @@ export const GetDashboardStats = async (req, res) => {
        WHERE o.current_status = 'تم التوصيل'`
     );
     
-    // Get bar chart data
+    // Get bar chart data — count distinct orders per day (no JOIN to avoid item-level inflation)
     const barChartData = await query(`
-      SELECT created_at, quantity
+      SELECT DATE(created_at) AS day, COUNT(*) AS total
       FROM order_info
-      JOIN order_items ON order_info.id = order_items.order_id
-      WHERE order_info.created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+      WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+      GROUP BY DATE(created_at)
+      ORDER BY day
     `);
     
     // Get category stats
@@ -1473,14 +1476,8 @@ export const GetDashboardStats = async (req, res) => {
       LIMIT 10
     `);
 
-    // Process daily totals
-    const dailyTotals = Object.entries(
-      (barChartData || []).reduce((acc, order) => {
-        const day = new Date(order.created_at).toISOString().split("T")[0];
-        acc[day] = (acc[day] || 0) + (order.quantity || 0);
-        return acc;
-      }, {})
-    ).map(([day, total]) => ({ day, total }));
+    // Process daily totals — SQL already returns { day, total }, just map to keep format
+    const dailyTotals = (barChartData || []).map(row => ({ day: row.day, total: row.total }));
     
     const totalProducts = totalProductsResult?.[0]?.total_products || 0;
     const totalOrders = totalOrdersResult?.[0]?.total_orders || 0;

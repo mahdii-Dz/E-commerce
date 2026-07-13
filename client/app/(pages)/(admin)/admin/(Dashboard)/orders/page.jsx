@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw, AlertTriangle, Loader } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw, AlertTriangle, Loader, Plus } from 'lucide-react';
+import Link from 'next/link';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import axios from 'axios';
 import { wilayaData } from '@/lib/wilayaData';
@@ -708,6 +709,13 @@ export default function OrdersPage() {
 
       <header className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold text-black tracking-tight">جميع الطلبات</h1>
+        <Link
+          href="/admin/add-order"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#FA3145] text-white rounded-xl hover:opacity-90 transition-opacity text-sm font-medium"
+        >
+          <Plus size={18} />
+          إضافة طلب
+        </Link>
       </header>
 
       {leftedCount > 0 && (
