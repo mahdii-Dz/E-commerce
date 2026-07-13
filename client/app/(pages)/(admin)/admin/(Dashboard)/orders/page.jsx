@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw, AlertTriangle } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw, AlertTriangle, Loader } from 'lucide-react';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import axios from 'axios';
 import { wilayaData } from '@/lib/wilayaData';
@@ -39,7 +39,7 @@ function formatDate(dateStr) {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-function StatusSelect({ value, onChange }) {
+function StatusSelect({ value, onChange, isUpdating }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef(null);
   const [pos, setPos] = useState(null);
@@ -64,17 +64,23 @@ function StatusSelect({ value, onChange }) {
     <div className="relative">
       <button
         ref={btnRef}
-        onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm cursor-pointer whitespace-nowrap transition-shadow hover:shadow-md"
+        onClick={() => !isUpdating && setOpen(true)}
+        disabled={isUpdating}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm whitespace-nowrap transition-shadow hover:shadow-md"
         style={{
           backgroundColor: `${statusInfo.color}15`,
           color: statusInfo.color,
-          borderColor: `${statusInfo.color}40`
+          borderColor: `${statusInfo.color}40`,
+          cursor: isUpdating ? 'wait' : 'pointer',
         }}
       >
-        <Icon size={14} />
+        {isUpdating ? (
+          <Loader size={14} className="animate-spin" />
+        ) : (
+          <Icon size={14} />
+        )}
         <span>{statusInfo.label}</span>
-        <ChevronDown size={12} className="opacity-60" />
+        {!isUpdating && <ChevronDown size={12} className="opacity-60" />}
       </button>
 
       {open && pos && (
@@ -160,6 +166,7 @@ export default function OrdersPage() {
   const [viewingOrder, setViewingOrder] = useState(null);
 
   const [sendingToDelivery, setSendingToDelivery] = useState(new Set());
+  const [updatingStatus, setUpdatingStatus] = useState(new Set());
 
   const [filters, setFilters] = useState({
     deliveryType: 'All',
@@ -295,6 +302,15 @@ export default function OrdersPage() {
     return result;
   }, [orders, debouncedSearchQuery, filters]);
 
+  const statusCounts = useMemo(() => {
+    const counts = {};
+    for (const order of orders) {
+      const s = order.current_status || 'new';
+      counts[s] = (counts[s] || 0) + 1;
+    }
+    return counts;
+  }, [orders]);
+
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -396,6 +412,7 @@ export default function OrdersPage() {
   );
 
   const handleStatusChange = async (orderId, newStatus) => {
+    setUpdatingStatus(prev => new Set(prev).add(orderId));
     try {
       const response = await axios.put(`/api/shop/orders/${orderId}`, {
         current_status: newStatus
@@ -407,6 +424,8 @@ export default function OrdersPage() {
       }
     } catch (err) {
       showToast(err.response?.data?.error || 'فشل تحديث الحالة', 'error');
+    } finally {
+      setUpdatingStatus(prev => { const n = new Set(prev); n.delete(orderId); return n; });
     }
   };
 
@@ -706,6 +725,31 @@ export default function OrdersPage() {
       )}
 
       <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full mb-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">إحصائيات الحالات</h3>
+        <div className="flex flex-wrap gap-3">
+          {STATUSES.map(status => {
+            const count = statusCounts[status.value] || 0;
+            const Icon = status.icon;
+            return (
+              <div
+                key={status.value}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-medium transition-shadow hover:shadow-sm"
+                style={{
+                  backgroundColor: `${status.color}15`,
+                  color: status.color,
+                  borderColor: `${status.color}30`,
+                }}
+              >
+                <Icon size={16} />
+                <span>{status.label}</span>
+                <span className="font-bold tabular-nums">({count})</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">الحالة الحالية</label>
@@ -927,6 +971,7 @@ export default function OrdersPage() {
                         <StatusSelect
                           value={order.current_status || 'new'}
                           onChange={(val) => handleStatusChange(order.order_id, val)}
+                          isUpdating={updatingStatus.has(order.order_id)}
                         />
                       </td>
                       <td className="px-4 py-4 text-sm font-bold text-gray-900 whitespace-nowrap">
@@ -1060,6 +1105,7 @@ export default function OrdersPage() {
                             <StatusSelect
                               value={order.current_status || 'new'}
                               onChange={(val) => handleStatusChange(order.order_id, val)}
+                              isUpdating={updatingStatus.has(order.order_id)}
                             />
                           </div>
                         </div>
