@@ -27,6 +27,7 @@ const menuItemsData = [
     children: [
       { label: "الطلبات", href: "/admin/orders" },
       { label: "الطلبات المتروكة", href: "/admin/lefted-orders" },
+      { label: "واش نوجد ؟", href: "/admin/color-analytics" },
     ],
   },
   { icon: ImageIcon, label: "إضافات", href: "/admin/extra" },
