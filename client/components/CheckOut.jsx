@@ -240,6 +240,13 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         return Object.entries(wilayaData);
     }, [formData.delivery, wilayaData]);
 
+    // Check if the selected wilaya has free delivery from the database
+    const wilayaFreeDelivery = useMemo(() => {
+        if (!formData.wilaya) return false;
+        const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === formData.wilaya);
+        return code ? Boolean(wilayaData[code]?.free_delivery) : false;
+    }, [formData.wilaya, wilayaData]);
+
     // Reset baladiya if the current wilaya is not in the filtered list
     useEffect(() => {
         const currentWilayaExists = Object.values(wilayaData).some(
@@ -299,6 +306,12 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         }
 
         const wilayaInfo = wilayaData[code];
+
+        // Free delivery if the wilaya has it
+        if (wilayaInfo?.free_delivery) {
+            setDeliveryPrice(0);
+            return;
+        }
 
         if (wilayaInfo && typeof wilayaInfo.domicilePrice === 'number' && typeof wilayaInfo.stopDeskPrice === 'number') {
             const newPrice = formData.delivery === 'domicile'
@@ -833,7 +846,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
                     <span className="font-medium text-black text-lg">رسوم التوصيل:</span>
                     <p className="font-medium text-primary text-xl">
-                        {selectedOffer?.freeDelivery ? (
+                        {selectedOffer?.freeDelivery || wilayaFreeDelivery ? (
                             <span className="text-green-600 flex items-center gap-1.5">
                                 <Truck size={18} />
                                 توصيل مجاني
