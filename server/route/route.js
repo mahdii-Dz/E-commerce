@@ -1,5 +1,5 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, getBanners, updateBanners, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, getBanners, updateBanners, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic, GetDeliveryWilayas, UpdateDeliveryWilayas, GetWilayaBaladiyas, UpdateWilayaStopDesk, GetDeliveryStats, GetPublicWilayas } from '../controllers/ShopController.js';
 import { verifyAdminSession } from '../middleware/sessionAuth.js';
 
 const router = express.Router();
@@ -46,6 +46,13 @@ router.put('/update-banners', verifyAdminSession, updateBanners);
 router.delete('/delete-product/:id', verifyAdminSession,DeleteProduct);
 router.delete('/delete-category/:id', verifyAdminSession,DeleteCategory);
 
+// Delivery / Wilaya routes
+router.get('/get-public-wilayas', GetPublicWilayas);
 
+router.get('/get-delivery-wilayas', verifyAdminSession, GetDeliveryWilayas);
+router.put('/update-delivery-wilayas', verifyAdminSession, UpdateDeliveryWilayas);
+router.get('/get-wilaya-baladiyas/:code', verifyAdminSession, GetWilayaBaladiyas);
+router.put('/update-wilaya-stopdesk/:code', verifyAdminSession, UpdateWilayaStopDesk);
+router.get('/get-delivery-stats', verifyAdminSession, GetDeliveryStats);
 
 export default router;

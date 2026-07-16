@@ -1760,3 +1760,178 @@ export const ConvertLeftedOrder = async (req, res) => {
     return handleDbError(res, error, "converting lefted order");
   }
 };
+
+// ==================== DELIVERY / WILAYA CONTROLLERS ====================
+
+export const GetDeliveryWilayas = async (req, res) => {
+  try {
+    const rows = await query(`
+      SELECT
+        w.code,
+        w.name,
+        w.home_delivery_price,
+        w.stopdesk_delivery_price,
+        w.free_delivery,
+        w.is_active,
+        (SELECT COUNT(*) FROM baladiyas b WHERE b.wilaya_code = w.code) AS total_baladiyas,
+        (SELECT COUNT(*) FROM baladiyas b WHERE b.wilaya_code = w.code AND b.has_stopdesk = 1) AS stopdesk_baladiyas
+      FROM wilayas w
+      ORDER BY CAST(w.code AS UNSIGNED) ASC
+    `);
+
+    return res.status(200).json(rows || []);
+  } catch (error) {
+    return handleDbError(res, error, 'fetching delivery wilayas');
+  }
+};
+
+export const UpdateDeliveryWilayas = async (req, res) => {
+  try {
+    const { wilayas } = req.body;
+
+    if (!wilayas || !Array.isArray(wilayas)) {
+      return res.status(400).json({ error: 'wilayas array is required' });
+    }
+
+    for (const w of wilayas) {
+      if (!w.code) continue;
+      await execute(
+        `UPDATE wilayas SET
+          home_delivery_price = ?,
+          stopdesk_delivery_price = ?,
+          free_delivery = ?,
+          is_active = ?
+        WHERE code = ?`,
+        [
+          w.home_delivery_price ?? 0,
+          w.stopdesk_delivery_price ?? 0,
+          w.free_delivery ? 1 : 0,
+          w.is_active ? 1 : 0,
+          w.code
+        ]
+      );
+    }
+
+    return res.status(200).json({ success: true, message: 'Wilayas updated successfully' });
+  } catch (error) {
+    return handleDbError(res, error, 'updating delivery wilayas');
+  }
+};
+
+export const GetWilayaBaladiyas = async (req, res) => {
+  try {
+    const { code } = req.params;
+
+    const wilayaRows = await query('SELECT * FROM wilayas WHERE code = ?', [code]);
+    if (!wilayaRows || wilayaRows.length === 0) {
+      return res.status(404).json({ error: 'Wilaya not found' });
+    }
+
+    const baladiyas = await query(
+      'SELECT id, name, has_stopdesk FROM baladiyas WHERE wilaya_code = ? ORDER BY name ASC',
+      [code]
+    );
+
+    return res.status(200).json({
+      wilaya: wilayaRows[0],
+      baladiyas: baladiyas || []
+    });
+  } catch (error) {
+    return handleDbError(res, error, 'fetching wilaya baladiyas');
+  }
+};
+
+export const UpdateWilayaStopDesk = async (req, res) => {
+  try {
+    const { code } = req.params;
+    const { stopdesk_ids } = req.body;
+
+    if (!Array.isArray(stopdesk_ids)) {
+      return res.status(400).json({ error: 'stopdesk_ids array is required' });
+    }
+
+    // Reset all to 0
+    await execute('UPDATE baladiyas SET has_stopdesk = 0 WHERE wilaya_code = ?', [code]);
+
+    // Set selected to 1
+    if (stopdesk_ids.length > 0) {
+      const placeholders = stopdesk_ids.map(() => '?').join(',');
+      await execute(
+        `UPDATE baladiyas SET has_stopdesk = 1 WHERE wilaya_code = ? AND id IN (${placeholders})`,
+        [code, ...stopdesk_ids]
+      );
+    }
+
+    return res.status(200).json({ success: true, message: 'Stopdesk baladiyas updated' });
+  } catch (error) {
+    return handleDbError(res, error, 'updating stopdesk baladiyas');
+  }
+};
+
+export const GetDeliveryStats = async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END) AS active,
+        SUM(CASE WHEN is_active = 0 THEN 1 ELSE 0 END) AS inactive
+      FROM wilayas
+    `);
+
+    const row = result?.[0] || {};
+    return res.status(200).json({
+      total: Number(row.total) || 0,
+      active: Number(row.active) || 0,
+      inactive: Number(row.inactive) || 0
+    });
+  } catch (error) {
+    return handleDbError(res, error, 'fetching delivery stats');
+  }
+};
+
+export const GetPublicWilayas = async (req, res) => {
+  try {
+    const rows = await query(`
+      SELECT
+        w.code,
+        w.name,
+        w.home_delivery_price,
+        w.stopdesk_delivery_price,
+        w.free_delivery,
+        w.is_active,
+        (SELECT COUNT(*) FROM baladiyas b WHERE b.wilaya_code = w.code AND b.has_stopdesk = 1) > 0 AS has_stopdesk
+      FROM wilayas w
+      WHERE w.is_active = 1
+      ORDER BY CAST(w.code AS UNSIGNED) ASC
+    `);
+
+    const allBaladiyas = await query(`
+      SELECT wilaya_code, name, has_stopdesk
+      FROM baladiyas
+      ORDER BY wilaya_code ASC, name ASC
+    `);
+
+    const baladiyasByCode = {};
+    for (const b of allBaladiyas || []) {
+      if (!baladiyasByCode[b.wilaya_code]) baladiyasByCode[b.wilaya_code] = [];
+      baladiyasByCode[b.wilaya_code].push({
+        name: b.name,
+        has_stopdesk: Boolean(b.has_stopdesk)
+      });
+    }
+
+    const result = (rows || []).map(w => ({
+      ...w,
+      home_delivery_price: Number(w.home_delivery_price) || 0,
+      stopdesk_delivery_price: Number(w.stopdesk_delivery_price) || 0,
+      free_delivery: Boolean(w.free_delivery),
+      is_active: Boolean(w.is_active),
+      has_stopdesk: Boolean(w.has_stopdesk),
+      municipalities: baladiyasByCode[w.code] || []
+    }));
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleDbError(res, error, 'fetching public wilayas');
+  }
+};
