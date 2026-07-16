@@ -5,10 +5,11 @@ import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, Chevr
 import Link from 'next/link';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import axios from 'axios';
-import { wilayaData } from '@/lib/wilayaData';
+import { useWilayaData } from '@/components/useWilayaData';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import CustomSelect from '@/components/CustomSelect';
 
 const ITEMS_PER_PAGE = 50;
 
@@ -41,78 +42,7 @@ function formatDate(dateStr) {
 }
 
 function StatusSelect({ value, onChange, isUpdating }) {
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef(null);
-  const [pos, setPos] = useState(null);
-
-  useEffect(() => {
-    if (open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      const estimatedH = Math.min(STATUSES.length * 42, 320);
-      const dropdownW = Math.max(rect.width, 220);
-      const top = (rect.bottom + 4 + estimatedH) > window.innerHeight
-        ? rect.top - estimatedH - 4
-        : rect.bottom + 4;
-      const left = Math.max(4, Math.min(rect.left, window.innerWidth - dropdownW - 4));
-      setPos({ top, left, width: rect.width });
-    }
-  }, [open]);
-
-  const statusInfo = STATUS_MAP[value] || STATUS_MAP['new'];
-  const Icon = statusInfo.icon;
-
-  return (
-    <div className="relative">
-      <button
-        ref={btnRef}
-        onClick={() => !isUpdating && setOpen(true)}
-        disabled={isUpdating}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-sm whitespace-nowrap transition-shadow hover:shadow-md"
-        style={{
-          backgroundColor: `${statusInfo.color}15`,
-          color: statusInfo.color,
-          borderColor: `${statusInfo.color}40`,
-          cursor: isUpdating ? 'wait' : 'pointer',
-        }}
-      >
-        {isUpdating ? (
-          <Loader size={14} className="animate-spin" />
-        ) : (
-          <Icon size={14} />
-        )}
-        <span>{statusInfo.label}</span>
-        {!isUpdating && <ChevronDown size={12} className="opacity-60" />}
-      </button>
-
-      {open && pos && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div
-            className="fixed z-50 bg-white rounded-xl border border-gray-200 shadow-xl py-1 overflow-y-auto"
-            style={{ top: pos.top, left: pos.left, width: Math.max(pos.width, 220), maxHeight: 320 }}
-          >
-            {STATUSES.map(s => {
-              const Icon = s.icon;
-              return (
-                <button
-                  key={s.value}
-                  onClick={() => { onChange(s.value); setOpen(false); }}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-right hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors"
-                >
-                  <Icon size={16} style={{ color: s.color }} />
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
-                  <span className={value === s.value ? 'font-semibold' : ''} style={{ color: value === s.value ? s.color : '#374151' }}>
-                    {s.label}
-                  </span>
-                  {value === s.value && <CheckCircle2 size={14} className="mr-auto" style={{ color: s.color }} />}
-                </button>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </div>
-  );
+  return <CustomSelect value={value} onChange={onChange} options={STATUSES} isUpdating={isUpdating} />;
 }
 
 const FILTER_TYPES = [
@@ -122,6 +52,7 @@ const FILTER_TYPES = [
 ];
 
 export default function OrdersPage() {
+  const { wilayaData } = useWilayaData();
   const [orders, setOrders] = useState([]);
   const [leftedCount, setLeftedCount] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -472,13 +403,13 @@ export default function OrdersPage() {
   };
 
   const editCommunes = useMemo(() => {
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === editForm.wilaya);
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === editForm.wilaya);
     return code ? wilayaData[code]?.municipalities || [] : [];
   }, [editForm.wilaya]);
 
   const handleEdit = async (order) => {
     setEditingOrder(order);
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === order.wilaya) || '';
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === order.wilaya) || '';
     const baladiya = order.baladiya || '';
     setEditForm({
       first_name: order.first_name || '',
@@ -528,7 +459,7 @@ export default function OrdersPage() {
   };
 
   const handleEditWilayaChange = (value) => {
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === value);
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === value);
     if (!code) return;
     const data = wilayaData[code];
     const newCommunes = data?.municipalities || [];
@@ -763,7 +694,7 @@ export default function OrdersPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">الحالة الحالية</label>
-            <BaseSelect.Root
+            <BaseSelect.Root dir="rtl"
               value={filters.currentStatus}
               onValueChange={(value) => handleFilterChange('currentStatus', value)}
             >
@@ -782,14 +713,14 @@ export default function OrdersPage() {
                     style={{ width: 'var(--anchor-width)' }}>
                     <BaseSelect.List>
                       <BaseSelect.Item value=""
-                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                        className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                         <BaseSelect.ItemText>الكل</BaseSelect.ItemText>
                       </BaseSelect.Item>
                       {STATUSES.map(s => (
                         <BaseSelect.Item key={s.value} value={s.value}
-                          className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                          className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                           <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
                             <BaseSelect.ItemText>{s.label}</BaseSelect.ItemText>
                           </div>
                         </BaseSelect.Item>
@@ -814,7 +745,7 @@ export default function OrdersPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">نوع التوصيل</label>
-            <BaseSelect.Root
+            <BaseSelect.Root dir="rtl"
               value={filters.deliveryType}
               onValueChange={(value) => handleFilterChange('deliveryType', value)}
             >
@@ -834,7 +765,7 @@ export default function OrdersPage() {
                     <BaseSelect.List>
                       {FILTER_TYPES.map(t => (
                         <BaseSelect.Item key={t.value} value={t.value}
-                          className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                          className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                           <BaseSelect.ItemText>{t.label}</BaseSelect.ItemText>
                         </BaseSelect.Item>
                       ))}
@@ -1340,7 +1271,7 @@ export default function OrdersPage() {
                       <SelectValue placeholder="اختر الولاية" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(wilayaData)
+                      {Object.entries(wilayaData || {})
                         .sort(([codeA], [codeB]) => parseInt(codeA, 10) - parseInt(codeB, 10))
                         .map(([code, data]) => (
                           <SelectItem key={code} value={data.name}>{code} - {data.name}</SelectItem>

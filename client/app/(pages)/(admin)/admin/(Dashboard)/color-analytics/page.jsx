@@ -165,7 +165,7 @@ export default function ColorAnalyticsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">الحالة الحالية</label>
-            <BaseSelect.Root
+            <BaseSelect.Root dir="rtl"
               value={filters.currentStatus}
               onValueChange={(value) => handleFilterChange('currentStatus', value)}
             >
@@ -184,14 +184,14 @@ export default function ColorAnalyticsPage() {
                     style={{ width: 'var(--anchor-width)' }}>
                     <BaseSelect.List>
                       <BaseSelect.Item value=""
-                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                        className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                         <BaseSelect.ItemText>الكل</BaseSelect.ItemText>
                       </BaseSelect.Item>
                       {STATUSES.map(s => (
                         <BaseSelect.Item key={s.value} value={s.value}
-                          className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                          className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                           <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
                             <BaseSelect.ItemText>{s.label}</BaseSelect.ItemText>
                           </div>
                         </BaseSelect.Item>
@@ -226,7 +226,7 @@ export default function ColorAnalyticsPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">المنتج</label>
-            <BaseSelect.Root
+            <BaseSelect.Root dir="rtl"
               value={filters.product}
               onValueChange={(value) => handleFilterChange('product', value)}
             >
@@ -246,12 +246,12 @@ export default function ColorAnalyticsPage() {
                     style={{ width: 'var(--anchor-width)' }}>
                     <BaseSelect.List>
                       <BaseSelect.Item value=""
-                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                        className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                         <BaseSelect.ItemText>الكل</BaseSelect.ItemText>
                       </BaseSelect.Item>
                       {products.map(p => (
                         <BaseSelect.Item key={p.id} value={String(p.id)}
-                          className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                          className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                           <BaseSelect.ItemText>{p.name}</BaseSelect.ItemText>
                         </BaseSelect.Item>
                       ))}

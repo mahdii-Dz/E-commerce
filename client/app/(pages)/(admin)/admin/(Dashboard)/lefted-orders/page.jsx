@@ -6,7 +6,7 @@ import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { wilayaData } from '@/lib/wilayaData';
+import { useWilayaData } from '@/components/useWilayaData';
 
 const ITEMS_PER_PAGE = 40;
 
@@ -45,6 +45,7 @@ function renderColorsWithQty(order) {
 }
 
 export default function LeftedOrdersPage() {
+  const { wilayaData } = useWilayaData();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -255,7 +256,7 @@ export default function LeftedOrdersPage() {
 
   const handleEdit = async (order) => {
     setEditingOrder(order);
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === order.wilaya) || '';
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === order.wilaya) || '';
     const baladiya = order.baladiya || '';
     setEditForm({
       first_name: order.first_name || '',
@@ -378,7 +379,7 @@ export default function LeftedOrdersPage() {
   };
 
   const handleEditWilayaChange = (value) => {
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === value);
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === value);
     if (!code) return;
     const data = wilayaData[code];
     const newCommunes = data?.municipalities || [];
@@ -387,13 +388,13 @@ export default function LeftedOrdersPage() {
   };
 
   const editCommunes = useMemo(() => {
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === editForm.wilaya);
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === editForm.wilaya);
     return code ? (wilayaData[code]?.municipalities || []) : [];
   }, [editForm.wilaya]);
 
   // Auto-calculate delivery price when wilaya or delivery type changes
   useEffect(() => {
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === editForm.wilaya);
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === editForm.wilaya);
     if (code) {
       const wilayaInfo = wilayaData[code];
       const autoPrice = editForm.delivery_type === 'domicile'
@@ -868,7 +869,7 @@ export default function LeftedOrdersPage() {
                       <SelectValue placeholder="اختر الولاية" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(wilayaData)
+                      {Object.entries(wilayaData || {})
                         .sort(([codeA], [codeB]) => parseInt(codeA, 10) - parseInt(codeB, 10))
                         .map(([code, data]) => (
                           <SelectItem key={code} value={data.name}>{code} - {data.name}</SelectItem>
