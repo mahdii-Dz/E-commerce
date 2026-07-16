@@ -8,7 +8,7 @@ import { Select as BaseSelect } from '@base-ui/react/select'
 import { Input } from '@/components/ui/input'
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 import { useFetchSingleProduct } from '@/components/useFetchSingleProduct'
-import { wilayaData } from '@/lib/wilayaData'
+import { useWilayaData } from '@/components/useWilayaData'
 
 const STATUSES = [
   { value: 'new', label: 'جديد', color: '#6366F1' },
@@ -25,8 +25,6 @@ const STATUSES = [
 
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.value, s]))
 
-const SORTED_WILAYAS = Object.entries(wilayaData).sort(([a], [b]) => parseInt(a) - parseInt(b))
-
 const ITEM_DEFAULTS = {
   productId: null,
   product: null,
@@ -40,6 +38,7 @@ const ITEM_DEFAULTS = {
 export default function AddOrderPage() {
   const router = useRouter()
   const { data: productsData, isLoading: productsLoading } = useFetchSingleProduct('/api/shop/products')
+  const { wilayaData, sortedEntries } = useWilayaData()
 
   const [products, setProducts] = useState([])
   const [submitting, setSubmitting] = useState(false)
@@ -72,26 +71,29 @@ export default function AddOrderPage() {
   }, [productsData])
 
   useEffect(() => {
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya)
+    if (!wilayaData) return;
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === formData.wilaya)
     if (code && wilayaData[code]) {
       const w = wilayaData[code]
       setDeliveryPrice(formData.deliveryType === 'domicile' ? w.domicilePrice : w.stopDeskPrice)
     } else {
       setDeliveryPrice(0)
     }
-  }, [formData.wilaya, formData.deliveryType])
+  }, [formData.wilaya, formData.deliveryType, wilayaData])
 
   const communes = useMemo(() => {
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya)
+    if (!wilayaData) return [];
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === formData.wilaya)
     return code ? (wilayaData[code]?.municipalities || []) : []
-  }, [formData.wilaya])
+  }, [formData.wilaya, wilayaData])
 
   const handleFieldChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const handleWilayaChange = (value) => {
-    const code = Object.keys(wilayaData).find(key => wilayaData[key].name === value)
+    if (!wilayaData) return;
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === value)
     if (!code) return
     const muns = wilayaData[code]?.municipalities || []
     setFormData(prev => ({
@@ -243,7 +245,7 @@ export default function AddOrderPage() {
       last_name: formData.lastName.trim(),
       phone: formData.phone.trim(),
       wilaya: formData.wilaya,
-      wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya) || '',
+      wilaya_code: wilayaData ? Object.keys(wilayaData).find(key => wilayaData[key]?.name === formData.wilaya) || '' : '',
       baladiya: formData.baladiya,
       delivery_type: formData.deliveryType,
       delivery_Price: deliveryPrice,
@@ -352,7 +354,7 @@ export default function AddOrderPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">الولاية</label>
-            <BaseSelect.Root value={formData.wilaya} onValueChange={handleWilayaChange}>
+            <BaseSelect.Root dir="rtl" value={formData.wilaya} onValueChange={handleWilayaChange}>
               <BaseSelect.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145] data-[open]:ring-2 data-[open]:ring-[#FA3145]/20 data-[open]:border-[#FA3145]">
                 <BaseSelect.Value placeholder="اختر الولاية" />
                 <ChevronDown size={16} className="text-gray-500 shrink-0" />
@@ -361,9 +363,9 @@ export default function AddOrderPage() {
                 <BaseSelect.Positioner side="bottom" align="start" alignItemWithTrigger={false} className="z-50">
                   <BaseSelect.Popup className="max-h-60 overflow-y-auto rounded-xl border border-stroke bg-white py-2 shadow-lg" style={{ width: 'var(--anchor-width)' }}>
                     <BaseSelect.List>
-                      {SORTED_WILAYAS.map(([code, data]) => (
+                      {sortedEntries.map(([code, data]) => (
                         <BaseSelect.Item key={code} value={data.name}
-                          className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                          className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                           <BaseSelect.ItemText>{code} - {data.name}</BaseSelect.ItemText>
                         </BaseSelect.Item>
                       ))}
@@ -375,7 +377,7 @@ export default function AddOrderPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">البلدية</label>
-            <BaseSelect.Root value={formData.baladiya} onValueChange={(v) => handleFieldChange('baladiya', v)} disabled={!communes.length}>
+            <BaseSelect.Root dir="rtl" value={formData.baladiya} onValueChange={(v) => handleFieldChange('baladiya', v)} disabled={!communes.length}>
               <BaseSelect.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145] data-[open]:ring-2 data-[open]:ring-[#FA3145]/20 data-[open]:border-[#FA3145] data-[disabled]:bg-gray-100 data-[disabled]:cursor-not-allowed">
                 <BaseSelect.Value placeholder={communes.length === 0 ? 'اختر الولاية أولاً' : 'اختر البلدية'} />
                 <ChevronDown size={16} className="text-gray-500 shrink-0" />
@@ -386,7 +388,7 @@ export default function AddOrderPage() {
                     <BaseSelect.List>
                       {communes.map(c => (
                         <BaseSelect.Item key={c} value={c}
-                          className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                          className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                           <BaseSelect.ItemText>{c}</BaseSelect.ItemText>
                         </BaseSelect.Item>
                       ))}
@@ -398,7 +400,7 @@ export default function AddOrderPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">نوع التوصيل</label>
-            <BaseSelect.Root value={formData.deliveryType} onValueChange={(v) => handleFieldChange('deliveryType', v)}>
+            <BaseSelect.Root dir="rtl" value={formData.deliveryType} onValueChange={(v) => handleFieldChange('deliveryType', v)}>
               <BaseSelect.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145] data-[open]:ring-2 data-[open]:ring-[#FA3145]/20 data-[open]:border-[#FA3145]">
                 <BaseSelect.Value placeholder="اختر نوع التوصيل">
                   {(value) => value === 'domicile' ? 'توصيل للمنزل' : 'استلام من المكتب'}
@@ -410,11 +412,11 @@ export default function AddOrderPage() {
                   <BaseSelect.Popup className="rounded-xl border border-stroke bg-white py-2 shadow-lg" style={{ width: 'var(--anchor-width)' }}>
                     <BaseSelect.List>
                       <BaseSelect.Item value="domicile"
-                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                        className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                         <BaseSelect.ItemText>توصيل للمنزل</BaseSelect.ItemText>
                       </BaseSelect.Item>
                       <BaseSelect.Item value="stopDesk"
-                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                        className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                         <BaseSelect.ItemText>استلام من المكتب</BaseSelect.ItemText>
                       </BaseSelect.Item>
                     </BaseSelect.List>
@@ -666,7 +668,7 @@ export default function AddOrderPage() {
       <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full mb-6">
         <h2 className="text-xl font-semibold text-gray-800 mb-6">حالة الطلب</h2>
         <div className="max-w-xs">
-          <BaseSelect.Root value={currentStatus} onValueChange={setCurrentStatus}>
+          <BaseSelect.Root dir="rtl" value={currentStatus} onValueChange={setCurrentStatus}>
              <BaseSelect.Trigger key={currentStatus} className="flex w-full h-11 items-center justify-between rounded-xl border border-stroke bg-white px-4 text-right text-sm outline-none transition-colors focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145] data-[open]:ring-2 data-[open]:ring-[#FA3145]/20 data-[open]:border-[#FA3145]">
                <BaseSelect.Value placeholder="اختر الحالة">
                  {(val) => {
@@ -687,9 +689,9 @@ export default function AddOrderPage() {
                   <BaseSelect.List>
                     {STATUSES.map(s => (
                       <BaseSelect.Item key={s.value} value={s.value}
-                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                        className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
                         <div className="flex items-center gap-2">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
                           <BaseSelect.ItemText>{s.label}</BaseSelect.ItemText>
                         </div>
                       </BaseSelect.Item>
