@@ -22,6 +22,7 @@ const STATUSES = [
 export default function ColorAnalyticsPage() {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,11 +38,13 @@ export default function ColorAnalyticsPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [ordersRes, productsRes] = await Promise.all([
+        const [ordersRes, productsRes, statsRes] = await Promise.all([
           axios.get('/api/shop/orders'),
-          fetch('/api/shop/products').then(r => r.json()),
+          fetch('/api/shop/products?limit=1000').then(r => r.json()),
+          fetch('/api/shop/stats').then(r => r.json()),
         ]);
         setOrders(ordersRes.data);
+        setStats(statsRes);
         const prods = Array.isArray(productsRes) ? productsRes : (productsRes?.products || []);
         setProducts(prods);
       } catch (err) {
@@ -90,10 +93,13 @@ export default function ColorAnalyticsPage() {
     const productsLookup = {};
     products.forEach(p => { productsLookup[p.id] = p; });
     let totalItemsSold = 0;
+    const productOrderIds = new Set();
 
     filtered.forEach(order => {
       order.items?.forEach(item => {
         if (filters.product && String(item.product_id) !== filters.product) return;
+
+        productOrderIds.add(order.order_id);
 
         if (!productMap[item.product_id]) {
           const prodInfo = productsLookup[item.product_id];
@@ -132,8 +138,34 @@ export default function ColorAnalyticsPage() {
     });
     productsList.sort((a, b) => b.totalQuantity - a.totalQuantity);
 
-    return { products: productsList, totalOrders: filtered.length, totalProducts: productsList.length, totalItemsSold };
+    return { products: productsList, totalOrders: filters.product ? productOrderIds.size : filtered.length, totalProducts: productsList.length, totalItemsSold };
   }, [orders, filters]);
+
+  const productAnalyticsMap = useMemo(() => {
+    const map = {};
+    processedData.products.forEach(p => { map[p.product_id] = p; });
+    return map;
+  }, [processedData.products]);
+
+  const displayProducts = useMemo(() => {
+    let list = [...products];
+
+    if (filters.product) {
+      const filtered = list.filter(p => String(p.id) === filters.product);
+      if (filtered.length > 0) return filtered;
+    }
+
+    list.sort((a, b) => {
+      const aData = productAnalyticsMap[a.id];
+      const bData = productAnalyticsMap[b.id];
+      if (aData && !bData) return -1;
+      if (!aData && bData) return 1;
+      if (aData && bData) return bData.totalQuantity - aData.totalQuantity;
+      return 0;
+    });
+
+    return list;
+  }, [products, filters.product, productAnalyticsMap]);
 
   if (loading) {
     return (
@@ -274,11 +306,11 @@ export default function ColorAnalyticsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-white border-2 border-stroke rounded-xl p-5">
           <p className="text-sm font-medium text-gray-500">إجمالي الطلبات</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{processedData.totalOrders}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{hasActiveFilters ? processedData.totalOrders : (stats?.totalOrders ?? processedData.totalOrders)}</p>
         </div>
         <div className="bg-white border-2 border-stroke rounded-xl p-5">
           <p className="text-sm font-medium text-gray-500">إجمالي المنتجات</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{processedData.totalProducts}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{hasActiveFilters ? processedData.totalProducts : (stats?.totalProducts ?? processedData.totalProducts)}</p>
         </div>
         <div className="bg-white border-2 border-stroke rounded-xl p-5">
           <p className="text-sm font-medium text-gray-500">إجمالي القطع المباعة</p>
@@ -286,31 +318,32 @@ export default function ColorAnalyticsPage() {
         </div>
       </div>
 
-      {processedData.products.length === 0 ? (
-        <div className="bg-white border-2 border-stroke rounded-xl p-12 flex flex-col items-center justify-center gap-3">
-          <Package size={48} className="text-gray-300" />
-          <p className="text-gray-500 text-lg">لا توجد بيانات تطابق التصفية</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {processedData.products.map(product => (
-            <div key={product.product_id} className="bg-white border-2 border-stroke rounded-xl p-6">
+      <div className="space-y-6">
+        {products.length === 0 ? (
+          <div className="bg-white border-2 border-stroke rounded-xl p-12 flex flex-col items-center justify-center gap-3">
+            <Package size={48} className="text-gray-300" />
+            <p className="text-gray-500 text-lg">لا توجد منتجات</p>
+          </div>
+        ) : displayProducts.map(product => {
+          const analytics = productAnalyticsMap[product.id];
+          return analytics ? (
+            <div key={product.id} className="bg-white border-2 border-stroke rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   {product.thumbnail && (
                     <div className="size-18 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-50">
-                      <Image src={product.thumbnail} alt={product.product_name} width={100} height={100} className="w-full h-full object-cover" />
+                      <Image src={product.thumbnail} alt={product.name} width={100} height={100} className="w-full h-full object-cover" />
                     </div>
                   )}
-                  <h3 className="text-xl font-semibold text-gray-900">{product.product_name}</h3>
+                  <h3 className="text-xl font-semibold text-gray-900">{analytics.product_name}</h3>
                 </div>
                 <span className="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                  {product.totalQuantity} قطعة
+                  {analytics.totalQuantity} قطعة
                 </span>
               </div>
               <div className="space-y-3">
-                {product.colors.map(color => {
-                  const percentage = Math.round((color.quantity / product.maxColorQty) * 100);
+                {analytics.colors.map(color => {
+                  const percentage = Math.round((color.quantity / analytics.maxColorQty) * 100);
                   return (
                     <div key={color.color_name} className="flex items-center gap-4">
                       <span
@@ -337,9 +370,30 @@ export default function ColorAnalyticsPage() {
                 })}
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div key={product.id} className="bg-white border-2 border-stroke rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  {product.thumbnail ? (
+                    <div className="size-18 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-50">
+                      <Image src={product.thumbnail} alt={product.name} width={100} height={100} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="size-18 rounded-xl border border-gray-200 flex-shrink-0 bg-gray-100 flex items-center justify-center">
+                      <Package size={32} className="text-gray-300" />
+                    </div>
+                  )}
+                  <h3 className="text-xl font-semibold text-gray-900">{product.name}</h3>
+                </div>
+                <span className="text-sm font-medium text-gray-400 bg-gray-50 px-3 py-1 rounded-full">
+                  0 قطعة
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm">لا توجد بيانات بعد</p>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
