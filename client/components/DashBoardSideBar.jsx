@@ -20,7 +20,15 @@ import Image from "next/image";
 
 const menuItemsData = [
   { icon: LayoutGrid, label: "لوحة التحكم", href: "/admin/dashboard" },
-  { icon: Package, label: "جميع المنتجات", href: "/admin/all-products" },
+  { 
+    icon: Package, 
+    label: "جميع المنتجات", 
+    href: "/admin/all-products",
+    children:[
+      { label: "جميع المنتجات", href: "/admin/all-products" },
+      { label: "إضافة منتج", href: "/admin/add-product" },
+    ]
+   },
   {
     icon: ShoppingCart,
     label: "الطلبات",
