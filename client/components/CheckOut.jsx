@@ -3,8 +3,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Select } from '@base-ui/react/select';
-import { wilayaDataWithStopDesk as wilayaData } from '@/lib/wilayaDataWithStopDesk';
-import { getStopDeskCommunesByWilayaCode } from '@/lib/stopDeskFilter';
 import { ChevronDown, Loader2, Minus, Plus, X, Truck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMutation } from '@tanstack/react-query';
@@ -31,7 +29,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         firstName: '',
         lastName: '',
         phoneNumber: '',
-        wilaya: 'Alger',
+        wilaya: '',
         baladiya: '',
         delivery: 'domicile',
     });
@@ -45,10 +43,42 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     const [submitError, setSubmitError] = useState('');
     const [fieldErrors, setFieldErrors] = useState({});
     const [leftedOrderId, setLeftedOrderId] = useState(null);
+    const [wilayaData, setWilayaData] = useState({});
+    const [wilayasLoading, setWilayasLoading] = useState(true);
     const successModalRef = useRef(null);
     const leftedTimerRef = useRef(null);
     const submittedRef = useRef(false);
     const hasSavedOnce = useRef(false);
+
+    // Fetch wilaya data from API on mount
+    useEffect(() => {
+      const fetchWilayas = async () => {
+        try {
+          const res = await fetch('/api/shop/public-wilayas');
+          const data = await res.json();
+          if (Array.isArray(data)) {
+            const lookup = {};
+            data.forEach(w => {
+              lookup[w.code] = {
+                name: w.name,
+                domicilePrice: Number(w.home_delivery_price) || 0,
+                stopDeskPrice: Number(w.stopdesk_delivery_price) || 0,
+                free_delivery: Boolean(w.free_delivery),
+                hasStopDesk: Boolean(w.has_stopdesk),
+                municipalities: (w.municipalities || []).map(m => m.name),
+                stopDeskCommunes: (w.municipalities || []).filter(m => m.has_stopdesk).map(m => m.name)
+              };
+            });
+            setWilayaData(lookup);
+          }
+        } catch (err) {
+          console.error('Failed to fetch wilayas:', err);
+        } finally {
+          setWilayasLoading(false);
+        }
+      };
+      fetchWilayas();
+    }, []);
 
     // Initialize colorQuantities when colors change
     useEffect(() => {
@@ -121,7 +151,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                     first_name: formData.firstName,
                     last_name: formData.lastName,
                     wilaya: formData.wilaya,
-                    wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya) || '',
+                    wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key]?.name === formData.wilaya) || '',
                     baladiya: formData.baladiya,
                     delivery_type: formData.delivery,
                     delivery_price: deliveryPrice,
@@ -184,17 +214,17 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
     // Get communes for selected wilaya name
     const allCommunes = useMemo(() => {
-        const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
+        const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === formData.wilaya);
         return code ? wilayaData[code]?.municipalities || [] : [];
-    }, [formData.wilaya]);
+    }, [formData.wilaya, wilayaData]);
 
     // Filter communes based on delivery type
     const communes = useMemo(() => {
         if (formData.delivery === 'stopDesk') {
             // For stopDesk, only show communes that have stop desk service
-            const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
+            const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === formData.wilaya);
             if (!code) return [];
-            return getStopDeskCommunesByWilayaCode(code);
+            return wilayaData[code]?.stopDeskCommunes || [];
         }
         // For domicile, show all communes
         return allCommunes;
@@ -208,7 +238,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         }
         // For domicile, show all wilayas
         return Object.entries(wilayaData);
-    }, [formData.delivery]);
+    }, [formData.delivery, wilayaData]);
 
     // Reset baladiya if the current wilaya is not in the filtered list
     useEffect(() => {
@@ -219,9 +249,9 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             const firstWilaya = filteredWilayas[0];
             if (firstWilaya) {
                 const wilayaName = firstWilaya[1].name;
-                const code = Object.keys(wilayaData).find(key => wilayaData[key].name === wilayaName);
+                const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === wilayaName);
                 const filteredCommunes = formData.delivery === 'stopDesk'
-                    ? (code ? getStopDeskCommunesByWilayaCode(code) : [])
+                    ? (code ? (wilayaData[code]?.stopDeskCommunes || []) : [])
                     : (code ? (wilayaData[code]?.municipalities || []) : []);
                 const newBaladiya = filteredCommunes.length > 0 ? filteredCommunes[0] : '';
                 setFormData(prev => ({
@@ -237,12 +267,12 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
 
     // Auto-select first commune when wilaya changes
     const handleWilayaChange = (value) => {
-        const code = Object.keys(wilayaData).find(key => wilayaData[key].name === value);
+        const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === value);
         if (!code) return;
 
         // Use the filtered communes based on delivery type
         const filteredCommunes = formData.delivery === 'stopDesk'
-            ? getStopDeskCommunesByWilayaCode(code)
+            ? (wilayaData[code]?.stopDeskCommunes || [])
             : (wilayaData[code]?.municipalities || []);
 
         const newBaladiya = filteredCommunes.length > 0 ? filteredCommunes[0] : '';
@@ -262,7 +292,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             return;
         }
 
-        const code = Object.keys(wilayaData).find(key => wilayaData[key].name === formData.wilaya);
+        const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === formData.wilaya);
         if (!code) {
             setDeliveryPrice(0);
             return;
@@ -424,7 +454,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             last_name: lastName,
             phone: phoneNumber,
             wilaya: wilaya,
-            wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key].name === wilaya),
+            wilaya_code: Object.keys(wilayaData).find(key => wilayaData[key]?.name === wilaya),
             baladiya,
             delivery_type: formData.delivery,
             delivery_Price: deliveryPrice,
@@ -494,7 +524,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
         );
     }
 
-    return (
+    return wilayasLoading ? (
+        <div className="flex items-center justify-center py-16">
+            <Loader2 size={32} className="animate-spin text-primary" />
+        </div>
+    ) : (
         <form
             id='form'
             onSubmit={handleSubmit}
@@ -673,7 +707,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 <label className="font-medium text-black text-base mb-2">
                     التوصيل *
                 </label>
-                <Select.Root
+                <Select.Root dir="rtl"
                     value={formData.delivery}
                     onValueChange={(value) => handleInputChange('delivery', value)}
                 >
@@ -689,13 +723,13 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                                 <Select.List>
                                     <Select.Item
                                         value="domicile"
-                                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-primary"
+                                        className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-primary"
                                     >
                                         <Select.ItemText>توصيل للمنزل</Select.ItemText>
                                     </Select.Item>
                                     <Select.Item
                                         value="stopDesk"
-                                        className="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-primary"
+                                        className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-primary"
                                     >
                                         <Select.ItemText>استلام من المكتب</Select.ItemText>
                                     </Select.Item>
@@ -747,6 +781,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 <label className="font-medium text-black text-base mb-2">
                     البلدية *
                 </label>
+                {formData.delivery === 'stopDesk' && communes.length > 0 && formData.wilaya && (
+                    <p className="text-xs text-gray-400 mb-2">
+                        هذه هي البلديات المتوفرة بخدمة التوصيل إلى المكتب في هذه الولاية
+                    </p>
+                )}
                 {formData.delivery === 'stopDesk' && communes.length === 0 && formData.wilaya && (
                     <p className="text-sm text-gray-500 mb-2">
                         لا توجد بلديات مع خدمة استلام من المكتب في هذه الولاية
@@ -794,10 +833,14 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                 <div className='w-full px-1 md:px-8 lg:px-16 flex justify-between'>
                     <span className="font-medium text-black text-lg">رسوم التوصيل:</span>
                     <p className="font-medium text-primary text-xl">
-                        {deliveryPrice === 0 ? (
+                        {selectedOffer?.freeDelivery ? (
                             <span className="text-green-600 flex items-center gap-1.5">
                                 <Truck size={18} />
-                                مجاني
+                                توصيل مجاني
+                            </span>
+                        ) : !formData.wilaya ? (
+                            <span className="text-gray-400 text-sm">
+                                اختر الولاية لمعرفة التوصيل
                             </span>
                         ) : (
                             <>{deliveryPrice} دج</>
@@ -817,21 +860,21 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                     mutation.isPending ||
                     (colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) ||
                     !!quantityError ||
-                    !formData.firstName.trim() ||
-                    !formData.phoneNumber.trim() ||
-                    !formData.wilaya.trim() ||
-                    (formData.delivery === 'domicile' ? !formData.baladiya.trim() : false) ||
-                    (formData.delivery === 'stopDesk' && communes.length > 0 ? !formData.baladiya.trim() : false)
+                    !formData.firstName?.trim() ||
+                    !formData.phoneNumber?.trim() ||
+                    !formData.wilaya?.trim() ||
+                    (formData.delivery === 'domicile' ? !formData.baladiya?.trim() : false) ||
+                    (formData.delivery === 'stopDesk' && communes.length > 0 ? !formData.baladiya?.trim() : false)
                 }
                 className={`w-full h-11 rounded-xl transition-opacity font-medium text-sm flex items-center justify-center gap-2 ${
                     mutation.isPending ||
                     (colors.length > 0 && Object.values(colorQuantities).every(q => q === 0)) ||
                     !!quantityError ||
-                    !formData.firstName.trim() ||
-                    !formData.phoneNumber.trim() ||
-                    !formData.wilaya.trim() ||
-                    (formData.delivery === 'domicile' ? !formData.baladiya.trim() : false) ||
-                    (formData.delivery === 'stopDesk' && communes.length > 0 ? !formData.baladiya.trim() : false)
+                    !formData.firstName?.trim() ||
+                    !formData.phoneNumber?.trim() ||
+                    !formData.wilaya?.trim() ||
+                    (formData.delivery === 'domicile' ? !formData.baladiya?.trim() : false) ||
+                    (formData.delivery === 'stopDesk' && communes.length > 0 ? !formData.baladiya?.trim() : false)
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-primary text-white hover:opacity-90 cursor-pointer'
                 }`}

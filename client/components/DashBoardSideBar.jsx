@@ -6,6 +6,7 @@ import {
   ShoppingCart,
   Image as ImageIcon,
   Star,
+  Truck,
   X,
   Menu,
   ChevronLeft,
@@ -30,8 +31,9 @@ const menuItemsData = [
       { label: "واش نوجد ؟", href: "/admin/color-analytics" },
     ],
   },
+  { icon: Truck, label: "التوصيل", href: "/admin/delivery" },
   { icon: ImageIcon, label: "إضافات", href: "/admin/extra" },
-  { icon: Star, label: "التقييمات", href: "/admin/reviews" }
+  { icon: Star, label: "التقييمات", href: "/admin/reviews" },
 ];
 
 export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar, toggleSidebar }) => {
