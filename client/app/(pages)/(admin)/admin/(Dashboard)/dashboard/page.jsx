@@ -8,14 +8,12 @@ import React from 'react'
 function Dashboard() {
   const { data: stats, isLoading: statsLoading, error: statsError } = useFetchSingleProduct('/api/shop/stats')
   const { totalProducts, totalSoldProducts, totalOrders, dailyTotals, CategoryStats, wilayaStats } = stats || {};
-  
-
 
   return (
-    <main className='w-full pt-6 px-9 flex flex-col gap-6 pb-16'>
+    <main className='w-full pt-6 px-4 sm:px-6 lg:px-9 flex flex-col gap-6 pb-16'>
       <h1 className='text-3xl font-bold'>لوحة التحكم</h1>
-      <div className='flex flex-col md:flex-row items-start gap-6 md:gap-9'>
-        <div className='bg-white border-2 w-full md:w-1/6 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
+      <div className='flex flex-col md:flex-row items-stretch gap-6 md:gap-9'>
+        <div className='bg-white border-2 w-full md:flex-1 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
           <p className='text-sm font-medium text-secondary'>إجمالي المنتجات</p>
           {
             totalProducts != null && totalProducts !== undefined ? (
@@ -25,7 +23,7 @@ function Dashboard() {
             )
           }
         </div>
-        <div className='bg-white border-2 w-full md:w-1/6 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
+        <div className='bg-white border-2 w-full md:flex-1 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
           <p className='text-sm font-medium text-secondary'>إجمالي المنتجات المباعة</p>
           {
             totalSoldProducts != null && totalSoldProducts !== undefined ? (
@@ -35,7 +33,7 @@ function Dashboard() {
             )
           }
         </div>
-        <div className='bg-white border-2 w-full md:w-1/6 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
+        <div className='bg-white border-2 w-full md:flex-1 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
           <p className='text-sm font-medium text-secondary'>إجمالي الطلبات</p>
           {
             totalOrders != null && totalOrders !== undefined ? (
@@ -47,9 +45,13 @@ function Dashboard() {
         </div>
       </div>
       <ChartBarDefault chartData={dailyTotals} isLoading={statsLoading} error={statsError} />
-      <div className='flex w-full gap-6'>
-        <ChartPieDonut chartData={CategoryStats} isLoading={statsLoading} error={statsError} />
-        <OrdersPerWilaya data={wilayaStats} isLoading={statsLoading} error={statsError} />
+      <div className='flex flex-col lg:flex-row w-full gap-6'>
+        <div className='w-full lg:w-1/2'>
+          <ChartPieDonut chartData={CategoryStats} isLoading={statsLoading} error={statsError} />
+        </div>
+        <div className='w-full lg:w-1/2'>
+          <OrdersPerWilaya data={wilayaStats} isLoading={statsLoading} error={statsError} />
+        </div>
       </div>
     </main>
   )

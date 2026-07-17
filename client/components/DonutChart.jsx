@@ -147,23 +147,19 @@ export function ChartPieDonut({
                                 }}
                             />
                             <Legend
-                                verticalAlign="middle"
-                                align="left"
-                                layout="vertical"
+                                verticalAlign="bottom"
+                                align="center"
+                                layout="horizontal"
                                 iconType="circle"
-                                wrapperStyle={{
-                                    paddingLeft: '50px',   
-                                    paddingRight: '200px',
-                                }}
                             />
                             <Pie
                                 data={processedData}
                                 dataKey={dataKey}
                                 nameKey={nameKey}
-                                innerRadius={55}
-                                outerRadius={90}
+                                innerRadius={48}
+                                outerRadius={75}
                                 paddingAngle={2}
-                                cx="35%"
+                                cx="50%"
                                 cy="50%"
                                 isAnimationActive={true}
                             >
