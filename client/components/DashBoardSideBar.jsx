@@ -95,6 +95,13 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
 
   return (
     <>
+<style>{`
+  .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+  .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-scroll::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+  .sidebar-scroll::-webkit-scrollbar-button { display: none; }
+`}</style>
+
       {isMobileOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -104,6 +111,7 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
 
       <aside
         className={`
+          sidebar-scroll
           ${isCollapsed ? 'w-20' : 'w-64'}
           ${isMobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
           transform
