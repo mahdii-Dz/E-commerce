@@ -7,6 +7,8 @@ import {
   Image as ImageIcon,
   Star,
   Truck,
+  UserCog,
+  LogOut,
   X,
   Menu,
   ChevronLeft,
@@ -14,16 +16,18 @@ import {
   ChevronDown
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { useWorker } from "./AdminAuthGuard";
 
-const menuItemsData = [
-  { icon: LayoutGrid, label: "لوحة التحكم", href: "/admin/dashboard" },
-  { 
-    icon: Package, 
-    label: "جميع المنتجات", 
+const ALL_MENU_ITEMS = [
+  { icon: LayoutGrid, label: "لوحة التحكم", href: "/admin/dashboard", permissionKey: "dashboard" },
+  {
+    icon: Package,
+    label: "جميع المنتجات",
     href: "/admin/all-products",
+    permissionKey: "products",
     children:[
       { label: "جميع المنتجات", href: "/admin/all-products" },
       { label: "إضافة منتج", href: "/admin/add-product" },
@@ -33,22 +37,50 @@ const menuItemsData = [
     icon: ShoppingCart,
     label: "الطلبات",
     href: "/admin/orders",
+    permissionKey: "orders",
     children: [
       { label: "الطلبات", href: "/admin/orders" },
       { label: "الطلبات المتروكة", href: "/admin/lefted-orders" },
       { label: "واش نوجد ؟", href: "/admin/color-analytics" },
     ],
   },
-  { icon: Truck, label: "التوصيل", href: "/admin/delivery" },
-  { icon: ImageIcon, label: "إضافات", href: "/admin/extra" },
-  { icon: Star, label: "التقييمات", href: "/admin/reviews" },
+  { icon: Truck, label: "التوصيل", href: "/admin/delivery", permissionKey: "delivery" },
+  { icon: ImageIcon, label: "إضافات", href: "/admin/extra", permissionKey: "extras" },
+  { icon: Star, label: "التقييمات", href: "/admin/reviews", permissionKey: "reviews" },
+  { icon: UserCog, label: "موظفي المتجر", href: "/admin/shop-workers", permissionKey: "shop-workers",
+    children: [
+      { label: "الكل", href: "/admin/shop-workers" },
+      { label: "إضافة موظف", href: "/admin/shop-workers/add" },
+    ]
+  },
 ];
+
+function filterMenuItems(items, worker) {
+  const isOwner = worker?.role === 'owner';
+  const permissions = worker?.permissions || [];
+
+  if (isOwner || permissions.includes('*')) return items;
+
+  return items.filter(item => {
+    if (item.permissionKey === 'shop-workers') return false;
+    return permissions.includes(item.permissionKey);
+  });
+}
 
 export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar, toggleSidebar }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const [hoveredItem, setHoveredItem] = useState(null);
   const [submenuOpen, setSubmenuOpen] = useState({});
   const previousPathnameRef = useRef(pathname);
+  const worker = useWorker();
+
+  const handleLogout = useCallback(async () => {
+    await fetch('/api/shop/workers/logout', { method: 'POST' });
+    router.push('/admin');
+  }, [router]);
+
+  const menuItemsData = filterMenuItems(ALL_MENU_ITEMS, worker);
 
   const toggleSubmenu = (label) => {
     setSubmenuOpen(prev => ({ ...prev, [label]: !prev[label] }));
@@ -75,7 +107,7 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
           ${isCollapsed ? 'w-20' : 'w-64'}
           ${isMobileOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
           transform
-          h-screen bg-white border-l border-gray-200 flex flex-col ${isCollapsed ? 'py-6 px-3' : 'p-6'} fixed top-0 right-0 z-50 transition-transform duration-300 ease-in-out
+          h-screen bg-white border-l border-gray-200 flex flex-col ${isCollapsed ? 'py-6 px-3' : 'p-6'} fixed top-0 right-0 z-50 transition-transform duration-300 ease-in-out overflow-y-auto
         `}
       >
         <button
@@ -138,6 +170,17 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
                 );
               })}
             </nav>
+            <div className="mt-auto pt-4 border-t border-gray-100">
+              <button
+                onClick={handleLogout}
+                onMouseEnter={() => setHoveredItem('logout')}
+                onMouseLeave={() => setHoveredItem(null)}
+                className="w-full cursor-pointer flex items-center justify-center gap-3 px-2 py-3 rounded-xl text-base font-medium transition-all duration-200 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                title="تسجيل الخروج"
+              >
+                <LogOut size={20} strokeWidth={2} />
+              </button>
+            </div>
           </>
         ) : (
           <>
@@ -261,6 +304,17 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
                 );
               })}
             </nav>
+            <div className="mt-auto pt-4 border-t border-gray-100">
+              <button
+                onClick={handleLogout}
+                onMouseEnter={() => setHoveredItem('logout')}
+                onMouseLeave={() => setHoveredItem(null)}
+                className="w-full cursor-pointer flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 text-gray-500 hover:bg-red-50 hover:text-red-600"
+              >
+                <LogOut size={20} strokeWidth={2} />
+                <span>تسجيل الخروج</span>
+              </button>
+            </div>
           </>
         )}
       </aside>

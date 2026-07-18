@@ -95,7 +95,7 @@ export function ChartPieDonut({
                     <CardDescription>{description}</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 flex items-center justify-center">
-                    <p className="text-red-500">Error: {error}</p>
+                    <p className="text-red-500">Error: {error?.message || 'Failed to load'}</p>
                 </CardContent>
             </Card>
         );

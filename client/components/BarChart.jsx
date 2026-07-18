@@ -74,7 +74,7 @@ export function ChartBarDefault({ chartData, isLoading, error, daysToShow = 30 }
     if (error) {
         return (
             <Card className="flex items-center justify-center h-[300px]">
-                <p className="text-red-500">Error: {error}</p>
+                <p className="text-red-500">Error: {error?.message || 'Failed to load'}</p>
             </Card>
         );
     }

@@ -26,7 +26,7 @@ function OrdersPerWilaya({ data, isLoading, error }) {
                     <CardDescription>احصائيات الطلبيات لكل ولاية</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 flex items-center justify-center">
-                    <p className="text-red-500">Error: {error}</p>
+                    <p className="text-red-500">Error: {error?.message || 'Failed to load'}</p>
                 </CardContent>
             </Card>
         );

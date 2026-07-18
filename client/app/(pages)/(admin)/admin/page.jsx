@@ -3,8 +3,8 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useEffect } from "react";
+import { getFirstPermittedPage } from "@/lib/permissions";
 
-// Custom hook for form handling
 function useForm(initialValues) {
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
@@ -13,7 +13,6 @@ function useForm(initialValues) {
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setValues(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: null }));
     }
@@ -28,7 +27,6 @@ function useForm(initialValues) {
   return { values, errors, isSubmitting, setIsSubmitting, setErrors, handleChange, resetForm, setValues };
 }
 
-// Toast notification component
 function Toast({ message, type, onClose }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 3000);
@@ -48,7 +46,6 @@ function Toast({ message, type, onClose }) {
   );
 }
 
-// Loading spinner component
 function LoadingSpinner() {
   return (
     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
@@ -59,45 +56,24 @@ export default function AdminPage() {
   const router = useRouter();
   const [toast, setToast] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [attempts, setAttempts] = useState(0);
-  const [isLocked, setIsLocked] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const { values, errors, isSubmitting, setIsSubmitting, setErrors, handleChange, resetForm } = useForm({
+  const { values, errors, isSubmitting, setIsSubmitting, setErrors, handleChange } = useForm({
+    email: '',
     password: ''
   });
 
-  // Lockout after 5 failed attempts
-  const MAX_ATTEMPTS = 5;
-  const LOCKOUT_DURATION = 30000; // 30 seconds
-
-  useEffect(() => {
-    if (attempts >= MAX_ATTEMPTS) {
-      setIsLocked(true);
-      setToast({ message: `محاولات كثيرة. تم القفل لمدة ${LOCKOUT_DURATION / 1000} ثانية.`, type: 'error' });
-      const timer = setTimeout(() => {
-        setIsLocked(false);
-        setAttempts(0);
-        setToast(null);
-      }, LOCKOUT_DURATION);
-      return () => clearTimeout(timer);
-    }
-  }, [attempts]);
-
-  // Check if already authenticated on mount
   useEffect(() => {
     async function checkAuth() {
       try {
-        const res = await fetch('/api/admin/auth/check');
+        const res = await fetch('/api/shop/workers/check');
         const data = await res.json();
-        if (data.authenticated) {
-          router.replace('/admin/dashboard');
-          return;
+        if (data.authenticated && data.worker) {
+          const page = getFirstPermittedPage(data.worker.permissions, data.worker.role)
+          router.replace(page)
+          return
         }
-        setIsAuthenticated(false);
       } catch {
-        setIsAuthenticated(false);
       } finally {
         setIsChecking(false);
       }
@@ -112,33 +88,38 @@ export default function AdminPage() {
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
 
-    if (isLocked) {
-      showToast('الرجاء الانتظار قبل المحاولة مرة أخرى.', 'error');
-      return;
-    }
+    const validationErrors = {};
+    if (!values.email.trim()) validationErrors.email = 'البريد الإلكتروني مطلوب';
+    if (!values.password.trim()) validationErrors.password = 'كلمة المرور مطلوبة';
 
-    if (!values.password.trim()) {
-      setErrors({ password: 'كلمة المرور مطلوبة' });
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
     setIsSubmitting(true);
 
-    const res = await fetch('/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: values.password })
-    });
+    try {
+      const res = await fetch('/api/shop/workers/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: values.email, password: values.password })
+      });
 
-    if (res.ok) {
-      router.push('/admin/dashboard');
-    } else {
-      setAttempts(prev => prev + 1);
-      showToast('تم رفض الوصول', 'error');
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        const page = getFirstPermittedPage(data.worker.permissions, data.worker.role)
+        router.push(page)
+      } else {
+        showToast(data.error || 'بيانات الدخول غير صحيحة', 'error');
+      }
+    } catch {
+      showToast('حدث خطأ في الاتصال', 'error');
     }
 
     setIsSubmitting(false);
-  }, [isLocked, values.password, setErrors, showToast, router]);
+  }, [values, setErrors, showToast, router]);
 
   const togglePasswordVisibility = useCallback(() => {
     setShowPassword(prev => !prev);
@@ -150,7 +131,6 @@ export default function AdminPage() {
     }
   }, [isSubmitting, handleSubmit]);
 
-  // Don't render the login form while checking auth
   if (isChecking) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
@@ -164,7 +144,6 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col items-center justify-center p-4" dir="rtl" lang="ar">
-      {/* Toast Notification */}
       {toast && (
         <Toast
           message={toast.message}
@@ -173,26 +152,49 @@ export default function AdminPage() {
         />
       )}
 
-      {/* Main Card */}
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 transform transition-all duration-300 hover:shadow-2xl">
-        {/* Logo Section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-4 shadow-lg">
             <Image src='/Logo.png' alt='Logo' width={64} height={64} className="rounded-xl" />
           </div>
-            <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D'or</h3>
+          <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D'or</h3>
           <h1 className="text-2xl font-bold text-gray-900">لوحة الإدارة</h1>
           <p className="text-gray-500 mt-2 text-sm">دخول آمن مطلوب</p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div className="space-y-2">
-            <label
-              htmlFor="admin-password"
-              className="block text-sm font-medium text-gray-700"
-            >كلمة المرور</label>
+            <label htmlFor="admin-email" className="block text-sm font-medium text-gray-700">البريد الإلكتروني</label>
+            <input
+              id="admin-email"
+              name="email"
+              type="email"
+              value={values.email}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              placeholder="أدخل البريد الإلكتروني"
+              disabled={isSubmitting}
+              className={`
+                w-full px-4 py-3 rounded-xl border-2 bg-gray-50
+                transition-all duration-200 outline-none
+                ${errors.email ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-gray-200 focus:border-blue-500 focus:bg-white'}
+                placeholder:text-gray-400 text-gray-900
+              `}
+              autoComplete="email"
+              autoFocus
+            />
+            {errors.email && (
+              <p className="text-red-500 text-sm flex items-center gap-1">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.email}
+              </p>
+            )}
+          </div>
 
+          <div className="space-y-2">
+            <label htmlFor="admin-password" className="block text-sm font-medium text-gray-700">كلمة المرور</label>
 
             <div className="relative">
               <input
@@ -203,28 +205,21 @@ export default function AdminPage() {
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
                 placeholder="أدخل كلمة المرور"
-                disabled={isLocked || isSubmitting}
+                disabled={isSubmitting}
                 className={`
                   w-full px-4 py-3 rounded-xl border-2 bg-gray-50
                   transition-all duration-200 outline-none
-                  ${errors.password
-                    ? 'border-red-500 focus:border-red-500 bg-red-50'
-                    : 'border-gray-200 focus:border-blue-500 focus:bg-white'
-                  }
-                  ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}
+                  ${errors.password ? 'border-red-500 focus:border-red-500 bg-red-50' : 'border-gray-200 focus:border-blue-500 focus:bg-white'}
+                  ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}
                   placeholder:text-gray-400 text-gray-900
                 `}
-                aria-invalid={errors.password ? "true" : "false"}
-                aria-describedby={errors.password ? "password-error" : undefined}
                 autoComplete="current-password"
-                autoFocus
               />
 
-              {/* Toggle Password Visibility */}
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
-                disabled={isLocked}
+                disabled={isSubmitting}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-1"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
@@ -241,9 +236,8 @@ export default function AdminPage() {
               </button>
             </div>
 
-            {/* Error Message */}
             {errors.password && (
-              <p id="password-error" className="text-red-500 text-sm flex items-center gap-1 animate-pulse">
+              <p className="text-red-500 text-sm flex items-center gap-1">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
@@ -252,15 +246,14 @@ export default function AdminPage() {
             )}
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
-            disabled={isSubmitting || isLocked || !values.password.trim()}
+            disabled={isSubmitting || !values.email.trim() || !values.password.trim()}
             className={`
               w-full py-3 px-4 rounded-xl font-semibold text-white
               transform transition-all duration-200
               flex items-center justify-center gap-2
-              ${isSubmitting || isLocked || !values.password.trim()
+              ${isSubmitting || !values.email.trim() || !values.password.trim()
                 ? 'bg-gray-400 cursor-not-allowed opacity-70'
                 : 'bg-[#EEC910] hover:bg-[#D4B80F] hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl'
               }
@@ -271,8 +264,6 @@ export default function AdminPage() {
                 <LoadingSpinner />
                 <span>جار التحقق...</span>
               </>
-            ) : isLocked ? (
-              <span>مقفل</span>
             ) : (
               <span>تسجيل الدخول</span>
             )}
@@ -280,7 +271,6 @@ export default function AdminPage() {
         </form>
       </div>
 
-      {/* Footer */}
       <footer className="mt-8 text-center text-gray-400 text-sm">
         <p>© {new Date().getFullYear()} شركتك. جميع الحقوق محفوظة.</p>
       </footer>
