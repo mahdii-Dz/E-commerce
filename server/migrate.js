@@ -59,6 +59,17 @@ async function migrate() {
       console.log('  - worker_sessions table already exists, skipping');
     }
 
+    // ============ ORDER DELIVERY SENT COLUMN ============
+    const checkDeliveryColumn = await conn.execute("SHOW COLUMNS FROM order_info LIKE 'delivery_sent'");
+    const hasDeliveryColumn = Array.isArray(checkDeliveryColumn) && checkDeliveryColumn.length > 0;
+    if (!hasDeliveryColumn) {
+      console.log('Adding delivery_sent column to order_info...');
+      await conn.execute("ALTER TABLE order_info ADD COLUMN delivery_sent TINYINT(1) DEFAULT 0 AFTER current_status");
+      console.log('  ✓ delivery_sent column added');
+    } else {
+      console.log('  - delivery_sent column already exists, skipping');
+    }
+
     console.log('\nMigration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error.message);

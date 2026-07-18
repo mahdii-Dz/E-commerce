@@ -865,6 +865,7 @@ export const GetOrders = async (req, res) => {
         o.delivery_Price,
         o.free_delivery,
         o.current_status,
+        o.delivery_sent,
         DATE_FORMAT(DATE_ADD(o.created_at, INTERVAL 1 HOUR), '%Y-%m-%dT%H:%i:%s+01:00') AS created_at,
         oi.id AS item_id,
         oi.quantity,
@@ -906,6 +907,7 @@ export const GetOrders = async (req, res) => {
           delivery_Price: Number(row.delivery_Price) || 0,
           free_delivery: row.free_delivery === 1 || row.free_delivery === true,
           current_status: row.current_status || 'new',
+          delivery_sent: row.delivery_sent === 1 || row.delivery_sent === true,
           created_at: row.created_at,
           items: [],
           totalPrice: 0
@@ -1046,6 +1048,24 @@ export const UpdateOrder = async (req, res) => {
     return res.status(200).json({ message: "Order updated successfully" });
   } catch (error) {
     return handleDbError(res, error, "updating order");
+  }
+};
+
+export const MarkOrderDeliverySent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const orderId = validateId(id);
+    if (!orderId) {
+      return res.status(400).json({ error: "Invalid order ID" });
+    }
+
+    await execute(
+      "UPDATE order_info SET delivery_sent = 1 WHERE id = ?",
+      [orderId]
+    );
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    return handleDbError(res, error, "marking order delivery sent");
   }
 };
 
@@ -1789,28 +1809,57 @@ export const UpdateDeliveryWilayas = async (req, res) => {
   try {
     const { wilayas } = req.body;
 
-    if (!wilayas || !Array.isArray(wilayas)) {
+    if (!wilayas || !Array.isArray(wilayas) || wilayas.length === 0) {
       return res.status(400).json({ error: 'wilayas array is required' });
     }
 
+    const codes = [];
     for (const w of wilayas) {
       if (!w.code) continue;
-      await execute(
-        `UPDATE wilayas SET
-          home_delivery_price = ?,
-          stopdesk_delivery_price = ?,
-          free_delivery = ?,
-          is_active = ?
-        WHERE code = ?`,
-        [
-          w.home_delivery_price ?? 0,
-          w.stopdesk_delivery_price ?? 0,
-          w.free_delivery ? 1 : 0,
-          w.is_active ? 1 : 0,
-          w.code
-        ]
-      );
+      codes.push(w.code);
     }
+
+    if (codes.length === 0) {
+      return res.status(400).json({ error: 'no valid wilayas to update' });
+    }
+
+    const whenHome = codes.map(() => "WHEN ? THEN ?").join(' ');
+    const whenStop = codes.map(() => "WHEN ? THEN ?").join(' ');
+    const whenFree = codes.map(() => "WHEN ? THEN ?").join(' ');
+    const whenActive = codes.map(() => "WHEN ? THEN ?").join(' ');
+    const inPlaceholders = codes.map(() => '?').join(', ');
+
+    const sql = `
+      UPDATE wilayas SET
+        home_delivery_price = CASE code ${whenHome} END,
+        stopdesk_delivery_price = CASE code ${whenStop} END,
+        free_delivery = CASE code ${whenFree} END,
+        is_active = CASE code ${whenActive} END
+      WHERE code IN (${inPlaceholders})
+    `;
+
+    const params = [];
+    for (const w of wilayas) {
+      if (!w.code) continue;
+      params.push(w.code, w.home_delivery_price ?? 0);
+    }
+    for (const w of wilayas) {
+      if (!w.code) continue;
+      params.push(w.code, w.stopdesk_delivery_price ?? 0);
+    }
+    for (const w of wilayas) {
+      if (!w.code) continue;
+      params.push(w.code, w.free_delivery ? 1 : 0);
+    }
+    for (const w of wilayas) {
+      if (!w.code) continue;
+      params.push(w.code, w.is_active ? 1 : 0);
+    }
+    for (const c of codes) {
+      params.push(c);
+    }
+
+    await execute(sql, params);
 
     return res.status(200).json({ success: true, message: 'Wilayas updated successfully' });
   } catch (error) {
