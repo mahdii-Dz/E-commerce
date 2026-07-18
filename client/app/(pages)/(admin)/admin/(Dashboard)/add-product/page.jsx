@@ -716,56 +716,54 @@ export default function AddProductPage() {
               {colors.map((color, index) => (
                 <div
                   key={index}
-                  className="relative group w-14 h-14 rounded-lg border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-gray-400 transition-colors"
+                  className="relative group flex flex-col items-center gap-1.5 w-24"
                 >
-                  <img
-                    src={color.image}
-                    alt={color.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-                  />
-                  <div
-                    className="w-full h-full items-center justify-center hidden"
-                    style={{ backgroundColor: `#${color.hex}` }}
-                  />
-                  {!isSubmitting && (
-                    <button
-                      onClick={() => handleRemoveColor(index)}
-                      className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                  <div className="relative w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-gray-400 transition-colors">
+                    <img
+                      src={color.image}
+                      alt={color.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextElementSibling.style.display = 'flex';
+                        e.target.nextElementSibling.nextElementSibling.style.display = 'none';
+                      }}
+                    />
+                    <div
+                      className="w-full h-full items-center justify-center hidden"
+                      style={{ backgroundColor: `#${color.hex}` }}
+                    />
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-6 flex items-center justify-center"
+                      style={{ backgroundColor: `#${color.hex}` }}
                     >
-                      <X size={20} className="text-white" />
-                    </button>
-                  )}
+                      <span className="w-3 h-3 rounded-full border border-white/50" />
+                    </div>
+                    {!isSubmitting && (
+                      <button
+                        onClick={() => handleRemoveColor(index)}
+                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
+                      >
+                        <X size={20} className="text-white" />
+                      </button>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-700 text-center leading-tight line-clamp-2 max-w-full">
+                    {color.name}
+                  </span>
                 </div>
               ))}
 
-              {/* Add color button - circular with plus icon */}
+              {/* Add color button */}
               <button
                 onClick={openColorModal}
                 disabled={isSubmitting}
-                className="w-14 h-14 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-[#FA3145] hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-1 hover:border-[#FA3145] hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Plus size={24} className="text-gray-400 group-hover:text-[#FA3145]" />
+                <Plus size={24} className="text-gray-400" />
+                <span className="text-xs text-gray-400">إضافة لون</span>
               </button>
             </div>
-
-            {/* Color names list */}
-            {colors.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {colors.map((color, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-700"
-                  >
-                    <span
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: `#${color.hex}` }}
-                    />
-                    {color.name}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="flex flex-col gap-3 w-full">
