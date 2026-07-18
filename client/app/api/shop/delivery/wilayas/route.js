@@ -13,6 +13,10 @@ export async function PUT(request) {
   const auth = await adminAuth(request);
   if (auth.error) return auth.error;
   const body = await request.json();
-  const data = await proxyRequest('PUT', '/api/shop/update-delivery-wilayas', body);
-  return NextResponse.json(data);
+  try {
+    const data = await proxyRequest('PUT', '/api/shop/update-delivery-wilayas', body);
+    return NextResponse.json(data);
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 502 });
+  }
 }

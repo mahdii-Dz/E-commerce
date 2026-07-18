@@ -114,11 +114,11 @@ export default function AdminReviewsPage() {
       }
 
       setImageUrl(imageUrl);
-      showToast('Image uploaded successfully!', 'success');
+      showToast('تم رفع الصورة بنجاح!', 'success');
 
     } catch (error) {
       console.error("Upload failed:", error);
-      showToast("Failed to upload image: " + error.message, "error");
+      showToast("فشل رفع الصورة: " + error.message, "error");
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -131,13 +131,13 @@ export default function AdminReviewsPage() {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      showToast('Please select an image file', 'error');
+      showToast('الرجاء اختيار ملف صورة', 'error');
       return;
     }
 
     // Validate file size (e.g., max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      showToast('Image size should be less than 5MB', 'error');
+      showToast('يجب أن يكون حجم الصورة أقل من 5 ميجابايت', 'error');
       return;
     }
 
@@ -190,12 +190,12 @@ export default function AdminReviewsPage() {
         throw new Error(errorData.error || 'Failed to delete review');
       }
 
-      showToast('Review deleted successfully!', 'success');
+      showToast('تم حذف المراجعة بنجاح!', 'success');
       // Remove from list
       setReviews(prev => prev.filter(r => r.id !== reviewId));
     } catch (err) {
       console.error('Error deleting review:', err);
-      showToast(err.message || 'Failed to delete review', 'error');
+      showToast(err.message || 'فشل حذف المراجعة', 'error');
     }
   };
 
@@ -203,22 +203,22 @@ export default function AdminReviewsPage() {
     e.preventDefault();
 
     if (!formData.productId) {
-      showToast('Please select a product', 'error');
+      showToast('الرجاء اختيار منتج', 'error');
       return;
     }
 
     if (!formData.customerName.trim()) {
-      showToast('Please enter a customer name', 'error');
+      showToast('الرجاء إدخال اسم العميل', 'error');
       return;
     }
 
     if (!formData.reviewText.trim()) {
-      showToast('Please enter review text', 'error');
+      showToast('الرجاء إدخال نص المراجعة', 'error');
       return;
     }
 
     if (formData.stars < 1 || formData.stars > 5) {
-      showToast('Please select a star rating', 'error');
+      showToast('الرجاء اختيار تقييم بالنجوم', 'error');
       return;
     }
 
@@ -248,7 +248,7 @@ export default function AdminReviewsPage() {
 
       const data = await response.json();
 
-      showToast(data.message || 'Admin review added successfully!', 'success');
+      showToast(data.message || 'تم إضافة المراجعة الإدارية بنجاح!', 'success');
 
       // Reset form
       setFormData({
@@ -264,7 +264,7 @@ export default function AdminReviewsPage() {
 
     } catch (err) {
       console.error('Error submitting admin review:', err);
-      showToast(err.message || 'Failed to submit admin review', 'error');
+      showToast(err.message || 'فشل إرسال المراجعة الإدارية', 'error');
     } finally {
       setIsSubmitting(false);
     }

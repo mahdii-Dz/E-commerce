@@ -136,7 +136,8 @@ export default function DeliveryPage() {
       });
       refetch();
     } catch (error) {
-      showToast(error.response?.data?.message || "فشل الحفظ", "error");
+      const data = error.response?.data;
+      showToast(data?.error || data?.message || "فشل الحفظ", "error");
     } finally {
       setIsSaving(false);
     }

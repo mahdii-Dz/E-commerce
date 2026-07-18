@@ -4,6 +4,7 @@ import { DashBoardSideBar } from "@/components/DashBoardSideBar";
 import { Roboto } from "next/font/google";
 import { AdminAuthGuard } from "@/components/AdminAuthGuard";
 import { useState, useEffect, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 
 const RobotoSans = Roboto({
@@ -27,6 +28,49 @@ export default function RootLayout({ children }) {
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Save and restore scroll position per admin page
+    const pathname = usePathname();
+
+    useEffect(() => {
+        history.scrollRestoration = 'manual';
+
+        const saved = sessionStorage.getItem(`admin_scroll_${pathname}`);
+        if (saved) {
+            const y = parseInt(saved, 10);
+            let attempts = 0;
+            const tryRestore = () => {
+                window.scrollTo(0, y);
+                if (++attempts < 20) requestAnimationFrame(tryRestore);
+            };
+            requestAnimationFrame(tryRestore);
+        }
+
+        let saveTimer;
+        const onScroll = () => {
+            clearTimeout(saveTimer);
+            saveTimer = setTimeout(() => {
+                sessionStorage.setItem(`admin_scroll_${pathname}`, window.scrollY);
+            }, 150);
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+
+        const saveImmediate = () => {
+            clearTimeout(saveTimer);
+            sessionStorage.setItem(`admin_scroll_${pathname}`, window.scrollY);
+        };
+        window.addEventListener('beforeunload', saveImmediate);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') saveImmediate();
+        });
+
+        return () => {
+            window.removeEventListener('scroll', onScroll);
+            window.removeEventListener('beforeunload', saveImmediate);
+            document.removeEventListener('visibilitychange', saveImmediate);
+            clearTimeout(saveTimer);
+        };
+    }, [pathname]);
 
 
 

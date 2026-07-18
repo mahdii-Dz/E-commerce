@@ -373,26 +373,37 @@ export default function OrdersPage() {
         return `${item.product_name}${item.offer_text ? ' - ' + item.offer_text : ''} (${colorQtys})`;
       }).join(', ');
 
+      const wilayaCode = order.wilaya_code || Object.keys(wilayaData).find(key => wilayaData[key]?.name === order.wilaya) || '';
       const response = await axios.post('/api/admin/Delivery', {
+        order_id: order.order_id,
+        reference: order.order_number,
         nom_client: fullName,
         telephone: order.phone,
         commune: order.baladiya,
-        code_wilaya: order.wilaya_code,
+        code_wilaya: wilayaCode,
         address: order.address,
         produit: produit,
         quantite: totalQty,
         montant: order.totalPrice,
-        boutique: 'E-Commerce Shop',
+        boutique: 'La Maison D\'or',
         delivery_type: order.delivery_type === 'domicile' ? 0 : 1
       });
 
       if (response.status === 200) {
         showToast(`تم إرسال الطلب ${order.order_number} للتوصيل بنجاح`, 'success');
+        setOrders(prev => prev.map(o =>
+          o.order_id === order.order_id ? { ...o, delivery_sent: true } : o
+        ));
       } else if (response.data?.success === false || response.data?.error) {
         showToast(`فشل الإرسال: ${response.data.error}`, 'error');
       }
     } catch (error) {
-      showToast(error.response?.data?.error || 'فشل إرسال الطلب للتوصيل', 'error');
+      const errData = error.response?.data;
+      if (errData?.errors?.commune) {
+        showToast('هذه البلدية لا يدعمها التوصيل', 'error');
+      } else {
+        showToast(errData?.error || 'فشل إرسال الطلب للتوصيل', 'error');
+      }
     } finally {
       setSendingToDelivery(prev => {
         const newSet = new Set(prev);
@@ -937,18 +948,24 @@ export default function OrdersPage() {
                           >
                             <Edit className="w-5 h-5 text-blue-600" />
                           </button>
-                          <button
-                            onClick={() => handleSendToDelivery(order)}
-                            disabled={isSending}
-                            className={`p-1.5 rounded-lg transition-colors ${isSending ? 'cursor-wait' : 'hover:bg-gray-100 cursor-pointer'}`}
-                            title="إرسال للتوصيل"
-                          >
-                            {isSending ? (
-                              <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
-                            ) : (
-                              <Truck className="w-5 h-5 text-orange-500" />
-                            )}
-                          </button>
+                          {order.delivery_sent ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-green-600 font-medium px-2 py-1" title="تم الإرسال للتوصيل">
+                              <CheckCircle2 size={16} />
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleSendToDelivery(order)}
+                              disabled={isSending}
+                              className={`p-1.5 rounded-lg transition-colors ${isSending ? 'cursor-wait' : 'hover:bg-gray-100 cursor-pointer'}`}
+                              title="إرسال للتوصيل"
+                            >
+                              {isSending ? (
+                                <Loader2 className="w-5 h-5 text-orange-500 animate-spin" />
+                              ) : (
+                                <Truck className="w-5 h-5 text-orange-500" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1098,13 +1115,19 @@ export default function OrdersPage() {
                           >
                             <Edit size={16} /> تعديل
                           </button>
-                          <button
-                            onClick={() => handleSendToDelivery(order)}
-                            disabled={isSending}
-                            className={`flex-1 flex items-center justify-center gap-1 px-2 py-3 rounded-lg border-2 transition-colors text-xs font-medium touch-manipulation min-h-[44px] ${isSending ? 'border-orange-400 bg-orange-50 cursor-wait text-orange-600' : 'border-orange-500 hover:bg-orange-50 text-orange-600'}`}
-                          >
-                            {isSending ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />} توصيل
-                          </button>
+                          {order.delivery_sent ? (
+                            <div className="flex-1 flex items-center justify-center gap-1 px-2 py-3 rounded-lg border-2 border-green-500 bg-green-50 text-green-600 text-xs font-medium">
+                              <CheckCircle2 size={16} /> تم الإرسال
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleSendToDelivery(order)}
+                              disabled={isSending}
+                              className={`flex-1 flex items-center justify-center gap-1 px-2 py-3 rounded-lg border-2 transition-colors text-xs font-medium touch-manipulation min-h-[44px] ${isSending ? 'border-orange-400 bg-orange-50 cursor-wait text-orange-600' : 'border-orange-500 hover:bg-orange-50 text-orange-600'}`}
+                            >
+                              {isSending ? <Loader2 size={16} className="animate-spin" /> : <Truck size={16} />} توصيل
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

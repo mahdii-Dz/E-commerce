@@ -154,11 +154,11 @@ export default function BannerCategoriesPage() {
         return newImages;
       });
 
-      showToast(`Banner ${index === 0 ? 'primary' : 'secondary'} image uploaded`, "success");
+      showToast(`تم رفع صورة البانر ${index === 0 ? 'الأساسي' : 'الثانوي'}`, "success");
 
     } catch (error) {
       console.error("Upload failed:", error);
-      showToast("Failed to upload image", "error");
+      showToast("فشل رفع الصورة", "error");
     } finally {
       setUploadingIndex(null);
       setUploadProgress(0);
@@ -211,12 +211,12 @@ export default function BannerCategoriesPage() {
   // Category management
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
-      showToast("Please enter a category name", "error");
+      showToast("الرجاء إدخال اسم التصنيف", "error");
       return;
     }
 
     if (categories.some(cat => cat.name.toLowerCase() === newCategoryName.trim().toLowerCase())) {
-      showToast("Category already exists", "error");
+      showToast("التصنيف موجود مسبقاً", "error");
       return;
     }
 
@@ -237,12 +237,12 @@ export default function BannerCategoriesPage() {
       setCategories(prev => [...prev, newCategory]);
       setNewCategoryName("");
       setShowAddCategoryModal(false);
-      showToast("Category added successfully", "success");
+      showToast("تم إضافة التصنيف بنجاح", "success");
       
       refetchCategories?.();
     } catch (error) {
       console.error("Failed to add category:", error);
-      showToast(error.response?.data?.message || "Failed to add category", "error");
+      showToast(error.response?.data?.message || "فشل إضافة التصنيف", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -261,11 +261,11 @@ export default function BannerCategoriesPage() {
       try {
         
         await axios.delete(`/api/shop/categories/${categoryId}`);
-        showToast("Category deleted", "success");
+        showToast("تم حذف التصنيف", "success");
         refetchCategories?.();
       } catch (error) {
         console.error("Failed to delete category:", error);
-        showToast("Failed to delete category", "error");
+        showToast("فشل حذف التصنيف", "error");
         setCategories(prev => {
           const restored = [...prev];
           restored.splice(index, 0, category);
@@ -281,7 +281,7 @@ export default function BannerCategoriesPage() {
 
   const handleConfirm = async () => {
     if (!bannerImages[0].url) {
-      showToast("Please upload a primary banner image", "error");
+      showToast("الرجاء رفع صورة البانر الأساسي", "error");
       return;
     }
 
@@ -300,7 +300,7 @@ export default function BannerCategoriesPage() {
         banners: bannerData
       });
 
-      showToast("Banners saved successfully!", "success");
+      showToast("تم حفظ البانرات بنجاح!", "success");
       
       setTimeout(() => {
         router.push("/admin/dashboard");
@@ -308,7 +308,7 @@ export default function BannerCategoriesPage() {
 
     } catch (error) {
       console.error("Save failed:", error);
-      showToast(error.response?.data?.message || "Failed to save banners", "error");
+      showToast(error.response?.data?.message || "فشل حفظ البانرات", "error");
     } finally {
       setIsSubmitting(false);
     }

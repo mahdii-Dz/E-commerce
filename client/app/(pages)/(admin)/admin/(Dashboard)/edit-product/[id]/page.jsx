@@ -173,7 +173,7 @@ export default function EditProductPage() {
         }
       } catch (error) {
         console.error("Failed to fetch product:", error);
-        showToast("Failed to load product", "error");
+        showToast("فشل تحميل المنتج", "error");
       } finally {
         setIsLoading(false);
       }
@@ -211,12 +211,12 @@ export default function EditProductPage() {
 
   const handleAddColor = () => {
     if (!colorForm.name.trim()) {
-      showToast("Please enter a color name", "error");
+      showToast("الرجاء إدخال اسم اللون", "error");
       return;
     }
 
     if (!colorForm.image) {
-      showToast("Please select an image for this color", "error");
+      showToast("الرجاء اختيار صورة لهذا اللون", "error");
       return;
     }
     
@@ -356,7 +356,7 @@ export default function EditProductPage() {
         await axios.delete(`/api/cloudinary/${img.publicId}`);
       } catch (error) {
         console.error("Delete failed:", error);
-        showToast("Failed to delete image from server", "error");
+        showToast("فشل حذف الصورة من الخادم", "error");
       }
     }
   };
@@ -380,17 +380,17 @@ export default function EditProductPage() {
 
   const handleSubmit = async () => {
     if (images.length === 0) {
-      showToast("Please upload at least one image", "error");
+      showToast("الرجاء رفع صورة واحدة على الأقل", "error");
       return;
     }
 
     if (!formData.title || !formData.price) {
-      showToast("Please fill in required fields", "error");
+      showToast("الرجاء ملء الحقول المطلوبة", "error");
       return;
     }
 
     if (formData.categories.length === 0) {
-      showToast("Please select at least one category", "error");
+      showToast("الرجاء اختيار تصنيف واحد على الأقل", "error");
       return;
     }
 
@@ -471,7 +471,7 @@ export default function EditProductPage() {
         offers: offers,
       });
 
-      showToast("Product updated successfully!", "success");
+      showToast("تم تحديث المنتج بنجاح!", "success");
 
       setTimeout(() => {
         router.push("/admin/all-products");
@@ -479,7 +479,7 @@ export default function EditProductPage() {
 
     } catch (error) {
       console.error("Update failed:", error);
-      showToast(error.response?.data?.message || "Failed to update product", "error");
+      showToast(error.response?.data?.message || "فشل تحديث المنتج", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -494,7 +494,7 @@ export default function EditProductPage() {
 
     try {
       await axios.delete(`/api/shop/products/${id}`);
-      showToast("Product deleted successfully!", "success");
+      showToast("تم حذف المنتج بنجاح!", "success");
 
       setTimeout(() => {
         router.push("/admin/all-products");
@@ -502,7 +502,7 @@ export default function EditProductPage() {
 
     } catch (error) {
       console.error("Delete failed:", error);
-      showToast("Failed to delete product", "error");
+      showToast("فشل حذف المنتج", "error");
       setIsSubmitting(false);
     }
   };
