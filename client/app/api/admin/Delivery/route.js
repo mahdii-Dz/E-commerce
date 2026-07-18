@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request) {
     const data = await request.json();
-    const {nom_client, telephone, commune, code_wilaya,address,montant, produit, quantite, boutique, delivery_type} = data;
+    const {nom_client, telephone,reference, commune, code_wilaya,address,montant, produit, quantite, boutique, delivery_type} = data;
     const api_token = {
       api_token: process.env.ECOTRACK_API_TOKEN
     }
-    const url = `${process.env.ECOTRACK_URL}/api/v1/create/order?reference&nom_client=${nom_client}&telephone=${telephone}&commune=${commune}&code_wilaya=${code_wilaya}&adresse=${address}&montant=${montant}&produit=${produit}&quantite=${quantite}&type=1&stock=0&boutique=${boutique}&stop_desk=${delivery_type}`;
+    const url = `${process.env.ECOTRACK_URL}/api/v1/create/order?reference=${reference}&nom_client=${nom_client}&telephone=${telephone}&commune=${commune}&code_wilaya=${code_wilaya}&adresse=${address}&montant=${montant}&produit=${produit}&quantite=${quantite}&type=1&stock=0&boutique=${boutique}&stop_desk=${delivery_type}`;
     
     try {
     const response = await fetch(url,

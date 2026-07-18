@@ -59,4 +59,4 @@ function OrdersPerWilaya({ data, isLoading, error }) {
     )
 }
 
-export default OrdersPerWilaya
+export default React.memo(OrdersPerWilaya)

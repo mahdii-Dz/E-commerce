@@ -1,7 +1,9 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, Pencil, Trash2, Plus, X } from 'lucide-react'
+import { Eye, Pencil, Trash2, Plus, X, CheckCircle2, XCircle, ChevronDown } from 'lucide-react'
+import { Select as BaseSelect } from '@base-ui/react/select'
+import CustomSelect from '@/components/CustomSelect'
 import { useWorker } from '@/components/AdminAuthGuard'
 import { PERMISSION_LABELS, AVAILABLE_PERMISSIONS } from '@/lib/permissions'
 
@@ -11,12 +13,18 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('ar-DZ', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
+const WORKER_STATUSES = [
+  { value: 'active', label: 'نشط', color: '#16A34A', icon: CheckCircle2 },
+  { value: 'inactive', label: 'غير نشط', color: '#DC2626', icon: XCircle },
+]
+
 export default function ShopWorkersPage() {
   const router = useRouter()
   const worker = useWorker()
   const [workers, setWorkers] = useState([])
   const [stats, setStats] = useState({ total: 0, active: 0, inactive: 0 })
   const [loading, setLoading] = useState(true)
+  const [updatingStatus, setUpdatingStatus] = useState(new Set())
   const [viewingWorker, setViewingWorker] = useState(null)
   const [editingWorker, setEditingWorker] = useState(null)
   const [deletingWorker, setDeletingWorker] = useState(null)
@@ -135,6 +143,7 @@ export default function ShopWorkersPage() {
   }
 
   const handleStatusChange = async (w, newStatus) => {
+    setUpdatingStatus(prev => new Set(prev).add(w.id))
     try {
       const res = await fetch(`/api/shop/workers/${w.id}`, {
         method: 'PUT',
@@ -146,6 +155,8 @@ export default function ShopWorkersPage() {
       }
     } catch {
       showToast('فشل تغيير الحالة', 'error')
+    } finally {
+      setUpdatingStatus(prev => { const n = new Set(prev); n.delete(w.id); return n })
     }
   }
 
@@ -220,19 +231,12 @@ export default function ShopWorkersPage() {
                     <td className='px-5 py-4 text-sm text-gray-700'>{permCount}</td>
                     <td className='px-5 py-4'>
                       {isOwner ? (
-                        <select
+                        <CustomSelect
                           value={w.status}
-                          onChange={(e) => handleStatusChange(w, e.target.value)}
-                          disabled={w.role === 'owner'}
-                          className={`px-3 py-1.5 rounded-lg text-sm font-medium border-2 outline-none cursor-pointer ${
-                            w.status === 'active'
-                              ? 'bg-green-50 border-green-200 text-green-700'
-                              : 'bg-red-50 border-red-200 text-red-700'
-                          }`}
-                        >
-                          <option value='active'>نشط</option>
-                          <option value='inactive'>غير نشط</option>
-                        </select>
+                          onChange={(val) => handleStatusChange(w, val)}
+                          options={WORKER_STATUSES}
+                          isUpdating={updatingStatus.has(w.id)}
+                        />
                       ) : (
                         <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
                           w.status === 'active'
@@ -379,25 +383,40 @@ export default function ShopWorkersPage() {
               </div>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>الدور</label>
-                <select
-                  value={editForm.role}
-                  onChange={e => handleEditField('role', e.target.value)}
-                  className='w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-primary outline-none'
-                >
-                  <option value='worker'>موظف</option>
-                  <option value='owner'>مالك</option>
-                </select>
+                <BaseSelect.Root dir="rtl" value={editForm.role} onValueChange={(val) => handleEditField('role', val)}>
+                  <BaseSelect.Trigger className="flex w-full h-11 items-center justify-between rounded-xl border-2 border-gray-200 bg-white px-4 text-right text-sm outline-none transition-colors focus:border-primary data-[open]:ring-2 data-[open]:ring-[#FA3145]/20 data-[open]:border-primary">
+                    <BaseSelect.Value placeholder="اختر الدور">
+                      {(value) => value === 'worker' ? 'موظف' : value === 'owner' ? 'مالك' : 'اختر الدور'}
+                    </BaseSelect.Value>
+                    <ChevronDown size={16} className="text-gray-500 shrink-0" />
+                  </BaseSelect.Trigger>
+                  <BaseSelect.Portal>
+                    <BaseSelect.Positioner side="bottom" align="start" alignItemWithTrigger={false} className="z-50">
+                      <BaseSelect.Popup className="rounded-xl border border-stroke bg-white py-2 shadow-lg"
+                        style={{ width: 'var(--anchor-width)' }}>
+                        <BaseSelect.List>
+                          <BaseSelect.Item value="worker"
+                            className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                            <BaseSelect.ItemText>موظف</BaseSelect.ItemText>
+                          </BaseSelect.Item>
+                          <BaseSelect.Item value="owner"
+                            className="flex cursor-pointer [direction:rtl] items-center justify-between px-4 py-2.5 text-sm outline-none data-[highlighted]:bg-gray-100 data-[selected]:text-[#FA3145]">
+                            <BaseSelect.ItemText>مالك</BaseSelect.ItemText>
+                          </BaseSelect.Item>
+                        </BaseSelect.List>
+                      </BaseSelect.Popup>
+                    </BaseSelect.Positioner>
+                  </BaseSelect.Portal>
+                </BaseSelect.Root>
               </div>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>الحالة</label>
-                <select
+                <CustomSelect
                   value={editForm.status}
-                  onChange={e => handleEditField('status', e.target.value)}
-                  className='w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 focus:border-primary outline-none'
-                >
-                  <option value='active'>نشط</option>
-                  <option value='inactive'>غير نشط</option>
-                </select>
+                  onChange={(val) => handleEditField('status', val)}
+                  options={WORKER_STATUSES}
+                  isUpdating={false}
+                />
               </div>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>الصلاحيات</label>

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@base-ui/react/select';
 import { ChevronDown, Loader2, Minus, Plus, X, Truck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useMutation } from '@tanstack/react-query';
 
 const submitOrder = async (orderData) => {
@@ -650,9 +651,11 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                             >
                                 <div className="flex items-center gap-3">
                                     {color.image ? (
-                                        <img
+                                        <Image
                                             src={color.image}
                                             alt={color.name}
+                                            width={56}
+                                            height={56}
                                             className="size-14 rounded-lg border border-gray-300 shadow-sm flex-shrink-0 object-cover"
                                             onError={(e) => { e.target.style.display = 'none'; }}
                                         />

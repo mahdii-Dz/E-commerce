@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
 import {
@@ -53,7 +53,7 @@ function fillMissingDays(data, daysToShow = 30) {
   return result;
 }
 
-export function ChartBarDefault({ chartData, isLoading, error, daysToShow = 30 }) {
+export const ChartBarDefault = React.memo(function ChartBarDefault({ chartData, isLoading, error, daysToShow = 30 }) {
     const filledData = useMemo(() => {
         return fillMissingDays(chartData, daysToShow);
     }, [chartData, daysToShow]);
@@ -140,4 +140,4 @@ export function ChartBarDefault({ chartData, isLoading, error, daysToShow = 30 }
             </CardContent>
         </Card>
     );
-}
+});

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, Loader2, Package } from 'lucide-react';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import Image from 'next/image';
@@ -20,11 +21,24 @@ const STATUSES = [
 ];
 
 export default function ColorAnalyticsPage() {
-  const [orders, setOrders] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { data: orders = [], isLoading: ordersLoading } = useQuery({
+    queryKey: ['colorOrders'],
+    queryFn: () => axios.get('/api/shop/orders').then(r => r.data),
+  });
+
+  const { data: rawProducts, isLoading: productsLoading } = useQuery({
+    queryKey: ['products'],
+    queryFn: () => fetch('/api/shop/products?limit=1000').then(r => r.json()),
+  });
+
+  const { data: stats = null, isLoading: statsLoading } = useQuery({
+    queryKey: ['stats'],
+    queryFn: () => fetch('/api/shop/stats').then(r => r.json()),
+  });
+
+  const isLoading = ordersLoading || productsLoading || statsLoading;
+
+  const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts?.products || []);
 
   const [filters, setFilters] = useState({
     currentStatus: '',
@@ -33,29 +47,6 @@ export default function ColorAnalyticsPage() {
     endDate: '',
     product: '',
   });
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [ordersRes, productsRes, statsRes] = await Promise.all([
-          axios.get('/api/shop/orders'),
-          fetch('/api/shop/products?limit=1000').then(r => r.json()),
-          fetch('/api/shop/stats').then(r => r.json()),
-        ]);
-        setOrders(ordersRes.data);
-        setStats(statsRes);
-        const prods = Array.isArray(productsRes) ? productsRes : (productsRes?.products || []);
-        setProducts(prods);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError('فشل تحميل البيانات. حاول مرة أخرى.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -167,18 +158,10 @@ export default function ColorAnalyticsPage() {
     return list;
   }, [products, filters.product, productAnalyticsMap]);
 
-  if (loading) {
+  if (isLoading && orders.length === 0) {
     return (
       <div className="w-full pt-6 px-9 pb-16 flex items-center justify-center h-96">
         <Loader2 size={32} className="animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full pt-6 px-9 pb-16 flex items-center justify-center h-96">
-        <p className="text-[#FA3145]">{error}</p>
       </div>
     );
   }

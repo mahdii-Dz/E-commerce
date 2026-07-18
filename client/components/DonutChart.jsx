@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { Pie, PieChart, Legend, Cell, ResponsiveContainer } from "recharts";
 
 import {
@@ -32,7 +32,7 @@ function getConsistentColor(str) {
     return COLOR_PALETTE[Math.abs(hash) % COLOR_PALETTE.length];
 }
 
-export function ChartPieDonut({
+export const ChartPieDonut = React.memo(function ChartPieDonut({
     chartData = [],
     isLoading = false,
     error = null,
@@ -178,4 +178,4 @@ export function ChartPieDonut({
             </CardContent>
         </Card>
     );
-}
+});
