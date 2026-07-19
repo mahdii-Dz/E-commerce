@@ -42,8 +42,12 @@ def get_db_connection_config():
         'autocommit': True,
     }
     
-    # Enable SSL/TLS with hostname verification (required by TiDB Cloud)
-    config['ssl'] = {'check_hostname': True}
+    # SSL with CA certificate (required by TiDB Cloud)
+    ca_path = os.path.join(os.path.dirname(__file__), 'ca.pem')
+    config['ssl'] = {
+        'ca': ca_path,
+        'check_hostname': True,
+    }
     config['connect_timeout'] = 15
     return config
 
@@ -332,9 +336,17 @@ def format_order_message(order: Dict) -> str:
 """
     return message
 
+def format_phone(phone: str) -> str:
+    phone = phone.strip()
+    if phone.startswith('+213'):
+        return phone
+    if phone.startswith('0'):
+        return '+213' + phone[1:]
+    return '+213' + phone
+
 def get_phone_keyboard(phone: str) -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton("📞 Call Customer", url=f"tel:{phone}")]
+        [InlineKeyboardButton("📞 Call Customer", url=f"tel:{format_phone(phone)}")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
