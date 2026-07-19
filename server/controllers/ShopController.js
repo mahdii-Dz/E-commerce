@@ -57,9 +57,18 @@ const safeJsonParse = (str, defaultValue = null) => {
 };
 
 const normalizeImage = (img) => {
-  if (typeof img === 'string') return { url: img, public_id: null };
-  if (img && typeof img === 'object') return { url: img.url || '', public_id: img.public_id || img.publicId || null };
-  return { url: '', public_id: null };
+  if (typeof img === 'string') return { url: img, public_id: null, is_active: true };
+  if (img && typeof img === 'object') return {
+    url: img.url || '',
+    public_id: img.public_id || img.publicId || null,
+    is_active: img.is_active !== false,
+  };
+  return { url: '', public_id: null, is_active: true };
+};
+
+const filterActive = (items) => {
+  if (!items || !Array.isArray(items)) return items;
+  return items.filter(item => item.is_active !== false);
 };
 
 // Helper function to validate ID
@@ -331,13 +340,13 @@ export const GetProducts = async (req, res) => {
       price: parseFloat(row.price) || 0,
       compare_price: parseFloat(row.compare_price) || 0,
       image_url: row.image_url,
-      images: safeJsonParse(row.images, []).map(normalizeImage),
+      images: filterActive(safeJsonParse(row.images, []).map(normalizeImage)),
       landing_page_image: row.landing_page_image,
       thumbnail: row.thumbnail,
       is_active: row.is_active === 1,
       created_at: row.created_at,
       type: row.type,
-      colors: safeJsonParse(row.colors, null),
+      colors: filterActive(safeJsonParse(row.colors, null)),
       offers: safeJsonParse(row.offers, null),
       categories: categoriesMap.get(row.id) || [],
     }));
@@ -352,7 +361,8 @@ export const GetProductById = async (req, res) => {
   try {
     const { id } = req.params;
     const productIdNum = validateId(id);
-    
+    const isAdmin = req.query.admin === 'true';
+
     if (!productIdNum) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
@@ -411,6 +421,14 @@ export const GetProductById = async (req, res) => {
     product.discount_percentage = product.discount_percentage || 0;
     product.is_active = product.is_active === 1;
 
+    // For public requests, filter out inactive images and colors
+    if (!isAdmin) {
+      product.images = filterActive(product.images);
+      if (product.colors) {
+        product.colors = filterActive(product.colors);
+      }
+    }
+
     return res.status(200).json(product);
   } catch (error) {
     return handleDbError(res, error, "fetching product");
@@ -447,6 +465,7 @@ export const GetProductsByCategory = async (req, res) => {
         p.is_active,
         p.created_at,
         p.type,
+        p.colors,
         p.offers
       FROM products p
       WHERE p.is_active = true
@@ -524,10 +543,11 @@ export const GetProductsByCategory = async (req, res) => {
           compare_price: parseFloat(row.compare_price) || 0,
           image_url: row.image_url,
           thumbnail: row.thumbnail,
-          images: safeJsonParse(row.images, []).map(normalizeImage),
+          images: filterActive(safeJsonParse(row.images, []).map(normalizeImage)),
           is_active: row.is_active === 1,
           created_at: row.created_at,
           type: row.type,
+          colors: filterActive(safeJsonParse(row.colors, null)),
           offers: safeJsonParse(row.offers, null),
           categories: categoriesMap.get(productId) || [],
         });
