@@ -1477,12 +1477,19 @@ export const GetDashboardStats = async (req, res) => {
       "SELECT COUNT(*) AS total_orders FROM order_info WHERE order_number IS NOT NULL"
     );
     
-    // Get total sold products
+    // Get total sold products (sum of item quantities in delivered orders)
     const totalSoldProductsResult = await query(
       `SELECT SUM(oi.quantity) AS total_sold_products
        FROM order_items oi
        JOIN order_info o ON oi.order_id = o.id
-       WHERE o.current_status = 'تم التوصيل'`
+       WHERE o.current_status = 'Delivered'`
+    );
+
+    // Get total delivered orders (count of orders with delivered status)
+    const totalDeliveredOrdersResult = await query(
+      `SELECT COUNT(*) AS total_delivered_orders
+       FROM order_info
+       WHERE current_status = 'Delivered'`
     );
     
     // Get bar chart data — count distinct orders per day (no JOIN to avoid item-level inflation)
@@ -1522,11 +1529,13 @@ export const GetDashboardStats = async (req, res) => {
     const totalProducts = totalProductsResult?.[0]?.total_products || 0;
     const totalOrders = totalOrdersResult?.[0]?.total_orders || 0;
     const totalSoldProducts = totalSoldProductsResult?.[0]?.total_sold_products || 0;
+    const totalDeliveredOrders = totalDeliveredOrdersResult?.[0]?.total_delivered_orders || 0;
 
     return res.status(200).json({
       totalProducts,
       totalOrders,
       totalSoldProducts,
+      totalDeliveredOrders,
       dailyTotals,
       CategoryStats: categoryStats || [],
       wilayaStats: wilayaStats || [],

@@ -7,7 +7,7 @@ import React from 'react'
 
 function Dashboard() {
   const { data: stats, isLoading: statsLoading, error: statsError } = useFetchSingleProduct('/api/shop/stats')
-  const { totalProducts, totalSoldProducts, totalOrders, dailyTotals, CategoryStats, wilayaStats } = stats || {};
+  const { totalProducts, totalSoldProducts, totalOrders, totalDeliveredOrders, dailyTotals, CategoryStats, wilayaStats } = stats || {};
 
   return (
     <main className='w-full pt-6 px-4 sm:px-6 lg:px-9 flex flex-col gap-6 pb-16'>
@@ -40,6 +40,16 @@ function Dashboard() {
               <h2 className='text-[28px] font-semibold text-primary'>{totalOrders}</h2>
             ) : (
               <p className='text-sm font-medium text-primary h-10.5 pt-4 '>loading...</p>
+            )
+          }
+        </div>
+        <div className='bg-white border-2 w-full md:flex-1 border-stroke flex flex-col items-start gap-1 rounded-xl py-4 px-5.5'>
+          <p className='text-sm font-medium text-secondary'>إجمالي الطلبات تم توصيلها</p>
+          {
+            totalDeliveredOrders != null && totalDeliveredOrders !== undefined ? (
+              <h2 className='text-[28px] font-semibold text-primary'>{totalDeliveredOrders}</h2>
+            ) : (
+              <p className='text-sm font-medium text-primary h-10.5 pt-4 '>جار التحميل...</p>
             )
           }
         </div>
