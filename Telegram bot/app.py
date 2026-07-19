@@ -42,8 +42,8 @@ def get_db_connection_config():
         'autocommit': True,
     }
     
-    # Enable SSL/TLS (empty dict = use encryption without CA verification)
-    config['ssl'] = {}
+    # Enable SSL/TLS with hostname verification (required by TiDB Cloud)
+    config['ssl'] = {'check_hostname': True}
     config['connect_timeout'] = 15
     return config
 
