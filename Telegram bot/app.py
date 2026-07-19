@@ -5,6 +5,7 @@ load_dotenv()
 # ===== REST OF IMPORTS =====
 import os
 import threading
+import tempfile
 import html
 from datetime import datetime, timedelta, timezone
 from typing import Dict
@@ -46,6 +47,13 @@ def get_db_connection_config():
     ca_candidate = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ca.pem')
     if os.path.exists(ca_candidate):
         config['ssl']['ca'] = ca_candidate
+        print("✅ Using ca.pem from local file")
+    elif os.getenv("CA_CERT"):
+        tmp_ca = os.path.join(tempfile.gettempdir(), 'tidb-ca.pem')
+        with open(tmp_ca, 'w') as f:
+            f.write(os.getenv("CA_CERT"))
+        config['ssl']['ca'] = tmp_ca
+        print("✅ Using ca.pem from CA_CERT env var")
     config['connect_timeout'] = 15
     return config
 
