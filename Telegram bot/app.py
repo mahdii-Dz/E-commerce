@@ -13,7 +13,7 @@ import pymysql
 from flask import Flask
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # ===== FLASK APP FOR HEALTH CHECKS =====
 flask_app = Flask(__name__)
@@ -314,17 +314,9 @@ def format_order_message(order: Dict) -> str:
 """
     return message
 
-def format_phone(phone: str) -> str:
-    phone = phone.strip()
-    if phone.startswith('+213'):
-        return phone
-    if phone.startswith('0'):
-        return '+213' + phone[1:]
-    return '+213' + phone
-
 def get_phone_keyboard(phone: str) -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton("📞 Call Customer", url=f"tel:{format_phone(phone)}")]
+        [InlineKeyboardButton("📞 Call Customer", callback_data=f"phone_{phone}")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -348,6 +340,15 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     count = get_new_orders_count()
     await update.message.reply_text(f"📊 New Orders: {count}")
+
+async def phone_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = str(update.effective_user.id)
+    if user_id not in AUTHORIZED_ADMINS:
+        await query.answer("⛔ Unauthorized", show_alert=True)
+        return
+    phone = query.data.split("_", 1)[1]
+    await query.answer(f"📞 {phone}", show_alert=True)
 
 async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -394,6 +395,7 @@ def main():
     # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("status", status_command))
+    app.add_handler(CallbackQueryHandler(phone_callback, pattern="^phone_"))
     
     # Add background job
     job_queue = app.job_queue
