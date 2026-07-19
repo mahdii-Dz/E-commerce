@@ -5,7 +5,12 @@ import { adminAuth } from "@/lib/adminAuth";
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const data = await proxyGET(`/api/shop/get-product/${id}`);
+    const url = new URL(request.url);
+    const isAdmin = url.searchParams.get('admin') === 'true';
+    const endpoint = isAdmin
+      ? `/api/shop/get-product/${id}?admin=true`
+      : `/api/shop/get-product/${id}`;
+    const data = await proxyGET(endpoint);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Product proxy error:", error);

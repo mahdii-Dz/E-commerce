@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2, Sparkles, Truck, GripVertical, Upload } from "lucide-react";
+import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2, Sparkles, Truck, GripVertical, Upload, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -125,7 +125,7 @@ export default function AddProductPage() {
     // Remove # from hex if present for storage
     const hexValue = colorForm.hex.replace("#", "");
 
-    setColors(prev => [...prev, { name: colorForm.name.trim(), hex: hexValue, image: colorForm.image }]);
+    setColors(prev => [...prev, { name: colorForm.name.trim(), hex: hexValue, image: colorForm.image, is_active: true }]);
     closeColorModal();
   };
 
@@ -213,7 +213,8 @@ export default function AddProductPage() {
       file,
       url: URL.createObjectURL(file),
       publicId: null,
-      status: 'local'
+      status: 'local',
+      is_active: true,
     }));
 
     setImages(prev => [...prev, ...newImages]);
@@ -261,6 +262,18 @@ export default function AddProductPage() {
         showToast("فشل حذف الصورة من الخادم", "error");
       }
     }
+  };
+
+  const handleToggleImage = (id) => {
+    setImages(prev => prev.map(img =>
+      img.id === id ? { ...img, is_active: !img.is_active } : img
+    ));
+  };
+
+  const handleToggleColor = (index) => {
+    setColors(prev => prev.map((color, i) =>
+      i === index ? { ...color, is_active: !color.is_active } : color
+    ));
   };
 
   const handleDragEnd = (event) => {
@@ -353,7 +366,7 @@ export default function AddProductPage() {
         type: formData.type,
         compare_price: parseFloat(ComparePrice) || 0,
         discount_percentage: parseFloat(formData.discount) || 0,
-        images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null })),
+        images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null, is_active: img.is_active !== false })),
         thumbnail: thumbnailUrl,
         landing_page_image: finalLandingPageUrl,
         colors: colors,
@@ -624,6 +637,7 @@ export default function AddProductPage() {
                     position={1}
                     isSubmitting={isSubmitting}
                     onDelete={handleDeleteImage}
+                    onToggle={handleToggleImage}
                     variant="main"
                   />
                   {images.length > 1 && (
@@ -635,6 +649,7 @@ export default function AddProductPage() {
                           position={idx + 2}
                           isSubmitting={isSubmitting}
                           onDelete={handleDeleteImage}
+                          onToggle={handleToggleImage}
                           variant="grid"
                         />
                       ))}
@@ -713,16 +728,18 @@ export default function AddProductPage() {
             <label className="text-lg font-semibold text-black">الألوان:</label>
             <div className="flex flex-wrap gap-3">
               {/* Existing colors */}
-              {colors.map((color, index) => (
+              {colors.map((color, index) => {
+                const isColorActive = color.is_active !== false;
+                return (
                 <div
                   key={index}
                   className="relative group flex flex-col items-center gap-1.5 w-24"
                 >
-                  <div className="relative w-24 h-24 rounded-xl border-2 border-gray-200 overflow-hidden cursor-pointer hover:border-gray-400 transition-colors">
+                  <div className={`relative w-24 h-24 rounded-xl border-2 overflow-hidden cursor-pointer hover:border-gray-400 transition-colors ${isColorActive ? 'border-gray-200' : 'border-gray-300'}`}>
                     <img
                       src={color.image}
                       alt={color.name}
-                      className="w-full h-full object-cover"
+                      className={`w-full h-full object-cover ${!isColorActive ? 'opacity-40' : ''}`}
                       onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.nextElementSibling.style.display = 'flex';
@@ -740,19 +757,29 @@ export default function AddProductPage() {
                       <span className="w-3 h-3 rounded-full border border-white/50" />
                     </div>
                     {!isSubmitting && (
-                      <button
-                        onClick={() => handleRemoveColor(index)}
-                        className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
-                      >
-                        <X size={20} className="text-white" />
-                      </button>
+                      <>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleColor(index); }}
+                          className={`absolute top-1.5 right-1.5 w-6 h-6 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10`}
+                          title={isColorActive ? 'تعطيل اللون' : 'تفعيل اللون'}
+                        >
+                          {isColorActive ? <Eye size={14} className="text-gray-700 pointer-events-none" /> : <EyeOff size={14} className="text-gray-700 pointer-events-none" />}
+                        </button>
+                        <button
+                          onClick={() => handleRemoveColor(index)}
+                          className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"
+                        >
+                          <X size={20} className="text-white" />
+                        </button>
+                      </>
                     )}
                   </div>
                   <span className="text-xs text-gray-700 text-center leading-tight line-clamp-2 max-w-full">
                     {color.name}
                   </span>
                 </div>
-              ))}
+                );
+              })}
 
               {/* Add color button */}
               <button
@@ -987,7 +1014,7 @@ export default function AddProductPage() {
   );
 }
 
-function SortableImage({ image, position, isSubmitting, onDelete, variant }) {
+function SortableImage({ image, position, isSubmitting, onDelete, onToggle, variant }) {
   const {
     attributes,
     listeners,
@@ -1004,6 +1031,8 @@ function SortableImage({ image, position, isSubmitting, onDelete, variant }) {
     zIndex: isDragging ? 10 : 'auto',
   };
 
+  const isActive = image.is_active !== false;
+
   if (variant === 'main') {
     return (
       <div
@@ -1016,18 +1045,30 @@ function SortableImage({ image, position, isSubmitting, onDelete, variant }) {
         <img
           src={image.url}
           alt="Main"
-          className="w-full h-full object-cover border border-gray-200 rounded-xl pointer-events-none"
+          className={`w-full h-full object-cover border border-gray-200 rounded-xl pointer-events-none ${!isActive ? 'opacity-40' : ''}`}
         />
+        {!isActive && (
+          <div className="absolute inset-0 bg-black/10 rounded-xl pointer-events-none" />
+        )}
         <div className="absolute top-3 left-3 w-7 h-7 bg-black/50 rounded-full flex items-center justify-center">
           <span className="text-white text-xs font-bold">{position}</span>
         </div>
         {!isSubmitting && (
-          <button
-            onClick={(e) => onDelete(e, image.id)}
-            className="absolute top-3 right-3 w-8 h-8 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
-          >
-            <X size={16} className="text-gray-700 pointer-events-none" />
-          </button>
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggle(image.id); }}
+              className="absolute top-3 right-12 w-8 h-8 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
+              title={isActive ? 'تعطيل الصورة' : 'تفعيل الصورة'}
+            >
+              {isActive ? <Eye size={16} className="text-gray-700 pointer-events-none" /> : <EyeOff size={16} className="text-gray-700 pointer-events-none" />}
+            </button>
+            <button
+              onClick={(e) => onDelete(e, image.id)}
+              className="absolute top-3 right-3 w-8 h-8 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
+            >
+              <X size={16} className="text-gray-700 pointer-events-none" />
+            </button>
+          </>
         )}
         <div className="absolute bottom-3 left-3 w-8 h-8 bg-white/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
           <GripVertical size={16} className="text-gray-600" />
@@ -1047,18 +1088,30 @@ function SortableImage({ image, position, isSubmitting, onDelete, variant }) {
       <img
         src={image.url}
         alt={`Product ${position}`}
-        className="w-full h-full object-cover border border-gray-200 rounded-xl pointer-events-none"
+        className={`w-full h-full object-cover border border-gray-200 rounded-xl pointer-events-none ${!isActive ? 'opacity-40' : ''}`}
       />
+      {!isActive && (
+        <div className="absolute inset-0 bg-black/10 rounded-xl pointer-events-none" />
+      )}
       <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-black/50 rounded-full flex items-center justify-center">
         <span className="text-white text-[10px] font-bold">{position}</span>
       </div>
       {!isSubmitting && (
-        <button
-          onClick={(e) => onDelete(e, image.id)}
-          className="absolute top-1.5 right-1.5 w-6 h-6 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
-        >
-          <X size={14} className="text-gray-700 pointer-events-none" />
-        </button>
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggle(image.id); }}
+            className="absolute top-1.5 right-9 w-6 h-6 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
+            title={isActive ? 'تعطيل الصورة' : 'تفعيل الصورة'}
+          >
+            {isActive ? <Eye size={14} className="text-gray-700 pointer-events-none" /> : <EyeOff size={14} className="text-gray-700 pointer-events-none" />}
+          </button>
+          <button
+            onClick={(e) => onDelete(e, image.id)}
+            className="absolute top-1.5 right-1.5 w-6 h-6 cursor-pointer bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white z-10"
+          >
+            <X size={14} className="text-gray-700 pointer-events-none" />
+          </button>
+        </>
       )}
       <div className="absolute bottom-1.5 left-1.5 w-5 h-5 bg-white/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
         <GripVertical size={12} className="text-gray-600" />
