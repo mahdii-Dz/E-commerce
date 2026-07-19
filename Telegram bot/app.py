@@ -12,7 +12,7 @@ from dbutils.pooled_db import PooledDB
 from flask import Flask
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes
 
 # ===== FLASK APP FOR HEALTH CHECKS =====
 flask_app = Flask(__name__)
@@ -207,27 +207,6 @@ def get_new_orders() -> list:
         if conn:
             conn.close()
 
-def get_order_phone(order_id: int) -> str:
-    """Fetch phone number for an order"""
-    conn = None
-    cursor = None
-    try:
-        conn = get_db_connection()
-        if not conn:
-            return "Unknown"
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-        cursor.execute("SELECT phone FROM order_info WHERE id = %s", (order_id,))
-        row = cursor.fetchone()
-        return row['phone'] if row else "Unknown"
-    except Exception as e:
-        print(f"Error fetching phone for order {order_id}: {e}")
-        return "Unknown"
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
-
 def get_new_orders_count() -> int:
     """Count new orders not yet notified"""
     conn = None
@@ -275,6 +254,7 @@ def mark_as_notified(order_id: int) -> bool:
             conn.close()
 
 def format_order_message(order: Dict) -> str:
+    from collections import defaultdict
     items_text = ""
     subtotal = 0
 
@@ -284,16 +264,28 @@ def format_order_message(order: Dict) -> str:
     }
     delivery_label = delivery_labels.get(order.get('delivery_type', ''), order.get('delivery_type', 'Standard'))
 
-    for i, item in enumerate(order['items'], 1):
-        item_total = item['quantity'] * item['price_per_unit']
-        subtotal += item_total
-        items_text += f"\n─────────────────────"
-        items_text += f"\n**{i}.** {item['product_name']}"
-        items_text += f"\n     📦 **Qty:** {item['quantity']} × {item['price_per_unit']:,.0f} DA = **{item_total:,.0f} DA**"
-        if item.get('color_name'):
-            items_text += f"\n     🎨 **Color:** {item['color_name']}"
-        if item.get('offer_text'):
-            items_text += f"\n     💫 **Offer:** {item['offer_text']}"
+    # Group items by (product_name, offer_text)
+    grouped = defaultdict(list)
+    for item in order['items']:
+        key = (item['product_name'], item.get('offer_text'))
+        grouped[key].append(item)
+
+    for (product_name, offer_text), items in grouped.items():
+        color_parts = []
+        for it in items:
+            qty = it['quantity']
+            subtotal += qty * it['price_per_unit']
+            color = it.get('color_name', '')
+            if color:
+                color_parts.append(f"{qty} x {color}")
+            else:
+                color_parts.append(str(qty))
+        colors_str = ", ".join(color_parts)
+        line = product_name
+        if offer_text:
+            line += f" - Offer: {offer_text}"
+        line += f" ({colors_str})"
+        items_text += f"\n• {line}"
 
     total = subtotal + order['delivery_price']
 
@@ -331,9 +323,9 @@ def format_order_message(order: Dict) -> str:
 """
     return message
 
-def get_phone_keyboard(order_id: int) -> InlineKeyboardMarkup:
+def get_phone_keyboard(phone: str) -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton("📞 Call Customer", callback_data=f"phone_{order_id}")]
+        [InlineKeyboardButton("📞 Call Customer", url=f"tel:{phone}")]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -358,19 +350,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     count = get_new_orders_count()
     await update.message.reply_text(f"📊 New Orders: {count}")
 
-async def phone_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = str(update.effective_user.id)
-    
-    if user_id not in AUTHORIZED_ADMINS:
-        await query.answer("⛔ Unauthorized", show_alert=True)
-        return
-    
-    callback_data = query.data
-    order_id = int(callback_data.split("_")[1])
-    phone = get_order_phone(order_id)
-    await query.answer(f"📞 {phone}", show_alert=True)
-
 async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
     try:
         new_orders = get_new_orders()
@@ -378,7 +357,7 @@ async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
         for order in new_orders:
             order_id = order['order_id']
             message = format_order_message(order)
-            keyboard = get_phone_keyboard(order_id)
+            keyboard = get_phone_keyboard(order['phone'])
             
             for admin_id in AUTHORIZED_ADMINS:
                 try:
@@ -418,7 +397,6 @@ def main():
     # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CallbackQueryHandler(phone_callback, pattern="^phone_"))
     
     # Add background job
     job_queue = app.job_queue
