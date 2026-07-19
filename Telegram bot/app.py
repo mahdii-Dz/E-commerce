@@ -5,14 +5,14 @@ load_dotenv()
 # ===== REST OF IMPORTS =====
 import os
 import threading
-from datetime import datetime
-from typing import Optional, Dict, Any, Set, List
+from datetime import datetime, timedelta, timezone
+from typing import Optional, Dict, Any, List
 import pymysql
 from dbutils.pooled_db import PooledDB
 from flask import Flask
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 # ===== FLASK APP FOR HEALTH CHECKS =====
 flask_app = Flask(__name__)
@@ -61,9 +61,6 @@ if not AUTHORIZED_ADMINS:
     print("❌ ERROR: ADMIN_IDS not found!")
     exit(1)
 
-# Track processed orders
-processed_order_ids: Set[int] = set()
-
 # Connection pool
 connection_pool = None
 
@@ -102,8 +99,32 @@ def get_db_connection():
             return None
     return connection_pool.connection()
 
-def get_orders_by_status(status: str) -> list:
-    """Fetch orders filtered by status"""
+def init_notified_column():
+    """Add telegram_notified column if it doesn't exist"""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return False
+        cursor = conn.cursor()
+        cursor.execute(
+            "ALTER TABLE order_info ADD COLUMN IF NOT EXISTS telegram_notified TINYINT(1) DEFAULT 0"
+        )
+        conn.commit()
+        print("✅ telegram_notified column ready")
+        return True
+    except Exception as e:
+        print(f"⚠️ Could not add telegram_notified column (may already exist): {e}")
+        return True
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def get_new_orders() -> list:
+    """Fetch orders that are new and not yet notified to Telegram"""
     conn = None
     cursor = None
     try:
@@ -124,7 +145,7 @@ def get_orders_by_status(status: str) -> list:
                 o.wilaya_code,
                 o.delivery_type,
                 o.delivery_Price,
-                o.status,
+                o.current_status,
                 o.created_at,
                 oi.id AS item_id,
                 oi.product_id,
@@ -137,11 +158,11 @@ def get_orders_by_status(status: str) -> list:
             FROM order_info o
             JOIN order_items oi ON o.id = oi.order_id
             JOIN products p ON oi.product_id = p.id
-            WHERE o.status = %s
-            ORDER BY o.id DESC
+            WHERE o.current_status = 'new' AND (o.telegram_notified IS NULL OR o.telegram_notified = 0)
+            ORDER BY o.id ASC
         """
         
-        cursor.execute(query, (status,))
+        cursor.execute(query)
         rows = cursor.fetchall()
         
         if not rows:
@@ -162,7 +183,6 @@ def get_orders_by_status(status: str) -> list:
                     'wilaya_code': row['wilaya_code'],
                     'delivery_type': row['delivery_type'],
                     'delivery_price': float(row['delivery_Price']) if row['delivery_Price'] else 0,
-                    'status': row['status'],
                     'created_at': row['created_at'],
                     'items': []
                 }
@@ -179,7 +199,7 @@ def get_orders_by_status(status: str) -> list:
         return list(orders_dict.values())
         
     except Exception as e:
-        print(f"Error fetching {status} orders: {e}")
+        print(f"Error fetching new orders: {e}")
         return []
     finally:
         if cursor:
@@ -187,26 +207,66 @@ def get_orders_by_status(status: str) -> list:
         if conn:
             conn.close()
 
-def get_pending_orders() -> list:
-    return get_orders_by_status('pending')
+def get_order_phone(order_id: int) -> str:
+    """Fetch phone number for an order"""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return "Unknown"
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        cursor.execute("SELECT phone FROM order_info WHERE id = %s", (order_id,))
+        row = cursor.fetchone()
+        return row['phone'] if row else "Unknown"
+    except Exception as e:
+        print(f"Error fetching phone for order {order_id}: {e}")
+        return "Unknown"
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
-def update_order_status(order_id: int, new_status: str) -> bool:
+def get_new_orders_count() -> int:
+    """Count new orders not yet notified"""
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return 0
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM order_info WHERE current_status = 'new' AND (telegram_notified IS NULL OR telegram_notified = 0)"
+        )
+        return cursor.fetchone()[0] or 0
+    except Exception as e:
+        print(f"Error counting new orders: {e}")
+        return 0
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def mark_as_notified(order_id: int) -> bool:
+    """Mark order as notified to prevent re-sending on restart"""
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         if not conn:
             return False
-            
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE order_info SET status = %s WHERE id = %s",
-            (new_status, order_id)
+            "UPDATE order_info SET telegram_notified = 1 WHERE id = %s",
+            (order_id,)
         )
         conn.commit()
         return cursor.rowcount > 0
     except Exception as e:
-        print(f"Error updating order {order_id}: {e}")
+        print(f"Error marking order {order_id} as notified: {e}")
         return False
     finally:
         if cursor:
@@ -217,50 +277,64 @@ def update_order_status(order_id: int, new_status: str) -> bool:
 def format_order_message(order: Dict) -> str:
     items_text = ""
     subtotal = 0
-    
-    for item in order['items']:
+
+    delivery_labels = {
+        'domicile': '📬 Home Delivery',
+        'stopdesk': '📦 Stop Desk',
+    }
+    delivery_label = delivery_labels.get(order.get('delivery_type', ''), order.get('delivery_type', 'Standard'))
+
+    for i, item in enumerate(order['items'], 1):
         item_total = item['quantity'] * item['price_per_unit']
         subtotal += item_total
-        items_text += f"\n• {item['quantity']}x {item['product_name']} - ${item['price_per_unit']:.2f} = ${item_total:.2f}"
-        
+        items_text += f"\n─────────────────────"
+        items_text += f"\n**{i}.** {item['product_name']}"
+        items_text += f"\n     📦 **Qty:** {item['quantity']} × {item['price_per_unit']:,.0f} DA = **{item_total:,.0f} DA**"
         if item.get('color_name'):
-            items_text += f"\n  🎨 Color: {item['color_name']}"
+            items_text += f"\n     🎨 **Color:** {item['color_name']}"
         if item.get('offer_text'):
-            items_text += f"\n  💫 Offer: {item['offer_text']}"
-    
+            items_text += f"\n     💫 **Offer:** {item['offer_text']}"
+
     total = subtotal + order['delivery_price']
-    
-    status_emoji = {'pending': '⏳', 'accepted': '✅', 'rejected': '❌'}.get(order['status'], '📦')
-    
+
+    # Timezone conversion to Algeria (UTC+1)
+    created = order['created_at']
+    if isinstance(created, datetime):
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        algeria_time = created.astimezone(timezone(timedelta(hours=1)))
+        time_str = algeria_time.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        time_str = str(created)
+
     message = f"""
-{status_emoji} **ORDER #{order['order_id']}** [{order['status'].upper()}]
+━━━━━━━━━━━━━━━━━━━
+🆕 **ORDER #{order['order_id']}**
 ━━━━━━━━━━━━━━━━━━━
 
 👤 **Customer:** {order['first_name']} {order['last_name']}
-📞 **Phone:** {order['phone']}
+📞 **Phone:** `{order['phone']}`
 📍 **Location:** {order['baladiya']}, {order['wilaya']}
-🚚 **Delivery:** {order.get('delivery_type', 'Standard')}
+🚚 **Delivery:** {delivery_label}
 
-📋 **Items:**{items_text}
+🛍️ **Items:** ({len(order['items'])}){items_text}
 
+─────────────────────
 ━━━━━━━━━━━━━━━━━━━
-💰 **TOTAL:** ${total:.2f}
+📦 **Subtotal:** {subtotal:,.0f} DA
+🚚 **Delivery:** {order['delivery_price']:,.0f} DA
+━━━━━━━━━━━━━━━━━━━
+💰 **TOTAL: {total:,.0f} DA**
 ━━━━━━━━━━━━━━━━━━━
 
-⏰ **Time:** {order['created_at']}
+⏰ **Time:** {time_str} DZ (UTC+1)
 """
     return message
 
-def get_order_action_keyboard(order_id: int, current_status: str) -> InlineKeyboardMarkup:
-    if current_status == 'pending':
-        keyboard = [
-            [
-                InlineKeyboardButton("✅ Approve", callback_data=f"approve_{order_id}"),
-                InlineKeyboardButton("❌ Reject", callback_data=f"reject_{order_id}"),
-            ]
-        ]
-    else:
-        keyboard = [[InlineKeyboardButton("👁️ View", callback_data=f"view_{order_id}")]]
+def get_phone_keyboard(order_id: int) -> InlineKeyboardMarkup:
+    keyboard = [
+        [InlineKeyboardButton("📞 Call Customer", callback_data=f"phone_{order_id}")]
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 # ===== TELEGRAM HANDLERS =====
@@ -281,64 +355,45 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⛔ Unauthorized")
         return
     
-    pending = get_pending_orders()
-    await update.message.reply_text(f"📊 Pending Orders: {len(pending)}")
+    count = get_new_orders_count()
+    await update.message.reply_text(f"📊 New Orders: {count}")
 
-async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def phone_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = str(update.effective_user.id)
     
     if user_id not in AUTHORIZED_ADMINS:
-        await query.answer("Unauthorized!", show_alert=True)
+        await query.answer("⛔ Unauthorized", show_alert=True)
         return
     
-    await query.answer()
     callback_data = query.data
-    action, order_id_str = callback_data.split("_")
-    order_id = int(order_id_str)
-    
-    if action == "approve":
-        success = update_order_status(order_id, "accepted")
-        if success:
-            await query.edit_message_text(f"✅ Order #{order_id} APPROVED!")
-        else:
-            await query.edit_message_text(f"❌ Failed to approve Order #{order_id}")
-    
-    elif action == "reject":
-        success = update_order_status(order_id, "rejected")
-        if success:
-            await query.edit_message_text(f"❌ Order #{order_id} REJECTED!")
-        else:
-            await query.edit_message_text(f"❌ Failed to reject Order #{order_id}")
-    
-    elif action == "view":
-        await query.answer(f"Order #{order_id} details")
+    order_id = int(callback_data.split("_")[1])
+    phone = get_order_phone(order_id)
+    await query.answer(f"📞 {phone}", show_alert=True)
 
 async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
-    global processed_order_ids
     try:
-        pending_orders = get_pending_orders()
+        new_orders = get_new_orders()
         
-        for order in pending_orders:
+        for order in new_orders:
             order_id = order['order_id']
+            message = format_order_message(order)
+            keyboard = get_phone_keyboard(order_id)
             
-            if order_id not in processed_order_ids:
-                message = format_order_message(order)
-                keyboard = get_order_action_keyboard(order_id, 'pending')
-                
-                for admin_id in AUTHORIZED_ADMINS:
-                    try:
-                        await context.bot.send_message(
-                            chat_id=admin_id,
-                            text=f"🆕 NEW ORDER #{order_id}!\n\n{message}",
-                            reply_markup=keyboard,
-                            parse_mode="Markdown"
-                        )
-                        print(f"📨 Sent order #{order_id} to admin {admin_id}")
-                    except Exception as e:
-                        print(f"Failed to send to {admin_id}: {e}")
-                
-                processed_order_ids.add(order_id)
+            for admin_id in AUTHORIZED_ADMINS:
+                try:
+                    await context.bot.send_message(
+                        chat_id=admin_id,
+                        text=message,
+                        reply_markup=keyboard,
+                        parse_mode="Markdown"
+                    )
+                    print(f"📨 Sent order #{order_id} to admin {admin_id}")
+                except Exception as e:
+                    print(f"Failed to send to {admin_id}: {e}")
+            
+            mark_as_notified(order_id)
+            print(f"✅ Order #{order_id} marked as notified")
                 
     except Exception as e:
         print(f"Error checking orders: {e}")
@@ -354,13 +409,16 @@ def main():
         print("❌ Failed to connect to database")
         return
     
+    # Ensure tracking column exists
+    init_notified_column()
+    
     # Create application
     app = Application.builder().token(BOT_TOKEN).build()
     
     # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CallbackQueryHandler(button_callback))
+    app.add_handler(CallbackQueryHandler(phone_callback, pattern="^phone_"))
     
     # Add background job
     job_queue = app.job_queue
