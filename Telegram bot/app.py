@@ -42,8 +42,9 @@ def get_db_connection_config():
         'autocommit': True,
     }
     
-    # Enable SSL with hostname verification
-    config['ssl'] = {'check_hostname': True}
+    # Enable SSL/TLS (empty dict = use encryption without CA verification)
+    config['ssl'] = {}
+    config['connect_timeout'] = 15
     return config
 
 # Print config for debugging
@@ -52,6 +53,8 @@ print(f"BOT_TOKEN loaded: {'✅ Yes' if BOT_TOKEN else '❌ NO!'}")
 print(f"ADMIN_IDS loaded: {AUTHORIZED_ADMINS}")
 print(f"DB_HOST: {os.getenv('DB_HOST')}")
 print(f"DB_NAME: {os.getenv('DB_NAME')}")
+print(f"DB_USER: {'✅ Yes' if os.getenv('DB_USER') else '❌ NO!'}")
+print(f"DB_PASSWORD: {'✅ Yes' if os.getenv('DB_PASSWORD') else '❌ NO!'}")
 
 # ===== VALIDATE CONFIGURATION =====
 if not BOT_TOKEN:
@@ -72,6 +75,7 @@ def init_db_pool():
     global connection_pool
     try:
         db_config = get_db_connection_config()
+        print("🔌 Creating connection pool...")
         
         connection_pool = PooledDB(
             creator=pymysql,
@@ -83,6 +87,7 @@ def init_db_pool():
         )
         
         # Test the connection
+        print("🔍 Testing database connection...")
         test_conn = connection_pool.connection()
         test_conn.close()
         
