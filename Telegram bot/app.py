@@ -5,8 +5,9 @@ load_dotenv()
 # ===== REST OF IMPORTS =====
 import os
 import threading
+import html
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any, List
+from typing import Dict
 import pymysql
 from dbutils.pooled_db import PooledDB
 from flask import Flask
@@ -253,6 +254,9 @@ def mark_as_notified(order_id: int) -> bool:
         if conn:
             conn.close()
 
+def h(text) -> str:
+    return html.escape(str(text or ""))
+
 def format_order_message(order: Dict) -> str:
     from collections import defaultdict
     items_text = ""
@@ -277,13 +281,13 @@ def format_order_message(order: Dict) -> str:
             subtotal += qty * it['price_per_unit']
             color = it.get('color_name', '')
             if color:
-                color_parts.append(f"{qty} x {color}")
+                color_parts.append(f"{qty} x {h(color)}")
             else:
                 color_parts.append(str(qty))
         colors_str = ", ".join(color_parts)
-        line = product_name
+        line = h(product_name)
         if offer_text:
-            line += f" - Offer: {offer_text}"
+            line += f" - Offer: {h(offer_text)}"
         line += f" ({colors_str})"
         items_text += f"\n• {line}"
 
@@ -301,25 +305,25 @@ def format_order_message(order: Dict) -> str:
 
     message = f"""
 ━━━━━━━━━━━━━━━━━━━
-🆕 **ORDER #{order['order_id']}**
+🆕 <b>ORDER #{order['order_id']}</b>
 ━━━━━━━━━━━━━━━━━━━
 
-👤 **Customer:** {order['first_name']} {order['last_name']}
-📞 **Phone:** `{order['phone']}`
-📍 **Location:** {order['baladiya']}, {order['wilaya']}
-🚚 **Delivery:** {delivery_label}
+👤 <b>Customer:</b> {h(order['first_name'])} {h(order['last_name'])}
+📞 <b>Phone:</b> <code>{h(order['phone'])}</code>
+📍 <b>Location:</b> {h(order['baladiya'])}, {h(order['wilaya'])}
+🚚 <b>Delivery:</b> {delivery_label}
 
-🛍️ **Items:** ({len(order['items'])}){items_text}
+🛍️ <b>Items:</b> ({len(order['items'])}){items_text}
 
 ─────────────────────
 ━━━━━━━━━━━━━━━━━━━
-📦 **Subtotal:** {subtotal:,.0f} DA
-🚚 **Delivery:** {order['delivery_price']:,.0f} DA
+📦 <b>Subtotal:</b> {subtotal:,.0f} DA
+🚚 <b>Delivery:</b> {order['delivery_price']:,.0f} DA
 ━━━━━━━━━━━━━━━━━━━
-💰 **TOTAL: {total:,.0f} DA**
+💰 <b>TOTAL: {total:,.0f} DA</b>
 ━━━━━━━━━━━━━━━━━━━
 
-⏰ **Time:** {time_str} DZ (UTC+1)
+⏰ <b>Time:</b> {time_str} DZ (UTC+1)
 """
     return message
 
@@ -359,20 +363,23 @@ async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
             message = format_order_message(order)
             keyboard = get_phone_keyboard(order['phone'])
             
+            all_sent = True
             for admin_id in AUTHORIZED_ADMINS:
                 try:
                     await context.bot.send_message(
                         chat_id=admin_id,
                         text=message,
                         reply_markup=keyboard,
-                        parse_mode="Markdown"
+                        parse_mode="HTML"
                     )
                     print(f"📨 Sent order #{order_id} to admin {admin_id}")
                 except Exception as e:
                     print(f"Failed to send to {admin_id}: {e}")
+                    all_sent = False
             
-            mark_as_notified(order_id)
-            print(f"✅ Order #{order_id} marked as notified")
+            if all_sent:
+                mark_as_notified(order_id)
+                print(f"✅ Order #{order_id} marked as notified")
                 
     except Exception as e:
         print(f"Error checking orders: {e}")
