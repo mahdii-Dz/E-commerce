@@ -9,7 +9,6 @@ import html
 from datetime import datetime, timedelta, timezone
 from typing import Dict
 import pymysql
-from dbutils.pooled_db import PooledDB
 from flask import Flask
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -43,11 +42,10 @@ def get_db_connection_config():
     }
     
     # SSL with CA certificate (required by TiDB Cloud)
-    ca_path = os.path.join(os.path.dirname(__file__), 'ca.pem')
-    config['ssl'] = {
-        'ca': ca_path,
-        'check_hostname': True,
-    }
+    config['ssl'] = {'check_hostname': True}
+    ca_candidate = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ca.pem')
+    if os.path.exists(ca_candidate):
+        config['ssl']['ca'] = ca_candidate
     config['connect_timeout'] = 15
     return config
 
@@ -69,45 +67,17 @@ if not AUTHORIZED_ADMINS:
     print("❌ ERROR: ADMIN_IDS not found!")
     exit(1)
 
-# Connection pool
-connection_pool = None
-
 # ===== DATABASE FUNCTIONS =====
 
-def init_db_pool():
-    """Initialize database connection pool"""
-    global connection_pool
+def get_db_connection():
+    """Create a new database connection"""
     try:
         db_config = get_db_connection_config()
-        print("🔌 Creating connection pool...")
-        
-        connection_pool = PooledDB(
-            creator=pymysql,
-            maxconnections=5,
-            mincached=2,
-            maxcached=5,
-            blocking=True,
-            **db_config
-        )
-        
-        # Test the connection
-        print("🔍 Testing database connection...")
-        test_conn = connection_pool.connection()
-        test_conn.close()
-        
-        print("✅ Database connection pool initialized")
-        return True
+        conn = pymysql.connect(**db_config)
+        return conn
     except Exception as e:
-        print(f"❌ Failed to initialize database pool: {e}")
-        return False
-
-def get_db_connection():
-    """Get connection from pool"""
-    global connection_pool
-    if connection_pool is None:
-        if not init_db_pool():
-            return None
-    return connection_pool.connection()
+        print(f"❌ Failed to connect to database: {e}")
+        return None
 
 def init_notified_column():
     """Add telegram_notified column if it doesn't exist"""
@@ -406,11 +376,6 @@ async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
 def main():
     """Main function to run the bot"""
     print("🚀 Starting bot...")
-    
-    # Initialize database
-    if not init_db_pool():
-        print("❌ Failed to connect to database")
-        return
     
     # Ensure tracking column exists
     init_notified_column()

@@ -2,5 +2,4 @@ python-telegram-bot[job-queue]==20.7
 PyMySQL==1.1.0
 python-dotenv==1.0.0
 cryptography==41.0.7
-DBUtils==3.0.3
 Flask==3.0.0
