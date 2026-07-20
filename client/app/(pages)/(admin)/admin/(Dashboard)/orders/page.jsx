@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw, AlertTriangle, Loader, Plus } from 'lucide-react';
+import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw, RefreshCw, AlertTriangle, Loader, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import axios from 'axios';
@@ -56,6 +56,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [leftedCount, setLeftedCount] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,6 +176,21 @@ export default function OrdersPage() {
       .then(res => res.ok ? res.json() : [])
       .then(data => setLeftedCount(Array.isArray(data) ? data.length : 0))
       .catch(() => setLeftedCount(0));
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const response = await axios.get('/api/shop/orders');
+      setOrders(response.data);
+      const leftedRes = await fetch('/api/shop/lefted-orders');
+      const leftedData = await (leftedRes.ok ? leftedRes.json() : []);
+      setLeftedCount(Array.isArray(leftedData) ? leftedData.length : 0);
+    } catch (err) {
+      console.error('Refresh failed:', err);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
   const filteredOrders = useMemo(() => {
@@ -651,13 +667,18 @@ export default function OrdersPage() {
 
       <header className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold text-black tracking-tight">جميع الطلبات</h1>
-        <Link
-          href="/admin/add-order"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#FA3145] text-white rounded-xl hover:opacity-90 transition-opacity text-sm font-medium"
-        >
-          <Plus size={18} />
-          إضافة طلب
-        </Link>
+        <div className="flex items-center gap-2">
+          <button onClick={handleRefresh} disabled={refreshing} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <RefreshCw size={22} className={`text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+          <Link
+            href="/admin/add-order"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#FA3145] text-white rounded-xl hover:opacity-90 transition-opacity text-sm font-medium"
+          >
+            <Plus size={18} />
+            إضافة طلب
+          </Link>
+        </div>
       </header>
 
       {leftedCount > 0 && (

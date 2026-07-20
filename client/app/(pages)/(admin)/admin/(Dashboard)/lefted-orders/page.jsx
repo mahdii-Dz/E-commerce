@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, X, ChevronDown, Loader2, Trash2, ShoppingBag, Phone, MessageCircle, ChevronLeft, ChevronRight, Eye, Edit, Plus } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { Search, X, ChevronDown, Loader2, Trash2, ShoppingBag, Phone, MessageCircle, ChevronLeft, ChevronRight, Eye, Edit, Plus, RefreshCw } from 'lucide-react';
 import axios from 'axios';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -48,6 +48,7 @@ export default function LeftedOrdersPage() {
   const { wilayaData } = useWilayaData();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -133,6 +134,18 @@ export default function LeftedOrdersPage() {
       }
     };
     fetchOrders();
+  }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const response = await axios.get('/api/shop/lefted-orders');
+      setOrders(response.data);
+    } catch (err) {
+      console.error('Refresh failed:', err);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
   const filteredOrders = useMemo(() => {
@@ -513,6 +526,11 @@ export default function LeftedOrdersPage() {
 
       <header className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold text-black tracking-tight">الطلبات المتروكة</h1>
+        <div className="flex items-center gap-2">
+          <button onClick={handleRefresh} disabled={refreshing} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <RefreshCw size={22} className={`text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </header>
 
       <div className="bg-white border-2 border-stroke rounded-xl p-6 w-full mb-6">

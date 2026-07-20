@@ -539,8 +539,9 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
     }
 
     return wilayasLoading ? (
-        <div className="flex items-center justify-center py-16">
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 size={32} className="animate-spin text-primary" />
+            <p className="text-gray-500 text-sm">جاري تحميل استمارة الطلب</p>
         </div>
     ) : (
         <form
