@@ -23,6 +23,7 @@ export default function RichTextEditor({ content = '', onChange }) {
       'ul', 'ol', '|',
       'outdent', 'indent', '|',
       'font', 'fontsize', '|',
+      'brush', '|',
       'paragraph', '|',
       'align', '|',
       'hr', 'eraser', '|',

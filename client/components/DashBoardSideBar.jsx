@@ -45,7 +45,7 @@ const ALL_MENU_ITEMS = [
     ],
   },
   { icon: Truck, label: "التوصيل", href: "/admin/delivery", permissionKey: "delivery" },
-  { icon: ImageIcon, label: "إضافات", href: "/admin/extra", permissionKey: "extras" },
+  { icon: ImageIcon, label: "المتجر", href: "/admin/shop", permissionKey: "extras" },
   { icon: Star, label: "التقييمات", href: "/admin/reviews", permissionKey: "reviews" },
   { icon: UserCog, label: "موظفي المتجر", href: "/admin/shop-workers", permissionKey: "shop-workers",
     children: [

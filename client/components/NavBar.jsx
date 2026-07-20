@@ -5,6 +5,7 @@ import { Search, ShoppingCart, Menu, X } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useContext, useState, useCallback, useEffect } from 'react'
+import ShopHeaderBanner from './ShopHeaderBanner'
 
 function NavBar({ onOpenCategorySidebar }) {
   const { Cart } = useContext(GlobalContext);
@@ -38,7 +39,9 @@ function NavBar({ onOpenCategorySidebar }) {
 
   return (
     <>
-      <nav className='w-full max-w-full h-16 lg:h-22 px-4 lg:px-20 fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white flex items-center justify-between overflow-hidden'>
+      <nav className='w-full max-w-full fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white'>
+        <ShopHeaderBanner />
+        <div className='h-16 lg:h-22 px-4 lg:px-20 flex items-center justify-between'>
         {/* Mobile Menu Button */}
         <button 
           onClick={handleToggleMenu}
@@ -83,6 +86,7 @@ function NavBar({ onOpenCategorySidebar }) {
               </div>
             )}
           </Link>
+        </div>
         </div>
       </nav>
 

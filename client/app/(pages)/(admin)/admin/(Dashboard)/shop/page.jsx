@@ -10,13 +10,16 @@ import {
   AlertCircle, 
   Loader2, 
   Search,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import Image from "next/image";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
+import RichTextEditor from "@/components/RichTextEditor";
 
 export default function BannerCategoriesPage() {
   const router = useRouter();
@@ -56,6 +59,14 @@ export default function BannerCategoriesPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
   const [pendingUploadIndex, setPendingUploadIndex] = useState(null);
+
+  // Shop header state
+  const [isHeaderLoading, setIsHeaderLoading] = useState(true);
+  const [headerConfig, setHeaderConfig] = useState({
+    content: '',
+    backgroundColor: '#000000',
+    isActive: false,
+  });
 
   // Initialize categories from API data
   useEffect(() => {
@@ -109,6 +120,30 @@ export default function BannerCategoriesPage() {
     };
 
     fetchBanners();
+  }, []);
+
+  // Fetch existing header config on mount
+  useEffect(() => {
+    const fetchHeader = async () => {
+      try {
+        setIsHeaderLoading(true);
+        const response = await axios.get('/api/shop/header');
+        const data = response.data;
+        if (data && data.content) {
+          setHeaderConfig({
+            content: data.content || '',
+            backgroundColor: data.backgroundColor || '#000000',
+            isActive: data.isActive !== false,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch header:", error);
+      } finally {
+        setIsHeaderLoading(false);
+      }
+    };
+
+    fetchHeader();
   }, []);
 
   const showToast = (message, type = "success") => {
@@ -300,7 +335,13 @@ export default function BannerCategoriesPage() {
         banners: bannerData
       });
 
-      showToast("تم حفظ البانرات بنجاح!", "success");
+      await axios.put('/api/shop/header', {
+        content: headerConfig.content,
+        backgroundColor: headerConfig.backgroundColor,
+        isActive: headerConfig.isActive,
+      });
+
+      showToast("تم حفظ التغييرات بنجاح!", "success");
       
       setTimeout(() => {
         router.push("/admin/dashboard");
@@ -308,7 +349,7 @@ export default function BannerCategoriesPage() {
 
     } catch (error) {
       console.error("Save failed:", error);
-      showToast(error.response?.data?.message || "فشل حفظ البانرات", "error");
+      showToast(error.response?.data?.message || "فشل حفظ التغييرات", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -318,7 +359,7 @@ export default function BannerCategoriesPage() {
     router.push("/admin/dashboard");
   };
 
-  if (categoriesLoading || isLoadingBanners) {
+  if (categoriesLoading || isLoadingBanners || isHeaderLoading) {
     return (
       <div className="w-full pt-6 px-9 pb-16  flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
@@ -513,6 +554,73 @@ export default function BannerCategoriesPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Shop Header Section */}
+        <div className="flex flex-col items-start gap-6 w-full max-w-[915px]">
+          <h1 className="text-3xl font-semibold text-black font-roboto">
+            الهيدر
+          </h1>
+
+          {/* Live Preview */}
+          <div className="w-full overflow-hidden rounded-xl border-2 border-dashed border-gray-300">
+            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+              <span className="text-xs font-medium text-gray-500">معاينة حية</span>
+            </div>
+            <div
+              style={{ backgroundColor: headerConfig.backgroundColor }}
+              className="w-full text-white text-center px-4 py-3"
+            >
+              {headerConfig.content ? (
+                <div
+                  className="[&_*]:text-white max-w-7xl mx-auto"
+                  dangerouslySetInnerHTML={{ __html: headerConfig.content }}
+                />
+              ) : (
+                <span className="text-white/60">سيظهر المحتوى هنا...</span>
+              )}
+            </div>
+          </div>
+
+          {/* Background Color */}
+          <div className="flex flex-col gap-2 w-full">
+            <label className="text-sm font-medium text-gray-700">الخلفية:</label>
+            <input
+              type="color"
+              value={headerConfig.backgroundColor}
+              onChange={(e) => setHeaderConfig(prev => ({ ...prev, backgroundColor: e.target.value }))}
+              className="w-16 h-12 rounded-lg border border-gray-200 cursor-pointer"
+            />
+          </div>
+
+          {/* Content */}
+          <div className="flex flex-col gap-2 w-full">
+            <label className="text-sm font-medium text-gray-700">المحتوى:</label>
+            <RichTextEditor
+              content={headerConfig.content}
+              onChange={(html) => setHeaderConfig(prev => ({ ...prev, content: html }))}
+            />
+          </div>
+
+          {/* Active Toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setHeaderConfig(prev => ({ ...prev, isActive: !prev.isActive }))}
+              className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
+                headerConfig.isActive ? 'bg-green-500' : 'bg-gray-300'
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform cursor-pointer ${
+                  headerConfig.isActive ? '-translate-x-6' : '-translate-x-0.5'
+                }`}
+              />
+            </button>
+            <span className="text-sm text-gray-700">
+              {headerConfig.isActive ? 'مفعل' : 'غير مفعل'}
+            </span>
           </div>
         </div>
 
