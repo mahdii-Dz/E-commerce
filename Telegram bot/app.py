@@ -8,21 +8,39 @@ import threading
 import tempfile
 import html
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 from typing import Dict
 import pymysql
-from flask import Flask
+from flask import Flask, request
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-# ===== FLASK APP FOR HEALTH CHECKS =====
+# ===== FLASK APP FOR HEALTH CHECKS & CALL REDIRECT =====
 flask_app = Flask(__name__)
+
+def format_phone(phone: str) -> str:
+    phone = phone.strip()
+    if phone.startswith('+213'):
+        return phone
+    if phone.startswith('0'):
+        return '+213' + phone[1:]
+    return '+213' + phone
 
 @flask_app.route('/')
 @flask_app.route('/health')
 def health_check():
     """Health check endpoint to keep the bot alive"""
     return {"status": "alive", "bot": "running", "timestamp": datetime.now().isoformat()}, 200
+
+@flask_app.route('/call')
+def call_phone():
+    """Redirect to tel: URI so the mobile phone dialer opens"""
+    phone = request.args.get('phone', '')
+    if not phone:
+        return "No phone number provided", 400
+    tel_uri = f"tel:{format_phone(phone)}"
+    return f'<meta http-equiv="refresh" content="0; url={tel_uri}"><p>Redirecting to call {phone}...</p>'
 
 # ===== CONFIGURATION =====
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -314,9 +332,13 @@ def format_order_message(order: Dict) -> str:
 """
     return message
 
+def get_call_url(phone: str) -> str:
+    base = os.getenv("RENDER_EXTERNAL_URL", f"http://localhost:{os.getenv('PORT', 10000)}")
+    return f"{base}/call?phone={quote(phone)}"
+
 def get_phone_keyboard(phone: str) -> InlineKeyboardMarkup:
     keyboard = [
-        [InlineKeyboardButton("📞 Call Customer", callback_data=f"phone_{phone}")]
+        [InlineKeyboardButton("📞 Call Customer", url=get_call_url(phone))]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -340,15 +362,6 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     count = get_new_orders_count()
     await update.message.reply_text(f"📊 New Orders: {count}")
-
-async def phone_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    user_id = str(update.effective_user.id)
-    if user_id not in AUTHORIZED_ADMINS:
-        await query.answer("⛔ Unauthorized", show_alert=True)
-        return
-    phone = query.data.split("_", 1)[1]
-    await query.answer(f"📞 {phone}", show_alert=True)
 
 async def check_new_orders(context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -395,7 +408,6 @@ def main():
     # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CallbackQueryHandler(phone_callback, pattern="^phone_"))
     
     # Add background job
     job_queue = app.job_queue
