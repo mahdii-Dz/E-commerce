@@ -631,7 +631,7 @@ export default function AddProductPage() {
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={images.map(i => i.id)} strategy={rectSwappingStrategy}>
-                <div className="flex gap-6">
+                <div className="flex flex-col lg:flex-row gap-6">
                   <SortableImage
                     image={images[0]}
                     position={1}
@@ -920,7 +920,7 @@ export default function AddProductPage() {
             </div>
 
           </div>
-            <div className="flex flex-col gap-3 w-[246px]">
+            <div className="flex flex-col gap-3 w-full max-w-[246px]">
               <label className="text-lg font-semibold text-black text-center">الخصم</label>
               <div className="flex items-center px-5 py-4 bg-white border border-gray-200 rounded-xl">
                 <input

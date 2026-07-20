@@ -787,7 +787,7 @@ export default function EditProductPage() {
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={images.map(i => i.id)} strategy={rectSwappingStrategy}>
-                <div className="flex gap-6">
+                <div className="flex flex-col lg:flex-row gap-6">
                   <SortableImage
                     image={images[0]}
                     position={1}
@@ -866,8 +866,8 @@ export default function EditProductPage() {
           )}
         </div>
 
-        <div className="flex flex-col gap-6 w-[915px]">
-          <div className="flex flex-col gap-3 w-[671px]">
+        <div className="flex flex-col gap-6 w-full max-w-[915px]">
+          <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <label className="text-lg font-semibold text-black">العنوان: <span className="text-red-500">*</span></label>
             <textarea
               value={formData.title}
@@ -880,7 +880,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Colors Section */}
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <label className="text-lg font-semibold text-black">الألوان:</label>
             <div className="flex flex-wrap gap-3">
               {/* Existing colors */}
@@ -950,7 +950,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Offers Section */}
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <div className="flex items-center justify-between">
               <label className="text-lg font-semibold text-black">Offers (عروض):</label>
               <button
@@ -982,7 +982,7 @@ export default function EditProductPage() {
             )}
           </div>
 
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <label className="text-lg font-semibold text-black">الوصف:</label>
             <textarea
               value={formData.description}
@@ -995,7 +995,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Big Description (TipTap Rich Text) */}
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <label className="text-lg font-semibold text-black">الوصف الطويل:</label>
             <RichTextEditor
               content={formData.big_description}
@@ -1004,7 +1004,7 @@ export default function EditProductPage() {
           </div>
 
           {/* Multiple Category Selection with Combobox */}
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <label className="text-lg font-semibold text-black">التصنيفات: <span className="text-red-500">*</span></label>
             {categoriesLoading ? (
               <div className="w-full h-14 bg-gray-100 rounded-xl flex items-center px-5 text-gray-500">
@@ -1047,8 +1047,8 @@ export default function EditProductPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-6 w-[671px]">
-            <div className="flex flex-col gap-3 flex-1">
+          <div className="flex flex-col sm:flex-row items-center gap-6 w-full max-w-[671px]">
+            <div className="flex flex-col gap-3 flex-1 w-full sm:w-auto">
               <label className="text-lg font-semibold text-black">السعر: <span className="text-red-500">*</span></label>
               <input
                 type="number"
@@ -1076,7 +1076,7 @@ export default function EditProductPage() {
             </div>
 
           </div>
-            <div className="flex flex-col gap-3 w-[246px]">
+            <div className="flex flex-col gap-3 w-full max-w-[246px]">
               <label className="text-lg font-semibold text-black text-center">الخصم</label>
               <div className="flex items-center px-5 py-4 bg-white border border-gray-200 rounded-xl">
                 <input
@@ -1091,7 +1091,7 @@ export default function EditProductPage() {
               </div>
             </div>
 
-          <div className="flex flex-col gap-3 w-[671px]">
+          <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <label className="text-lg font-semibold text-black">النوع:</label>
             <Select
               onValueChange={(value) => handleChange("type", value)}
