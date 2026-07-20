@@ -559,9 +559,31 @@ export default function BannerCategoriesPage() {
 
         {/* Shop Header Section */}
         <div className="flex flex-col items-start gap-6 w-full max-w-[915px]">
-          <h1 className="text-3xl font-semibold text-black font-roboto">
-            الهيدر
-          </h1>
+          <div className="flex items-center justify-between w-full">
+            <h1 className="text-3xl font-semibold text-black font-roboto">
+              الهيدر
+            </h1>
+
+            {/* Active Toggle */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-700">
+                {headerConfig.isActive ? 'مفعل' : 'غير مفعل'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setHeaderConfig(prev => ({ ...prev, isActive: !prev.isActive }))}
+                className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
+                  headerConfig.isActive ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform cursor-pointer ${
+                    headerConfig.isActive ? '-translate-x-6' : '-translate-x-0.5'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
 
           {/* Live Preview */}
           <div className="w-full overflow-hidden rounded-xl border-2 border-dashed border-gray-300">
@@ -603,25 +625,6 @@ export default function BannerCategoriesPage() {
             />
           </div>
 
-          {/* Active Toggle */}
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setHeaderConfig(prev => ({ ...prev, isActive: !prev.isActive }))}
-              className={`relative w-12 h-6 rounded-full transition-colors cursor-pointer ${
-                headerConfig.isActive ? 'bg-green-500' : 'bg-gray-300'
-              }`}
-            >
-              <div
-                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform cursor-pointer ${
-                  headerConfig.isActive ? '-translate-x-6' : '-translate-x-0.5'
-                }`}
-              />
-            </button>
-            <span className="text-sm text-gray-700">
-              {headerConfig.isActive ? 'مفعل' : 'غير مفعل'}
-            </span>
-          </div>
         </div>
 
         {/* Categories Section */}
