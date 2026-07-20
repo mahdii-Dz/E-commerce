@@ -190,6 +190,7 @@ export default function OrdersPage() {
       console.error('Refresh failed:', err);
     } finally {
       setRefreshing(false);
+      showToast('تم تحديث البيانات بنجاح','success' );
     }
   }, []);
 
@@ -668,7 +669,7 @@ export default function OrdersPage() {
       <header className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold text-black tracking-tight">جميع الطلبات</h1>
         <div className="flex items-center gap-2">
-          <button onClick={handleRefresh} disabled={refreshing} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          <button onClick={handleRefresh} disabled={refreshing} className="p-2 hover:bg-gray-100 rounded-lg border border-stroke cursor-pointer transition-colors">
             <RefreshCw size={22} className={`text-gray-500 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
           <Link
