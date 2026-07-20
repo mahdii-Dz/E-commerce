@@ -70,6 +70,26 @@ async function migrate() {
       console.log('  - delivery_sent column already exists, skipping');
     }
 
+    // ============ SHOP HEADER TABLE ============
+    const checkHeaderTable = await conn.execute("SHOW TABLES LIKE 'shop_header'");
+    const hasHeaderTable = Array.isArray(checkHeaderTable) && checkHeaderTable.length > 0;
+    if (!hasHeaderTable) {
+      console.log('Creating shop_header table...');
+      await conn.execute(`
+        CREATE TABLE shop_header (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          content TEXT NOT NULL,
+          background_color VARCHAR(7) DEFAULT '#000000',
+          is_active TINYINT(1) DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('  ✓ shop_header table created');
+    } else {
+      console.log('  - shop_header table already exists, skipping');
+    }
+
     console.log('\nMigration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error.message);

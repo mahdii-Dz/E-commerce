@@ -1246,6 +1246,71 @@ export const deleteBanner = async (req, res) => {
   }
 };
 
+// ==================== HEADER CONTROLLERS ====================
+
+export const getHeader = async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM shop_header LIMIT 1');
+    const header = rows && rows.length > 0 ? rows[0] : {};
+
+    return res.status(200).json({
+      success: true,
+      content: header.content || '',
+      backgroundColor: header.background_color || '#000000',
+      isActive: header.is_active !== 0,
+    });
+  } catch (error) {
+    return handleDbError(res, error, 'fetching header');
+  }
+};
+
+async function invalidateHeaderCache() {
+  await Promise.allSettled([
+    triggerNetlifyRebuild(),
+    purgeNetlifyCacheTag('header'),
+  ]);
+}
+
+export const updateHeader = async (req, res) => {
+  try {
+    const { content, backgroundColor, isActive } = req.body;
+
+    if (!content) {
+      return res.status(400).json({
+        success: false,
+        error: 'Content is required'
+      });
+    }
+
+    // Check if a row exists
+    const existing = await query('SELECT id FROM shop_header LIMIT 1');
+
+    if (existing && existing.length > 0) {
+      await execute(
+        `UPDATE shop_header 
+         SET content = ?, background_color = ?, is_active = ?
+         WHERE id = ?`,
+        [content, backgroundColor || '#000000', isActive ? 1 : 0, existing[0].id]
+      );
+    } else {
+      await execute(
+        `INSERT INTO shop_header (content, background_color, is_active) 
+         VALUES (?, ?, ?)`,
+        [content, backgroundColor || '#000000', isActive ? 1 : 0]
+      );
+    }
+
+    await invalidateHeaderCache();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Header saved successfully'
+    });
+  } catch (error) {
+    return handleDbError(res, error, 'updating header');
+  }
+};
+
 // ==================== REVIEWS CONTROLLERS ====================
 
 export const GetProductReviews = async (req, res) => {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, MarkOrderDeliverySent, getBanners, updateBanners, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic, GetDeliveryWilayas, UpdateDeliveryWilayas, GetWilayaBaladiyas, UpdateWilayaStopDesk, GetDeliveryStats, GetPublicWilayas } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, MarkOrderDeliverySent, getBanners, updateBanners, getHeader, updateHeader, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic, GetDeliveryWilayas, UpdateDeliveryWilayas, GetWilayaBaladiyas, UpdateWilayaStopDesk, GetDeliveryStats, GetPublicWilayas } from '../controllers/ShopController.js';
 import { GetWorkers, GetWorker, CreateWorker, UpdateWorker, DeleteWorker, LoginWorker, LogoutWorker, CheckWorkerSession } from '../controllers/WorkerController.js';
 import { verifyAdminSession } from '../middleware/sessionAuth.js';
 
@@ -10,6 +10,7 @@ const router = express.Router();
 router.get('/get-categories', GetCategories);
 router.get('/get-products', GetProducts);
 router.get('/get-banners', getBanners);
+router.get('/get-header', getHeader);
 router.get('/get-product/:id', GetProductById);
 router.get('/get-products/category/:categoryId', GetProductsByCategory);
 
@@ -45,6 +46,7 @@ router.put('/reject-order/:id', verifyAdminSession, RejectOrder);
 router.put('/update-order/:id', verifyAdminSession, UpdateOrder);
 router.put('/mark-order-delivery-sent/:id', verifyAdminSession, MarkOrderDeliverySent);
 router.put('/update-banners', verifyAdminSession, updateBanners);
+router.put('/update-header', verifyAdminSession, updateHeader);
 router.delete('/delete-product/:id', verifyAdminSession,DeleteProduct);
 router.delete('/delete-category/:id', verifyAdminSession,DeleteCategory);
 
