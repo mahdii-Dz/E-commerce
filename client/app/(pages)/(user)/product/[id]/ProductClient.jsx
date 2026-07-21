@@ -220,7 +220,7 @@ export default function ProductClient({ product, relatedProducts }) {
                         </div>
 
                         {/* IMAGES COLUMN */}
-                        <div className='w-full lg:sticky lg:top-42 self-start lg:row-start-1 lg:row-end-3 lg:col-start-1 lg:col-end-2 mt-6 lg:mt-0'>
+                        <div className='w-full lg:sticky lg:top-[calc(var(--navbar-offset,96px)_+_16px)] self-start lg:row-start-1 lg:row-end-3 lg:col-start-1 lg:col-end-2 mt-6 lg:mt-0'>
                             {/* Main Swiper */}
                             <div className='relative w-full bg-stroke/50 border border-stroke rounded-lg overflow-hidden'>
                                 <Swiper
