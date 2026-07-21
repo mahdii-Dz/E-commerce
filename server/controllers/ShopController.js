@@ -185,9 +185,14 @@ export const DeleteCategory = async (req, res) => {
 // ==================== PRODUCT CONTROLLERS ====================
 
 // Build WHERE clause for product filtering
-function buildProductWhereClause({ category, minPrice, maxPrice, minDiscount }) {
+function buildProductWhereClause({ category, minPrice, maxPrice, minDiscount, search }) {
   const conditions = ['p.is_active = true'];
   const values = [];
+
+  if (search !== undefined && search !== null && search !== '') {
+    conditions.push('p.name LIKE ?');
+    values.push(`%${search}%`);
+  }
 
   if (minPrice !== undefined && minPrice !== null && minPrice !== '') {
     conditions.push('p.price >= ?');
@@ -228,14 +233,15 @@ export const GetProducts = async (req, res) => {
       minDiscount,
       sort, 
       page = 1, 
-      limit = 12 
+      limit = 12,
+      search
     } = req.query;
 
     const pageNum = Math.max(1, parseInt(page, 10));
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
     const offset = (pageNum - 1) * limitNum;
 
-    const { where, values, category: catFilter } = buildProductWhereClause({ category, minPrice, maxPrice, minDiscount });
+    const { where, values, category: catFilter } = buildProductWhereClause({ category, minPrice, maxPrice, minDiscount, search });
     const orderBy = buildProductOrderBy(sort);
 
     // Build category filter for WHERE clause

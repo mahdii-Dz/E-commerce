@@ -1,17 +1,26 @@
 'use client'
 
 import { GlobalContext } from '@/app/context/Context'
-import { Search, ShoppingCart, Menu, X } from 'lucide-react'
+import { Search, ShoppingCart, Menu, X, Image as ImageIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useContext, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { Input } from '@/components/ui/input'
 import ShopHeaderBanner from './ShopHeaderBanner'
 
 function NavBar() {
   const { Cart, openCategorySidebar } = useContext(GlobalContext);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const router = useRouter();
   const navRef = useRef(null);
+  const desktopSearchRef = useRef(null);
+  const mobileSearchRef = useRef(null);
+  const searchTimerRef = useRef(null);
 
   useLayoutEffect(() => {
     if (navRef.current) {
@@ -55,6 +64,91 @@ function NavBar() {
     setIsSearchOpen(prev => !prev);
   }, []);
 
+  // Close search dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const isOutsideDesktop = desktopSearchRef.current && !desktopSearchRef.current.contains(e.target);
+      const isOutsideMobile = mobileSearchRef.current && !mobileSearchRef.current.contains(e.target);
+      if (isOutsideDesktop && isOutsideMobile) {
+        setShowSearchDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (!showSearchDropdown) return;
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const query = searchQuery.trim();
+        const endpoint = query
+          ? `/api/shop/products?search=${encodeURIComponent(query)}&limit=10`
+          : '/api/shop/products?sort=Newest&limit=10';
+        const res = await fetch(endpoint);
+        const data = await res.json();
+        setSearchResults(Array.isArray(data) ? data : (data.products || []));
+      } catch (err) {
+        console.error('Search failed:', err);
+      }
+    }, 300);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [searchQuery, showSearchDropdown]);
+
+  const handleSearchSelect = (product) => {
+    router.push(`/product/${product.id}`);
+    setShowSearchDropdown(false);
+    setSearchQuery('');
+  };
+
+  const handleSearchEnter = async () => {
+    const query = searchQuery.trim();
+    if (!query) return;
+    try {
+      const res = await fetch(`/api/shop/products?search=${encodeURIComponent(query)}&limit=1`);
+      const data = await res.json();
+      const products = Array.isArray(data) ? data : (data.products || []);
+      if (products.length > 0) {
+        router.push(`/product/${products[0].id}`);
+        setShowSearchDropdown(false);
+        setSearchQuery('');
+      }
+    } catch (err) {
+      console.error('Search failed:', err);
+    }
+  };
+
+  const SearchDropdown = ({ products, onSelect }) => {
+    if (!products || products.length === 0) return null;
+    return (
+      <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden max-h-96 overflow-y-auto">
+        {products.map(p => (
+          <button
+            key={p.id}
+            onClick={() => onSelect(p)}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-right cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
+              {(p.image_url || p.images?.[0]?.url) ? (
+                <Image src={p.image_url || p.images?.[0]?.url} alt={p.name} width={40} height={40} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={16} /></div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
+              <p className="text-xs text-gray-500">{p.price} دج</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <>
       <nav ref={navRef} className='w-full max-w-full fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white'>
@@ -76,13 +170,29 @@ function NavBar() {
         </Link>
 
         {/* Desktop Search */}
-        <div className='hidden lg:flex search justify-between items-center px-2 rounded-2xl border border-stroke pl-4 w-2/4 max-w-2xl'>
+        <div ref={desktopSearchRef} className='hidden lg:flex items-center rounded-xl border border-stroke px-4 w-2/4 max-w-2xl focus-within:ring-2 focus-within:ring-[#FA3145]/20 focus-within:border-[#FA3145] relative'>
           <Search className="cursor-pointer hover:text-primary transition-colors shrink-0" />
-          <input 
-            type="search" 
-            placeholder='ابحث عن المنتجات...' 
-            className='h-12.5 p-4 outline-none w-full bg-transparent min-w-0 text-right' 
+          <Input
+            type="search"
+            placeholder="ابحث عن المنتجات..."
+            autoComplete="off"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setShowSearchDropdown(true);
+            }}
+            onFocus={() => setShowSearchDropdown(true)}
+            className="border-none outline-none shadow-none bg-transparent h-12.5 text-right focus-visible:ring-0"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSearchEnter();
+              }
+            }}
           />
+          {showSearchDropdown && (
+            <SearchDropdown products={searchResults} onSelect={handleSearchSelect} />
+          )}
         </div>
 
         {/* Right Section */}
@@ -110,15 +220,32 @@ function NavBar() {
 
       {/* Mobile Search Overlay */}
       {isSearchOpen && (
-        <div className="lg:hidden fixed top-16 left-0 right-0 max-w-full bg-white border-b border-stroke p-4 z-40">
-          <div className='flex justify-between items-center rounded-xl border border-stroke pl-4 max-w-full'>
+        <div ref={mobileSearchRef} className="lg:hidden fixed top-[var(--navbar-offset)] left-0 right-0 max-w-full bg-white border-b border-stroke p-4 z-50">
+          <div className='flex items-center rounded-xl border border-stroke pl-4 max-w-full focus-within:ring-2 focus-within:ring-[#FA3145]/20 focus-within:border-[#FA3145] relative'>
             <Search className="cursor-pointer text-gray-500 flex-shrink-0" />
-            <input 
-              type="search" 
-              placeholder='ابحث عن المنتجات...' 
-              className='h-12 p-4 outline-none w-full bg-transparent min-w-0 text-right' 
+            <Input
+              type="search"
+              placeholder="ابحث عن المنتجات..."
+              autoComplete="off"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSearchDropdown(true);
+              }}
+              onFocus={() => setShowSearchDropdown(true)}
+              className="border-none shadow-none bg-transparent h-12 text-right focus-visible:ring-0"
               autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSearchEnter();
+                  setIsSearchOpen(false);
+                }
+              }}
             />
+            {showSearchDropdown && (
+              <SearchDropdown products={searchResults} onSelect={(p) => { handleSearchSelect(p); setIsSearchOpen(false); }} />
+            )}
           </div>
         </div>
       )}
