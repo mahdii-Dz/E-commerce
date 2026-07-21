@@ -66,16 +66,15 @@ function NavBar() {
 
   // Close search dropdown on click outside
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      const isOutsideDesktop = desktopSearchRef.current && !desktopSearchRef.current.contains(e.target);
-      const isOutsideMobile = mobileSearchRef.current && !mobileSearchRef.current.contains(e.target);
-      if (isOutsideDesktop && isOutsideMobile) {
-        setShowSearchDropdown(false);
-      }
+    if (!showSearchDropdown) return;
+    const handleClick = (e) => {
+      if (desktopSearchRef.current?.contains(e.target)) return;
+      if (mobileSearchRef.current?.contains(e.target)) return;
+      setShowSearchDropdown(false);
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [showSearchDropdown]);
 
   // Debounced search
   useEffect(() => {
@@ -170,8 +169,9 @@ function NavBar() {
         </Link>
 
         {/* Desktop Search */}
-        <div ref={desktopSearchRef} className='hidden lg:flex items-center rounded-xl border border-stroke px-4 w-2/4 max-w-2xl focus-within:ring-2 focus-within:ring-[#FA3145]/20 focus-within:border-[#FA3145] relative'>
-          <Search className="cursor-pointer hover:text-primary transition-colors shrink-0" />
+        <div ref={desktopSearchRef} className='hidden lg:flex items-center rounded-xl border border-stroke w-2/4 max-w-2xl focus-within:ring-2 focus-within:ring-[#FA3145]/20 focus-within:border-[#FA3145] relative'>
+          
+          <Search className="cursor-pointer hover:text-primary transition-colors shrink-0 mr-2" />
           <Input
             type="search"
             placeholder="ابحث عن المنتجات..."
@@ -190,6 +190,15 @@ function NavBar() {
               }
             }}
           />
+          <button
+            onClick={() => {
+              setShowSearchDropdown(false);
+              setSearchQuery('');
+            }}
+            className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors mr-2 ml-1 cursor-pointer"
+          >
+            <X size={18} className="text-gray-500" />
+          </button>
           {showSearchDropdown && (
             <SearchDropdown products={searchResults} onSelect={handleSearchSelect} />
           )}
@@ -221,8 +230,9 @@ function NavBar() {
       {/* Mobile Search Overlay */}
       {isSearchOpen && (
         <div ref={mobileSearchRef} className="lg:hidden fixed top-[var(--navbar-offset)] left-0 right-0 max-w-full bg-white border-b border-stroke p-4 z-50">
-          <div className='flex items-center rounded-xl border border-stroke pl-4 max-w-full focus-within:ring-2 focus-within:ring-[#FA3145]/20 focus-within:border-[#FA3145] relative'>
-            <Search className="cursor-pointer text-gray-500 flex-shrink-0" />
+          <div className='flex items-center rounded-xl border border-stroke max-w-full focus-within:ring-2 focus-within:ring-[#FA3145]/20 focus-within:border-[#FA3145] relative'>
+            
+            <Search className="cursor-pointer text-gray-500 flex-shrink-0 mr-2" />
             <Input
               type="search"
               placeholder="ابحث عن المنتجات..."
@@ -243,6 +253,16 @@ function NavBar() {
                 }
               }}
             />
+            <button
+              onClick={() => {
+                setIsSearchOpen(false);
+                setShowSearchDropdown(false);
+                setSearchQuery('');
+              }}
+              className="flex-shrink-0 p-2 hover:bg-gray-100 rounded-lg transition-colors mr-2 cursor-pointer"
+            >
+              <X size={18} className="text-gray-500" />
+            </button>
             {showSearchDropdown && (
               <SearchDropdown products={searchResults} onSelect={(p) => { handleSearchSelect(p); setIsSearchOpen(false); }} />
             )}
