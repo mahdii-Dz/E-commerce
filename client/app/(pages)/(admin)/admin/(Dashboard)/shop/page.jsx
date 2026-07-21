@@ -30,6 +30,9 @@ export default function BannerCategoriesPage() {
   // Loading states
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingBanners, setIsLoadingBanners] = useState(true);
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('banner');
   
   // Fetch categories from API
   const { 
@@ -342,10 +345,6 @@ export default function BannerCategoriesPage() {
       });
 
       showToast("تم حفظ التغييرات بنجاح!", "success");
-      
-      setTimeout(() => {
-        router.push("/admin/dashboard");
-      }, 1500);
 
     } catch (error) {
       console.error("Save failed:", error);
@@ -463,8 +462,26 @@ export default function BannerCategoriesPage() {
         </Link>
       </header>
 
+      {/* Tab Navigator */}
+      <div className="flex gap-2 mb-8">
+        {['banner', 'header', 'categories'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              activeTab === tab
+                ? 'bg-white text-[#FA3145] border-b-2 border-[#FA3145] shadow-sm'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {tab === 'banner' ? 'البانر' : tab === 'header' ? 'الهيدر' : 'التصنيفات'}
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-col gap-10">
         {/* Banner Section */}
+        {activeTab === 'banner' && (
         <div className="flex flex-col items-start gap-12 self-stretch">
           <h1 className="text-3xl font-semibold text-black font-roboto">
             البانر
@@ -556,8 +573,10 @@ export default function BannerCategoriesPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Shop Header Section */}
+        {activeTab === 'header' && (
         <div className="flex flex-col items-start gap-6 w-full max-w-[915px]">
           <div className="flex items-center justify-between w-full">
             <h1 className="text-3xl font-semibold text-black font-roboto">
@@ -626,8 +645,10 @@ export default function BannerCategoriesPage() {
           </div>
 
         </div>
+        )}
 
         {/* Categories Section */}
+        {activeTab === 'categories' && (
         <div className="w-[676px] flex flex-col items-start gap-6">
           {/* Search and Add Category */}
           <div className="flex items-start gap-3 self-stretch">
@@ -682,6 +703,7 @@ export default function BannerCategoriesPage() {
             )}
           </div>
         </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center gap-4">
