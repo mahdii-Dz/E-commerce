@@ -20,6 +20,7 @@ import axios from "axios";
 import Image from "next/image";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import RichTextEditor from "@/components/RichTextEditor";
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 export default function BannerCategoriesPage() {
   const router = useRouter();
@@ -41,6 +42,10 @@ export default function BannerCategoriesPage() {
     refetch: refetchCategories 
   } = useFetchSingleProduct('/api/shop/categories');
 
+  // Fetch products for banner product link
+  const { data: productsList } = useFetchSingleProduct('/api/shop/products');
+  const allProducts = Array.isArray(productsList) ? productsList : (productsList?.products || []);
+
   // Categories state (local copy for editing)
   const [categories, setCategories] = useState([]);
   
@@ -53,8 +58,8 @@ export default function BannerCategoriesPage() {
   
   // Banner images state - always initialize with 2 empty slots
   const [bannerImages, setBannerImages] = useState([
-    { url: null, publicId: null, isExisting: false, file: null }, // Primary (index 0)
-    { url: null, publicId: null, isExisting: false, file: null }, // Secondary (index 1)
+    { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
+    { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
   ]);
   
   // Image upload state
@@ -92,8 +97,8 @@ export default function BannerCategoriesPage() {
         
         // Always ensure we have 2 banner slots, fill with DB data if available
         const newBannerImages = [
-          { url: null, publicId: null, isExisting: false, file: null },
-          { url: null, publicId: null, isExisting: false, file: null },
+          { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
+          { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
         ];
 
         if (data && data.banners && Array.isArray(data.banners) && data.banners.length > 0) {
@@ -103,7 +108,8 @@ export default function BannerCategoriesPage() {
                 url: banner.url,
                 publicId: banner.public_id || banner.publicId || null,
                 isExisting: true,
-                file: null
+                file: null,
+                linkedProductId: banner.linked_product_id || null,
               };
             }
           });
@@ -114,8 +120,8 @@ export default function BannerCategoriesPage() {
         console.error("Failed to fetch banners:", error);
         // Don't show error toast - just start with empty banners
         setBannerImages([
-          { url: null, publicId: null, isExisting: false, file: null },
-          { url: null, publicId: null, isExisting: false, file: null },
+          { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
+          { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
         ]);
       } finally {
         setIsLoadingBanners(false);
@@ -330,7 +336,8 @@ export default function BannerCategoriesPage() {
         .map((img, idx) => ({
           position: idx,
           url: img.url,
-          publicId: img.publicId || null
+          publicId: img.publicId || null,
+          linkedProductId: img.linkedProductId || null,
         }))
         .filter(banner => banner.url);
 
@@ -571,6 +578,160 @@ export default function BannerCategoriesPage() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Primary Banner - Product Link Combobox */}
+          <div className="w-full max-w-[676px]">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              ربط البانر الرئيسي مع منتج (اختياري)
+            </label>
+            <Combobox
+              value={String(bannerImages[0].linkedProductId || '')}
+              onValueChange={(val) => {
+                const newImages = [...bannerImages];
+                newImages[0] = { ...newImages[0], linkedProductId: val ? Number(val) : null };
+                setBannerImages(newImages);
+              }}
+            >
+              <ComboboxInput
+                placeholder="ابحث عن منتج..."
+                className="w-full [&_input]:text-right"
+              />
+              <ComboboxContent>
+                <ComboboxList dir="rtl" className="text-right max-h-60">
+                  {allProducts.length === 0 && (
+                    <div className="px-4 py-3 text-sm text-gray-500 text-center">لا توجد منتجات</div>
+                  )}
+                  {allProducts.map(p => (
+                    <ComboboxItem key={p.id} value={String(p.id)} className="text-right">
+                      <div className="flex items-center gap-3 w-full">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
+                          <Image
+                            src={p.image_url || p.images?.[0]?.url}
+                            alt={p.name}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between w-full gap-3">
+                          <span className="truncate">{p.name}</span>
+                          <span className="text-xs text-gray-500 flex-shrink-0">{p.price} دج</span>
+                        </div>
+                      </div>
+                    </ComboboxItem>
+                  ))}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+            {(() => {
+              const selected = allProducts.find(p => p.id === bannerImages[0].linkedProductId);
+              if (!selected) return null;
+              return (
+                <div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-white">
+                    <Image
+                      src={selected.image_url || selected.images?.[0]?.url}
+                      alt={selected.name}
+                      width={48}
+                      height={48}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{selected.name}</p>
+                    <p className="text-xs text-gray-500">{selected.price} دج</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newImages = [...bannerImages];
+                      newImages[0] = { ...newImages[0], linkedProductId: null };
+                      setBannerImages(newImages);
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Secondary Banner - Product Link Combobox */}
+          <div className="w-full max-w-[676px]">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              ربط البانر الثانوي مع منتج (اختياري)
+            </label>
+            <Combobox
+              value={String(bannerImages[1].linkedProductId || '')}
+              onValueChange={(val) => {
+                const newImages = [...bannerImages];
+                newImages[1] = { ...newImages[1], linkedProductId: val ? Number(val) : null };
+                setBannerImages(newImages);
+              }}
+            >
+              <ComboboxInput
+                placeholder="ابحث عن منتج..."
+                className="w-full [&_input]:text-right"
+              />
+              <ComboboxContent>
+                <ComboboxList dir="rtl" className="text-right max-h-60">
+                  {allProducts.length === 0 && (
+                    <div className="px-4 py-3 text-sm text-gray-500 text-center">لا توجد منتجات</div>
+                  )}
+                  {allProducts.map(p => (
+                    <ComboboxItem key={p.id} value={String(p.id)} className="text-right">
+                      <div className="flex items-center gap-3 w-full">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
+                          <Image
+                            src={p.image_url || p.images?.[0]?.url}
+                            alt={p.name}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between w-full gap-3">
+                          <span className="truncate">{p.name}</span>
+                          <span className="text-xs text-gray-500 flex-shrink-0">{p.price} دج</span>
+                        </div>
+                      </div>
+                    </ComboboxItem>
+                  ))}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
+            {(() => {
+              const selected = allProducts.find(p => p.id === bannerImages[1].linkedProductId);
+              if (!selected) return null;
+              return (
+                <div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-white">
+                    <Image
+                      src={selected.image_url || selected.images?.[0]?.url}
+                      alt={selected.name}
+                      width={48}
+                      height={48}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate">{selected.name}</p>
+                    <p className="text-xs text-gray-500">{selected.price} دج</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newImages = [...bannerImages];
+                      newImages[1] = { ...newImages[1], linkedProductId: null };
+                      setBannerImages(newImages);
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
         )}

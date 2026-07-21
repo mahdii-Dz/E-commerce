@@ -90,6 +90,17 @@ async function migrate() {
       console.log('  - shop_header table already exists, skipping');
     }
 
+    // ============ BANNERS LINKED PRODUCT COLUMN ============
+    const checkBannerLinkedColumn = await conn.execute("SHOW COLUMNS FROM banners LIKE 'linked_product_id'");
+    const hasBannerLinkedColumn = Array.isArray(checkBannerLinkedColumn) && checkBannerLinkedColumn.length > 0;
+    if (!hasBannerLinkedColumn) {
+      console.log('Adding linked_product_id column to banners...');
+      await conn.execute("ALTER TABLE banners ADD COLUMN linked_product_id INT DEFAULT NULL AFTER public_id");
+      console.log('  ✓ linked_product_id column added');
+    } else {
+      console.log('  - linked_product_id column already exists, skipping');
+    }
+
     console.log('\nMigration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error.message);

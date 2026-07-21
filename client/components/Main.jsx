@@ -29,17 +29,31 @@ function Main({ Banners, Products = [], onOpenCategorySidebar }) {
 
       {/* Banners */}
       <div className='w-full flex flex-col lg:flex-row items-stretch gap-4 overflow-hidden'>
-        <div className='w-full lg:w-3/4 h-64 lg:h-96 rounded-xl bg-stroke relative overflow-hidden'>
+        <div className='w-full lg:flex-1 h-64 lg:h-96 rounded-xl bg-stroke relative overflow-hidden'>
           {mainBanner && mainBanner.url ? (
-            <Image 
-              src={mainBanner.url.trim()} 
-              alt="الإعلان الرئيسي" 
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 75vw"
-              className="object-cover cursor-pointer hover:scale-110 transition-transform duration-300"
-              quality={85}
-            />
+            mainBanner.linked_product_id ? (
+              <Link href={`/product/${mainBanner.linked_product_id}`} className="block w-full h-full">
+                <Image 
+                  src={mainBanner.url.trim()} 
+                  alt="الإعلان الرئيسي" 
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, (min-width: 1024px) calc(100vw - 358px)"
+                  className="object-cover hover:scale-110 transition-transform duration-300"
+                  quality={85}
+                />
+              </Link>
+            ) : (
+              <Image 
+                src={mainBanner.url.trim()} 
+                alt="الإعلان الرئيسي" 
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, (min-width: 1024px) calc(100vw - 358px)"
+                className="object-cover cursor-pointer hover:scale-110 transition-transform duration-300"
+                quality={85}
+              />
+            )
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-200 text-gray-500">
               لا يوجد إعلان متاح
@@ -47,16 +61,29 @@ function Main({ Banners, Products = [], onOpenCategorySidebar }) {
           )}
         </div>
         
-        <div className='w-full lg:w-1/4 h-64 lg:h-96 hidden lg:block rounded-xl cursor-pointer relative overflow-hidden'>
+        <div className='w-full lg:w-[326px] h-64 lg:h-96 hidden lg:block rounded-xl cursor-pointer relative overflow-hidden'>
           {sideBanner && sideBanner.url ? (
-            <Image 
-              src={sideBanner.url.trim()} 
-              alt="إعلان جانبي" 
-              fill
-              sizes="(max-width: 1024px) 100vw, 25vw"
-              className="object-cover hover:scale-110 transition-transform duration-300"
-              quality={85}
-            />
+            sideBanner.linked_product_id ? (
+              <Link href={`/product/${sideBanner.linked_product_id}`} className="block w-full h-full">
+                <Image 
+                  src={sideBanner.url.trim()} 
+                  alt="إعلان جانبي" 
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 25vw"
+                  className="object-cover hover:scale-110 transition-transform duration-300"
+                  quality={85}
+                />
+              </Link>
+            ) : (
+              <Image 
+                src={sideBanner.url.trim()} 
+                alt="إعلان جانبي" 
+                fill
+                sizes="(max-width: 1024px) 100vw, 25vw"
+                className="object-cover hover:scale-110 transition-transform duration-300"
+                quality={85}
+              />
+            )
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-primary text-white font-semibold text-xl">
               عرض خاص

@@ -1194,12 +1194,13 @@ export const updateBanners = async (req, res) => {
 
     for (const banner of banners) {
       await execute(
-        `INSERT INTO banners (position, url, public_id) 
-         VALUES (?, ?, ?) 
+        `INSERT INTO banners (position, url, public_id, linked_product_id) 
+         VALUES (?, ?, ?, ?) 
          ON DUPLICATE KEY UPDATE 
          url = VALUES(url),
-         public_id = VALUES(public_id)`,
-        [banner.position, banner.url, banner.publicId || null]
+         public_id = VALUES(public_id),
+         linked_product_id = VALUES(linked_product_id)`,
+        [banner.position, banner.url, banner.publicId || null, banner.linkedProductId || null]
       );
     }
 
