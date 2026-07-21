@@ -18,6 +18,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import StarRating from "@/components/StarRating";
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox';
 
 export default function AdminReviewsPage() {
   const router = useRouter();
@@ -340,20 +341,47 @@ export default function AdminReviewsPage() {
                 <label htmlFor='productId' className='block text-sm font-medium mb-2'>
                   المنتج <span className='text-red-500'>*</span>
                 </label>
-                <select
-                  id='productId'
-                  value={formData.productId}
-                  onChange={(e) => handleInputChange('productId', e.target.value)}
-                  className='w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
-                  required
+                <Combobox
+                  value={String(formData.productId || '')}
+                  onValueChange={(val) => handleInputChange('productId', val)}
                 >
-                  <option value="">اختر منتج...</option>
-                  {products.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name} - {product.price} دج
-                    </option>
-                  ))}
-                </select>
+                  <ComboboxInput
+                    placeholder="ابحث عن منتج..."
+                    className="w-full [&_input]:text-right"
+                  />
+                  <ComboboxContent>
+                    <ComboboxList dir="rtl" className="text-right max-h-60">
+                      {products.length === 0 && (
+                        <div className="px-4 py-3 text-sm text-gray-500 text-center">لا توجد منتجات</div>
+                      )}
+                      {products.map((product) => (
+                        <ComboboxItem key={product.id} value={String(product.id)} className="text-right">
+                          <div className="flex items-center gap-3 w-full">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
+                              {product.image_url || product.images?.[0]?.url ? (
+                                <Image
+                                  src={product.image_url || product.images?.[0]?.url}
+                                  alt={product.name}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  <ImageIcon size={16} />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center justify-between w-full gap-3">
+                              <span className="truncate">{product.name}</span>
+                              <span className="text-xs text-gray-500 flex-shrink-0">{product.price} دج</span>
+                            </div>
+                          </div>
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               </div>
 
               {/* Customer Name */}

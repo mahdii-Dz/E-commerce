@@ -3,12 +3,13 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import axios from 'axios'
-import { ChevronDown, Loader2, Plus, X, Minus } from 'lucide-react'
+import { ChevronDown, Loader2, Plus, X, Minus, ArrowRight } from 'lucide-react'
 import { Select as BaseSelect } from '@base-ui/react/select'
 import { Input } from '@/components/ui/input'
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 import { useFetchSingleProduct } from '@/components/useFetchSingleProduct'
 import { useWilayaData } from '@/components/useWilayaData'
+import Link from 'next/link'
 
 const STATUSES = [
   { value: 'new', label: 'جديد', color: '#6366F1' },
@@ -312,7 +313,13 @@ export default function AddOrderPage() {
           </div>
         </div>
       )}
-
+      <nav className="flex items-center justify-between mb-8">
+        <Link href="/admin/orders">
+          <button className="w-10 h-10 flex cursor-pointer items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors">
+            <ArrowRight size={20} className="text-black" />
+          </button>
+        </Link>
+      </nav>
       <header className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold text-black tracking-tight">إضافة طلب</h1>
       </header>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import {
-  ArrowLeft,
+  ArrowRight,
   CheckCircle,
   AlertCircle,
   Loader2,
@@ -106,7 +106,7 @@ export default function ManageStopDeskPage() {
       <header className="flex items-center justify-between mb-14">
         <Link href="/admin/delivery">
           <button className="w-10 h-10 flex cursor-pointer items-center justify-center rounded-full border border-gray-200 hover:bg-gray-50 transition-colors">
-            <ArrowLeft size={20} className="text-black" />
+            <ArrowRight size={20} className="text-black" />
           </button>
         </Link>
       </header>
