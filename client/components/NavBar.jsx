@@ -4,13 +4,31 @@ import { GlobalContext } from '@/app/context/Context'
 import { Search, ShoppingCart, Menu, X } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useContext, useState, useCallback, useEffect } from 'react'
+import { useContext, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react'
 import ShopHeaderBanner from './ShopHeaderBanner'
 
-function NavBar({ onOpenCategorySidebar }) {
-  const { Cart } = useContext(GlobalContext);
+function NavBar() {
+  const { Cart, openCategorySidebar } = useContext(GlobalContext);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const navRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (navRef.current) {
+      document.documentElement.style.setProperty('--navbar-offset', navRef.current.getBoundingClientRect().height + 'px');
+    }
+  }, []);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const h = entry.contentRect.height;
+      if (h > 0) document.documentElement.style.setProperty('--navbar-offset', h + 'px');
+    });
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, []);
   // Start with null to prevent hydration mismatch
   const [mounted, setMounted] = useState(false);
 
@@ -22,8 +40,8 @@ function NavBar({ onOpenCategorySidebar }) {
 
   const handleOpenCategory = useCallback(() => {
     setIsMobileMenuOpen(false);
-    onOpenCategorySidebar?.();
-  }, [onOpenCategorySidebar]);
+    openCategorySidebar?.();
+  }, [openCategorySidebar]);
 
   const handleCloseMenu = useCallback(() => {
     setIsMobileMenuOpen(false);
@@ -39,7 +57,7 @@ function NavBar({ onOpenCategorySidebar }) {
 
   return (
     <>
-      <nav className='w-full max-w-full fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white'>
+      <nav ref={navRef} className='w-full max-w-full fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white'>
         <ShopHeaderBanner />
         <div className='h-16 lg:h-22 px-4 lg:px-20 flex items-center justify-between'>
         {/* Mobile Menu Button */}

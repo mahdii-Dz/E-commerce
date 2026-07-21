@@ -155,7 +155,7 @@ export default function ProductClient({ product, relatedProducts }) {
 
     return (
         <>
-            <main className='pt-24 lg:pt-30 px-4 lg:px-20 pb-16 lg:pb-0 w-full --font-Rubik-sans'>
+            <main className='px-4 lg:px-20 pb-16 lg:pb-0 w-full --font-Rubik-sans'>
                 <style>{`
                   .product-swiper .swiper-button-next,
                   .product-swiper .swiper-button-prev {

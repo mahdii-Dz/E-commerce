@@ -1,24 +1,18 @@
 'use client'
 
-import { useState } from 'react';
+import { useContext } from 'react';
 import Main from "@/components/Main";
 import SideBar from "@/components/SideBar";
-import NavBar from "@/components/NavBar";
+import { GlobalContext } from "@/app/context/Context";
 
 export default function HomeClient({ banners = [], products = [], categories }) {
-  const [isCategorySidebarOpen, setIsCategorySidebarOpen] = useState(false);
+  const { isCategorySidebarOpen, closeCategorySidebar, openCategorySidebar } = useContext(GlobalContext);
   const isLoadingCategories = categories === null;
-
-  const openCategorySidebar = () => setIsCategorySidebarOpen(true);
-  const closeCategorySidebar = () => setIsCategorySidebarOpen(false);
 
   return (
     <>
-      <NavBar onOpenCategorySidebar={openCategorySidebar} />
-
-      <div className="pt-24 lg:pt-32">
+      <div>
         <div className="flex flex-col lg:flex-row gap-6 px-4 lg:px-20">
-
           <SideBar
             category={categories || []}
             isLoadingCategories={isLoadingCategories}

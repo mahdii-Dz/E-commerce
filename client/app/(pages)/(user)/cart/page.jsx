@@ -14,7 +14,7 @@ function CartPage() {
   const isEmpty = !Cart || Cart.length === 0;
 
   return (
-    <div className='w-full h-auto min-h-screen pt-24 lg:pt-30 px-4 sm:px-6 lg:px-20 overflow-x-hidden'>
+    <div className='w-full h-auto min-h-screen px-4 sm:px-6 lg:px-20 overflow-x-hidden'>
       <section className='w-full h-auto'>
         <Breadcrumb />
         

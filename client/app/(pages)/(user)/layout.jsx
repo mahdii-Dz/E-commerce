@@ -23,9 +23,11 @@ export default function UserLayout({ children }) {
         <div dir="rtl" lang="ar" className={`${RubikSans.variable} font-sans antialiased bg-background w-full max-w-full min-h-screen `}>
             <ContextProvider>
                 <NavBar />
+                <main style={{ paddingTop: 'calc(var(--navbar-offset, 96px) + 16px)' }}>
                 <Suspense fallback={<Loading />}>
                     {children}
                 </Suspense>
+                </main>
                 <Footer />
             </ContextProvider>
         </div>

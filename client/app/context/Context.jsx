@@ -13,6 +13,10 @@ export function ContextProvider({ children, initialPromotions = [] }) {
     });
 
     const [Promotions, setPromotions] = useState(initialPromotions);
+    const [isCategorySidebarOpen, setIsCategorySidebarOpen] = useState(false);
+
+    const openCategorySidebar = () => setIsCategorySidebarOpen(true);
+    const closeCategorySidebar = () => setIsCategorySidebarOpen(false);
 
     useEffect(() => {
         if (Promotions.length === 0) {
@@ -27,7 +31,7 @@ export function ContextProvider({ children, initialPromotions = [] }) {
     }, []);
 
     return (
-        <GlobalContext.Provider value={{ Promotions, Cart, setCart }}>
+        <GlobalContext.Provider value={{ Promotions, Cart, setCart, isCategorySidebarOpen, openCategorySidebar, closeCategorySidebar }}>
             {children}
         </GlobalContext.Provider>
     )

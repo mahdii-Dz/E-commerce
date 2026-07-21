@@ -230,7 +230,7 @@ export default function ProductsClient({
   );
 
   return (
-    <div className="pt-24 lg:pt-30 px-4 lg:px-20 w-full h-auto min-h-screen overflow-x-hidden">
+    <div className="px-4 lg:px-20 w-full h-auto min-h-screen overflow-x-hidden">
       <Breadcrumb />
       
       {/* Header Section */}
