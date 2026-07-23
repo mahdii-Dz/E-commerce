@@ -110,12 +110,12 @@ export default function ProductClient({ product, relatedProducts }) {
             if (e.key === 'Escape') setIsFullscreenOpen(false);
         };
         if (isFullscreenOpen) {
-            document.addEventListener('mousedown', handleClickOutside);
+            document.addEventListener('pointerdown', handleClickOutside);
             document.addEventListener('keydown', handleEscape);
             document.body.style.overflow = 'hidden';
         }
         return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('pointerdown', handleClickOutside);
             document.removeEventListener('keydown', handleEscape);
             document.body.style.overflow = 'unset';
         };
