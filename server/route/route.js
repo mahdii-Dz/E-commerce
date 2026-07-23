@@ -1,7 +1,9 @@
 import express from 'express';
 import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, MarkOrderDeliverySent, getBanners, updateBanners, getHeader, updateHeader, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic, GetDeliveryWilayas, UpdateDeliveryWilayas, GetWilayaBaladiyas, UpdateWilayaStopDesk, GetDeliveryStats, GetPublicWilayas } from '../controllers/ShopController.js';
 import { GetWorkers, GetWorker, CreateWorker, UpdateWorker, DeleteWorker, LoginWorker, LogoutWorker, CheckWorkerSession } from '../controllers/WorkerController.js';
+import { UploadCredentials, GetCredentialInfo, GetSheets, CreateSheet, GetSheet, UpdateSheet, DeleteSheet, ToggleSheetStatus } from '../controllers/SheetsController.js';
 import { verifyAdminSession } from '../middleware/sessionAuth.js';
+import upload from '../middleware/multer.js';
 
 const router = express.Router();
 
@@ -70,5 +72,15 @@ router.get('/workers/:id', verifyAdminSession, GetWorker);
 router.post('/workers', verifyAdminSession, CreateWorker);
 router.put('/workers/:id', verifyAdminSession, UpdateWorker);
 router.delete('/workers/:id', verifyAdminSession, DeleteWorker);
+
+// Google Sheets routes
+router.post('/sheets/credentials', verifyAdminSession, upload.single('credential'), UploadCredentials);
+router.get('/sheets/credentials', verifyAdminSession, GetCredentialInfo);
+router.get('/sheets', verifyAdminSession, GetSheets);
+router.post('/sheets', verifyAdminSession, CreateSheet);
+router.get('/sheets/:id', verifyAdminSession, GetSheet);
+router.put('/sheets/:id', verifyAdminSession, UpdateSheet);
+router.delete('/sheets/:id', verifyAdminSession, DeleteSheet);
+router.patch('/sheets/:id/toggle', verifyAdminSession, ToggleSheetStatus);
 
 export default router;

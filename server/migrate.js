@@ -101,6 +101,45 @@ async function migrate() {
       console.log('  - linked_product_id column already exists, skipping');
     }
 
+    // ============ GOOGLE CREDENTIALS TABLE ============
+    const checkCredTable = await conn.execute("SHOW TABLES LIKE 'google_credentials'");
+    const hasCredTable = Array.isArray(checkCredTable) && checkCredTable.length > 0;
+    if (!hasCredTable) {
+      console.log('Creating google_credentials table...');
+      await conn.execute(`
+        CREATE TABLE google_credentials (
+          id INT PRIMARY KEY DEFAULT 1,
+          credentials JSON NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('  ✓ google_credentials table created');
+    } else {
+      console.log('  - google_credentials table already exists, skipping');
+    }
+
+    // ============ GOOGLE SHEETS TABLE ============
+    const checkSheetsTable = await conn.execute("SHOW TABLES LIKE 'google_sheets'");
+    const hasSheetsTable = Array.isArray(checkSheetsTable) && checkSheetsTable.length > 0;
+    if (!hasSheetsTable) {
+      console.log('Creating google_sheets table...');
+      await conn.execute(`
+        CREATE TABLE google_sheets (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          file_name VARCHAR(255) NOT NULL,
+          file_id VARCHAR(255) NOT NULL,
+          paper_name VARCHAR(255) NOT NULL,
+          is_active TINYINT(1) DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('  ✓ google_sheets table created');
+    } else {
+      console.log('  - google_sheets table already exists, skipping');
+    }
+
     console.log('\nMigration completed successfully!');
   } catch (error) {
     console.error('Migration failed:', error.message);
