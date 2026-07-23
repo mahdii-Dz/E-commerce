@@ -129,7 +129,7 @@ function NavBar() {
           <button
             key={p.id}
             onClick={() => onSelect(p)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-right cursor-pointer"
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:opacity-70 active:scale-[0.98] transition-all duration-150 text-right cursor-pointer"
           >
             <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
               {(p.image_url || p.images?.[0]?.url) ? (
