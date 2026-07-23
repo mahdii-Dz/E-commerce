@@ -3,9 +3,9 @@
 import { GlobalContext } from '@/app/context/Context';
 import Breadcrumb from '@/components/Breadcrumb';
 import CheckOut from '@/components/CheckOut';
-import RenderProducts from '@/components/RenderProducts';
+import ProductCard from '@/components/ProductCard';
 import ReviewsSection from '@/components/ReviewsSection';
-import { ArrowRight, Check, Percent, ShoppingCart, Sparkles, Tag, Truck, Van, XIcon } from 'lucide-react';
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Percent, ShoppingCart, Sparkles, Tag, Truck, Van, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import React, { useContext, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils';
@@ -13,8 +13,9 @@ import 'swiper/css';
 import 'swiper/css/thumbs';
 import 'swiper/css/free-mode';
 import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, Thumbs, FreeMode, Navigation } from 'swiper/modules';
+import { Autoplay, Thumbs, FreeMode, Navigation, Pagination } from 'swiper/modules';
 
 export default function ProductClient({ product, relatedProducts }) {
     const { Cart, setCart } = useContext(GlobalContext)
@@ -23,6 +24,8 @@ export default function ProductClient({ product, relatedProducts }) {
     const [fullscreenIndex, setFullscreenIndex] = useState(0);
     const [isFullscreenOpen, setIsFullscreenOpen] = useState(false);
     const fullscreenRef = useRef(null);
+    const prevRef = useRef(null);
+    const nextRef = useRef(null);
     const date = new Date();
     const today = date.getDate()
     const deliveryDate = new Date(date.setDate(date.getDate() + 2));
@@ -511,10 +514,76 @@ export default function ProductClient({ product, relatedProducts }) {
                         </Link>
                     </div>
                     <div className='w-full'>
-                        <RenderProducts
-                            Products={relatedProducts}
-                            Class={'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4'}
-                        />
+                        {relatedProducts.length > 0 ? (
+                            <>
+                                <style>{`
+                                    .related-products-swiper .swiper-pagination {
+                                        position: relative;
+                                        margin-top: 16px;
+                                    }
+                                    .related-products-swiper .swiper-pagination-bullet {
+                                        width: 8px;
+                                        height: 8px;
+                                        background: #d1d5db;
+                                        opacity: 1;
+                                        transition: all 0.2s;
+                                    }
+                                    .related-products-swiper .swiper-pagination-bullet-active {
+                                        width: 24px;
+                                        border-radius: 4px;
+                                        background: #D4AF37;
+                                    }
+                                    .related-products-swiper .swiper-button-disabled {
+                                        opacity: 0.25 !important;
+                                        cursor: default;
+                                        pointer-events: none;
+                                    }
+                                    .related-products-swiper .swiper-button-disabled:hover {
+                                        transform: none !important;
+                                        box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
+                                    }
+                                `}</style>
+                                <Swiper
+                                    slidesPerView={1}
+                                    spaceBetween={16}
+                                    breakpoints={{
+                                        640: { slidesPerView: 2, spaceBetween: 16 },
+                                        1024: { slidesPerView: 4, spaceBetween: 20 },
+                                    }}
+                                    onBeforeInit={(swiper) => {
+                                        swiper.params.navigation.prevEl = prevRef.current;
+                                        swiper.params.navigation.nextEl = nextRef.current;
+                                        swiper.navigation.init();
+                                        swiper.navigation.update();
+                                    }}
+                                    pagination={{ clickable: true }}
+                                    modules={[Navigation, Pagination]}
+                                    className='related-products-swiper w-full pb-10'
+                                >
+                                    {relatedProducts.map(product => (
+                                        <SwiperSlide key={product.id}>
+                                            <ProductCard product={product} isCart={false} Cart={Cart} setCart={setCart} />
+                                        </SwiperSlide>
+                                    ))}
+                                    <button
+                                        ref={nextRef}
+                                        className="absolute top-1/2 -translate-y-1/2 left-2 z-10 w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center hover:shadow-lg hover:scale-105 transition-all"
+                                    >
+                                        <ChevronLeft size={24} className="text-[#D4AF37]" />
+                                    </button>
+                                    <button
+                                        ref={prevRef}
+                                        className="absolute top-1/2 -translate-y-1/2 right-2 z-10 w-12 h-12 bg-white rounded-full shadow-md flex items-center justify-center hover:shadow-lg hover:scale-105 transition-all"
+                                    >
+                                        <ChevronRight size={24} className="text-[#D4AF37]" />
+                                    </button>
+                                </Swiper>
+                            </>
+                        ) : (
+                            <div className="w-full flex items-center justify-center py-12 text-gray-500">
+                                لا توجد منتجات متاحة.
+                            </div>
+                        )}
                     </div>
                 </section>
 
