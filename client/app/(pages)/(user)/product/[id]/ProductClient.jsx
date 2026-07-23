@@ -104,21 +104,13 @@ export default function ProductClient({ product, relatedProducts }) {
 
     // Fullscreen modal handlers
     useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (fullscreenRef.current && !fullscreenRef.current.contains(e.target)) {
-                setIsFullscreenOpen(false);
-            }
-        };
+        if (!isFullscreenOpen) return;
         const handleEscape = (e) => {
             if (e.key === 'Escape') setIsFullscreenOpen(false);
         };
-        if (isFullscreenOpen) {
-            document.addEventListener('pointerdown', handleClickOutside);
-            document.addEventListener('keydown', handleEscape);
-            document.body.style.overflow = 'hidden';
-        }
+        document.addEventListener('keydown', handleEscape);
+        document.body.style.overflow = 'hidden';
         return () => {
-            document.removeEventListener('pointerdown', handleClickOutside);
             document.removeEventListener('keydown', handleEscape);
             document.body.style.overflow = 'unset';
         };
@@ -589,8 +581,15 @@ export default function ProductClient({ product, relatedProducts }) {
 
                 {/* Fullscreen Image Modal */}
                 {isFullscreenOpen && (
-                    <div className='fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4'>
-                        <div ref={fullscreenRef} className='relative w-full max-w-6xl max-h-full'>
+                    <div
+                        className='fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4'
+                        onClick={() => setIsFullscreenOpen(false)}
+                    >
+                        <div
+                            ref={fullscreenRef}
+                            className='relative w-full max-w-6xl max-h-full'
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <button
                                 onClick={() => setIsFullscreenOpen(false)}
                                 className='absolute -top-12 right-0 lg:-top-4 lg:-right-12 p-2 text-white hover:bg-white/10 rounded-full transition-colors z-10'
