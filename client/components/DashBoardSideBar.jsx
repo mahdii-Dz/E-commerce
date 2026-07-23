@@ -13,7 +13,8 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  FileSpreadsheet
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -53,6 +54,7 @@ const ALL_MENU_ITEMS = [
       { label: "إضافة موظف", href: "/admin/shop-workers/add" },
     ]
   },
+  { icon: FileSpreadsheet, label: "الاضافات", href: "/admin/addons", permissionKey: "addons" },
 ];
 
 function filterMenuItems(items, worker) {
