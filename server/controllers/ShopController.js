@@ -1,6 +1,7 @@
 // controllers/ShopController.js
 import { query, execute } from '../db.js';
 import axios from 'axios';
+import { syncOrderToSheets } from '../services/GoogleSheetsService.js';
 
 // Netlify cache invalidation
 const NETLIFY_BUILD_HOOK = process.env.NETLIFY_BUILD_HOOK;
@@ -860,6 +861,20 @@ export const AddOrder = async (req, res) => {
     try {
       await execute('DELETE FROM lefted_orders WHERE phone = ?', [phone]);
     } catch (_) {}
+
+    syncOrderToSheets({
+      orderNumber,
+      first_name: first_name.trim(),
+      last_name: last_name ? last_name.trim() : '',
+      phone,
+      wilaya,
+      baladiya,
+      delivery_type,
+      delivery_Price,
+      current_status: current_status || 'new',
+      items,
+      created_at: new Date(),
+    }).catch(err => console.error('Google Sheets sync failed:', err));
 
     return res.status(201).json({
       message: "Order created successfully",
