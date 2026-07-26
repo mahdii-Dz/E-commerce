@@ -1,5 +1,5 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, MarkOrderDeliverySent, getBanners, updateBanners, getHeader, updateHeader, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic, GetDeliveryWilayas, UpdateDeliveryWilayas, GetWilayaBaladiyas, UpdateWilayaStopDesk, GetDeliveryStats, GetPublicWilayas } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, MarkOrderDeliverySent, getBanners, updateBanners, getHeader, updateHeader, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, ApproveReview, RejectReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic, GetDeliveryWilayas, UpdateDeliveryWilayas, GetWilayaBaladiyas, UpdateWilayaStopDesk, GetDeliveryStats, GetPublicWilayas } from '../controllers/ShopController.js';
 import { GetWorkers, GetWorker, CreateWorker, UpdateWorker, DeleteWorker, LoginWorker, LogoutWorker, CheckWorkerSession } from '../controllers/WorkerController.js';
 import { UploadCredentials, GetCredentialInfo, GetSheets, CreateSheet, GetSheet, UpdateSheet, DeleteSheet, ToggleSheetStatus } from '../controllers/SheetsController.js';
 import { verifyAdminSession } from '../middleware/sessionAuth.js';
@@ -43,6 +43,8 @@ router.post('/add-product', verifyAdminSession, AddProduct);
 router.put('/update-product/:id', verifyAdminSession,UpdateProduct);
 router.post('/add-product/:id/review/admin', verifyAdminSession,AddAdminReview);
 router.delete('/reviews/:id', verifyAdminSession, DeleteReview);
+router.patch('/reviews/:id/approve', verifyAdminSession, ApproveReview);
+router.patch('/reviews/:id/reject', verifyAdminSession, RejectReview);
 router.put('/accept-order/:id', verifyAdminSession, AcceptOrder);
 router.put('/reject-order/:id', verifyAdminSession, RejectOrder);
 router.put('/update-order/:id', verifyAdminSession, UpdateOrder);

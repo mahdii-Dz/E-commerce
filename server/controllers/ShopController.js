@@ -1339,15 +1339,16 @@ export const GetProductReviews = async (req, res) => {
   try {
     const { id } = req.params;
     const productIdNum = validateId(id);
+    const isAdmin = req.query.admin === 'true';
     
     if (!productIdNum) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
 
     const rows = await query(
-      `SELECT id, product_id, customer_name, review_text, stars, image_url, is_admin, created_at
+      `SELECT id, product_id, customer_name, review_text, stars, image_url, is_admin, is_approved, created_at
        FROM reviews
-       WHERE product_id = ?
+       WHERE product_id = ?${isAdmin ? '' : ' AND is_approved = 1'}
        ORDER BY created_at DESC`,
       [productIdNum]
     );
@@ -1355,7 +1356,8 @@ export const GetProductReviews = async (req, res) => {
     const reviews = (rows || []).map(review => ({
       ...review,
       created_at: review.created_at,
-      is_admin: Boolean(review.is_admin)
+      is_admin: Boolean(review.is_admin),
+      is_approved: Boolean(review.is_approved),
     }));
 
     return res.status(200).json({
@@ -1402,15 +1404,16 @@ export const AddUserReview = async (req, res) => {
     }
 
     const result = await execute(
-      `INSERT INTO reviews (product_id, customer_name, review_text, stars, image_url, is_admin)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO reviews (product_id, customer_name, review_text, stars, image_url, is_admin, is_approved)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         productIdNum,
         customer_name.trim(),
         review_text.trim(),
         starsNum,
         null,
-        false
+        false,
+        0
       ]
     );
 
@@ -1476,21 +1479,21 @@ export const AddAdminReview = async (req, res) => {
     }
 
     const result = await execute(
-      `INSERT INTO reviews (product_id, customer_name, review_text, stars, image_url, is_admin)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO reviews (product_id, customer_name, review_text, stars, image_url, is_admin, is_approved)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         productIdNum,
         customer_name.trim(),
         review_text.trim(),
         starsNum,
         image_url || null,
-        true
+        false,
+        1
       ]
     );
 
     let reviewId = result.insertId;
 
-    // Fallback for TiDB Serverless
     if (!reviewId || reviewId === 0) {
       const lastIdResult = await query('SELECT LAST_INSERT_ID() as id');
       reviewId = lastIdResult && lastIdResult[0] ? lastIdResult[0].id : 0;
@@ -1508,7 +1511,7 @@ export const AddAdminReview = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: "Admin review added successfully",
+      message: "Review added successfully",
       review: newReview
     });
   } catch (error) {
@@ -1547,6 +1550,50 @@ export const DeleteReview = async (req, res) => {
     });
   } catch (error) {
     return handleDbError(res, error, "deleting review");
+  }
+};
+
+export const ApproveReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reviewIdNum = validateId(id);
+
+    if (!reviewIdNum) {
+      return res.status(400).json({ error: "Invalid review ID" });
+    }
+
+    const existing = await query("SELECT id FROM reviews WHERE id = ?", [reviewIdNum]);
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({ error: "Review not found" });
+    }
+
+    await execute("UPDATE reviews SET is_approved = 1 WHERE id = ?", [reviewIdNum]);
+
+    return res.status(200).json({ success: true, message: "Review approved successfully" });
+  } catch (error) {
+    return handleDbError(res, error, "approving review");
+  }
+};
+
+export const RejectReview = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const reviewIdNum = validateId(id);
+
+    if (!reviewIdNum) {
+      return res.status(400).json({ error: "Invalid review ID" });
+    }
+
+    const existing = await query("SELECT id FROM reviews WHERE id = ?", [reviewIdNum]);
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({ error: "Review not found" });
+    }
+
+    await execute("DELETE FROM reviews WHERE id = ?", [reviewIdNum]);
+
+    return res.status(200).json({ success: true, message: "Review rejected and deleted" });
+  } catch (error) {
+    return handleDbError(res, error, "rejecting review");
   }
 };
 

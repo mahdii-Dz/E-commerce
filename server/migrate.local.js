@@ -172,10 +172,19 @@ async function migrate() {
       stars TINYINT NOT NULL,
       image_url TEXT DEFAULT NULL,
       is_admin TINYINT(1) DEFAULT 0,
+      is_approved TINYINT(1) DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
     )`);
     console.log('  ✓ reviews');
+
+    // Add is_approved column if missing (for existing tables)
+    try {
+      await connection.execute("ALTER TABLE reviews ADD COLUMN is_approved TINYINT(1) DEFAULT 0 AFTER is_admin");
+      console.log('  ✓ is_approved column added to reviews');
+    } catch (e) {
+      if (!e.message.includes('Duplicate column')) console.error('  is_approved column error:', e.message);
+    }
 
     // ============ 11. LEFTED ORDERS ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS lefted_orders (
