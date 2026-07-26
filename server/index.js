@@ -3,7 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import router from './route/route.js';
 import CloudinaryRouter from './controllers/routeUpload.js';
-import { httpServerHandler } from 'cloudflare:node';
 import { executeQuery } from './db.js';
 
 const app = express();
@@ -32,4 +31,5 @@ app.use(express.json());
 app.use('/api/shop', router);
 app.use('/cloudinary', CloudinaryRouter);
 
-export default httpServerHandler(app.listen(3000));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
