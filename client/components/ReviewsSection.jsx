@@ -7,7 +7,7 @@ import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import Image from 'next/image';
 import Loader from './Loader';
-import { AlertCircle, CheckCircle, MessageSquare, Star, User, ShieldCheck, Image as ImageIcon, Plus } from 'lucide-react';
+import { AlertCircle, CheckCircle, MessageSquare, Star, User, Image as ImageIcon, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function ReviewsSection({ productId }) {
@@ -98,20 +98,6 @@ export default function ReviewsSection({ productId }) {
         throw new Error(errorData.error || 'فشل في إرسال المراجعة');
       }
 
-      // Generate review locally for immediate display (optimistic update)
-      const newReview = {
-        id: Date.now(), // temporary ID
-        product_id: parseInt(productId),
-        customer_name: formData.customer_name.trim(),
-        review_text: formData.review_text.trim(),
-        stars: formData.stars,
-        image_url: null,
-        is_admin: false,
-        created_at: new Date().toISOString()
-      };
-
-      setReviews(prev => [newReview, ...prev]);
-
       // Reset form
       setFormData({
         customer_name: '',
@@ -119,7 +105,7 @@ export default function ReviewsSection({ productId }) {
         stars: 0
       });
 
-      showToast('تم إرسال المراجعة بنجاح!', 'success');
+      showToast('تم إرسال المراجعة! سيتم مراجعتها من قبل الإدارة قبل النشر.', 'success');
 
     } catch (err) {
       console.error('Error submitting review:', err);
@@ -225,33 +211,17 @@ export default function ReviewsSection({ productId }) {
             {(showAllReviews ? reviews : reviews.slice(0, 3)).map((review) => (
               <div
                 key={review.id}
-                className={cn(
-                  'bg-white rounded-xl border-2 p-6',
-                  review.is_admin ? 'border-primary/30 bg-primary/5' : 'border-stroke'
-                )}
+                className='bg-white rounded-xl border-2 border-stroke p-6'
               >
                 {/* Review Header */}
                 <div className='flex items-start justify-between gap-4 mb-3'>
                   <div className='flex items-center gap-3'>
-                    <div className={cn(
-                      'w-10 h-10 rounded-full flex items-center justify-center',
-                      review.is_admin ? 'bg-primary/20' : 'bg-gray-200'
-                    )}>
-                      {review.is_admin ? (
-                        <ShieldCheck size={20} className='text-primary' />
-                      ) : (
-                        <User size={20} className='text-secondary' />
-                      )}
+                    <div className='w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center'>
+                      <User size={20} className='text-secondary' />
                     </div>
                     <div>
                       <div className='flex items-center gap-2'>
                         <span className='font-medium'>{review.customer_name}</span>
-                        {review.is_admin && (
-                          <span className='text-xs bg-primary text-white px-2 py-0.5 rounded-full flex items-center gap-1'>
-                            <ShieldCheck size={12} />
-                            شهادة إدارية
-                          </span>
-                        )}
                       </div>
                       <div className='text-xs text-secondary'>
                         {new Date(review.created_at).toLocaleDateString('ar-EG', {
@@ -274,7 +244,7 @@ export default function ReviewsSection({ productId }) {
                 </p>
 
                 {/* Admin Image */}
-                {review.is_admin && review.image_url && (
+                {review.image_url && (
                   <div className='mt-4 pt-4 border-t border-stroke'>
                     <p className='text-sm font-medium mb-2 flex items-center gap-2'>
                       <ImageIcon size={16} />

@@ -5,7 +5,11 @@ import { proxyGET, proxyRequest } from "@/lib/proxy";
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const data = await proxyGET(`/api/shop/get-product/${id}/reviews`);
+    const url = new URL(request.url);
+    const admin = url.searchParams.get('admin');
+    let endpoint = `/api/shop/get-product/${id}/reviews`;
+    if (admin === 'true') endpoint += '?admin=true';
+    const data = await proxyGET(endpoint);
     return NextResponse.json(data);
   } catch (error) {
     console.error("Reviews proxy error:", error);

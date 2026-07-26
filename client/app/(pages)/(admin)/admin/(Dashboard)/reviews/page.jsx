@@ -8,7 +8,9 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
-  Trash2
+  Trash2,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -42,10 +44,11 @@ export default function AdminReviewsPage() {
   // Form state
   const [formData, setFormData] = useState({
     productId: '',
-    customerName: 'Admin', // Default to 'Admin'
+    customerName: 'Admin',
     reviewText: '',
-    stars: 5 // Default to 5 stars
+    stars: 5
   });
+  const [selectedProductName, setSelectedProductName] = useState('');
 
   // Image upload state
   const [imageUrl, setImageUrl] = useState(null);
@@ -158,7 +161,7 @@ export default function AdminReviewsPage() {
     try {
       setReviewsLoading(true);
       setReviewsError(null);
-      const response = await fetch(`/api/shop/reviews/${productId}`);
+      const response = await fetch(`/api/shop/reviews/${productId}?admin=true`);
       if (!response.ok) {
         throw new Error('Failed to fetch reviews');
       }
@@ -197,6 +200,46 @@ export default function AdminReviewsPage() {
     } catch (err) {
       console.error('Error deleting review:', err);
       showToast(err.message || 'فشل حذف المراجعة', 'error');
+    }
+  };
+
+  const handleApproveReview = async (reviewId) => {
+    try {
+      const response = await fetch(`/api/shop/reviews/${reviewId}/approve`, {
+        method: 'PATCH',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to approve review');
+      }
+
+      showToast('تمت الموافقة على المراجعة!', 'success');
+      setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, is_approved: true } : r));
+    } catch (err) {
+      showToast(err.message || 'فشل الموافقة على المراجعة', 'error');
+    }
+  };
+
+  const handleRejectReview = async (reviewId) => {
+    if (!window.confirm('هل أنت متأكد من رفض هذه المراجعة؟')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/shop/reviews/${reviewId}/reject`, {
+        method: 'PATCH',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to reject review');
+      }
+
+      showToast('تم رفض المراجعة وحذفها!', 'success');
+      setReviews(prev => prev.filter(r => r.id !== reviewId));
+    } catch (err) {
+      showToast(err.message || 'فشل رفض المراجعة', 'error');
     }
   };
 
@@ -259,6 +302,7 @@ export default function AdminReviewsPage() {
         stars: 5
       });
       setImageUrl(null);
+      setSelectedProductName('');
 
       // Optional: redirect to product page to see review
       // router.push(`/product/${formData.productId}`);
@@ -343,12 +387,23 @@ export default function AdminReviewsPage() {
                 </label>
                 <Combobox
                   value={String(formData.productId || '')}
-                  onValueChange={(val) => handleInputChange('productId', val)}
+                  onValueChange={(val) => {
+                    handleInputChange('productId', val);
+                    const selected = products.find(p => String(p.id) === val);
+                    setSelectedProductName(selected?.name || '');
+                  }}
                 >
-                  <ComboboxInput
-                    placeholder="ابحث عن منتج..."
-                    className="w-full [&_input]:text-right"
-                  />
+                  <div dir="rtl" className="relative">
+                    <ComboboxInput
+                      placeholder="ابحث عن منتج..."
+                      className="w-full [&_input]:text-right"
+                    />
+                    {formData.productId && selectedProductName && (
+                      <span className="absolute inset-0 flex items-center px-3 pointer-events-none text-sm text-foreground">
+                        {selectedProductName}
+                      </span>
+                    )}
+                  </div>
                   <ComboboxContent>
                     <ComboboxList dir="rtl" className="text-right max-h-60">
                       {products.length === 0 && (
@@ -525,13 +580,6 @@ export default function AdminReviewsPage() {
             </ul>
           </div>
 
-          <div className='bg-primary/5 rounded-xl border-2 border-primary p-6'>
-            <h3 className='font-semibold mb-4 text-primary'>ملاحظة</h3>
-            <p className='text-sm text-secondary'>
-              يتم عرض شهادات المدير مع شارة خاصة في قسم التقييمات وتظهر فوق تقييمات العملاء. كما يمكن إضافة صورة لها.
-            </p>
-          </div>
-
           {/* Current products count */}
           <div className='bg-gray-50 rounded-xl border border-stroke p-6'>
             <div className='text-sm text-secondary mb-1'>المنتجات المتاحة</div>
@@ -565,11 +613,6 @@ export default function AdminReviewsPage() {
                     <div className='flex-1'>
                       <div className='flex items-center gap-2 mb-2'>
                         <span className='font-semibold text-lg'>{review.customer_name}</span>
-                        {review.is_admin && (
-                          <span className='text-xs bg-primary text-white px-2 py-0.5 rounded-full flex items-center gap-1'>
-                            مدير
-                          </span>
-                        )}
                         <span className='text-sm text-secondary'>
                           {new Date(review.created_at).toLocaleDateString()}
                         </span>
@@ -591,15 +634,39 @@ export default function AdminReviewsPage() {
                         </div>
                       )}
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteReview(review.id)}
-                      className='flex items-center gap-1'
-                    >
-                      <Trash2 size={16} />
-                      حذف
-                    </Button>
+                    <div className='flex flex-col gap-2'>
+                      {!review.is_approved && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleApproveReview(review.id)}
+                            className='flex items-center gap-1 text-green-600 border-green-300 hover:bg-green-50'
+                          >
+                            <CheckCircle2 size={16} />
+                            موافقة
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRejectReview(review.id)}
+                            className='flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50'
+                          >
+                            <XCircle size={16} />
+                            رفض
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteReview(review.id)}
+                        className='flex items-center gap-1'
+                      >
+                        <Trash2 size={16} />
+                        حذف
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
