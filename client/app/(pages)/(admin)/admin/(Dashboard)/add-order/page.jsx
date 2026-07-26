@@ -6,7 +6,7 @@ import axios from 'axios'
 import { ChevronDown, Loader2, Plus, X, Minus, ArrowRight } from 'lucide-react'
 import { Select as BaseSelect } from '@base-ui/react/select'
 import { Input } from '@/components/ui/input'
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
+import { Combobox, ComboboxContent, ComboboxList, ComboboxItem, ComboboxTrigger, ComboboxValue } from '@/components/ui/combobox'
 import { useFetchSingleProduct } from '@/components/useFetchSingleProduct'
 import { useWilayaData } from '@/components/useWilayaData'
 import Link from 'next/link'
@@ -58,6 +58,7 @@ export default function AddOrderPage() {
   const [deliveryPrice, setDeliveryPrice] = useState(0)
   const [currentStatus, setCurrentStatus] = useState('new')
   const [items, setItems] = useState([{ ...ITEM_DEFAULTS }])
+  const [searchQuery, setSearchQuery] = useState('')
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
@@ -479,17 +480,43 @@ export default function AddOrderPage() {
                   </label>
                   <Combobox dir="rtl"
                     value={item.productId ? String(item.productId) : ''}
-                    onValueChange={(val) => handleProductSelect(idx, val)}
+                    onValueChange={(val) => {
+                      handleProductSelect(idx, val);
+                      setSearchQuery('');
+                    }}
+                    onOpenChange={(open) => {
+                      if (!open) setSearchQuery('');
+                    }}
                   >
-                    <ComboboxInput placeholder="ابحث عن منتج..." className="w-full" dir="rtl" />
-                    <ComboboxContent dir="rtl">
+                    <ComboboxTrigger className="flex items-center w-full h-9 px-3 border border-input rounded-md bg-white shadow-xs text-sm cursor-pointer">
+                      <span className="flex-1 text-right truncate">
+                        <ComboboxValue placeholder="ابحث عن منتج...">
+                          {(val) => {
+                            if (!val) return <span className="text-muted-foreground font-normal">ابحث عن منتج...</span>;
+                            const p = products.find(pr => String(pr.id) === val);
+                            return p?.name || val;
+                          }}
+                        </ComboboxValue>
+                      </span>
+                    </ComboboxTrigger>
+                    <ComboboxContent dir="rtl" className="z-50">
+                      <div className="p-2 border-b border-stroke">
+                        <input
+                          type="text"
+                          placeholder="ابحث عن منتج..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full px-3 py-1.5 text-sm border border-input rounded-md outline-hidden bg-white"
+                          dir="rtl"
+                        />
+                      </div>
                       <ComboboxList className="text-right">
                         {products.length === 0 && (
                           <div className="px-4 py-3 text-sm text-gray-500 text-center">
                             {productsLoading ? 'جار التحميل...' : 'لا توجد منتجات'}
                           </div>
                         )}
-                        {products.map(p => (
+                        {products.filter(p => !searchQuery || p.name.toLowerCase().includes(searchQuery.toLowerCase())).map(p => (
                           <ComboboxItem key={p.id} value={String(p.id)} className="text-right" dir="rtl">
                             <div className="flex items-center gap-3 w-full" dir="rtl">
                               <img

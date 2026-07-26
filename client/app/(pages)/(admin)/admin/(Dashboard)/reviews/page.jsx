@@ -20,7 +20,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import StarRating from "@/components/StarRating";
-import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox';
+import { Combobox, ComboboxContent, ComboboxList, ComboboxItem, ComboboxTrigger, ComboboxValue } from '@/components/ui/combobox';
 
 export default function AdminReviewsPage() {
   const router = useRouter();
@@ -48,7 +48,12 @@ export default function AdminReviewsPage() {
     reviewText: '',
     stars: 5
   });
-  const [selectedProductName, setSelectedProductName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter products based on search
+  const filteredProducts = searchQuery
+    ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : products;
 
   // Image upload state
   const [imageUrl, setImageUrl] = useState(null);
@@ -302,7 +307,6 @@ export default function AdminReviewsPage() {
         stars: 5
       });
       setImageUrl(null);
-      setSelectedProductName('');
 
       // Optional: redirect to product page to see review
       // router.push(`/product/${formData.productId}`);
@@ -386,30 +390,43 @@ export default function AdminReviewsPage() {
                   المنتج <span className='text-red-500'>*</span>
                 </label>
                 <Combobox
+                  dir="rtl"
                   value={String(formData.productId || '')}
                   onValueChange={(val) => {
                     handleInputChange('productId', val);
-                    const selected = products.find(p => String(p.id) === val);
-                    setSelectedProductName(selected?.name || '');
+                    setSearchQuery('');
+                  }}
+                  onOpenChange={(open) => {
+                    if (!open) setSearchQuery('');
                   }}
                 >
-                  <div dir="rtl" className="relative">
-                    <ComboboxInput
-                      placeholder="ابحث عن منتج..."
-                      className="w-full [&_input]:text-right"
-                    />
-                    {formData.productId && selectedProductName && (
-                      <span className="absolute inset-0 flex items-center px-3 pointer-events-none text-sm text-foreground">
-                        {selectedProductName}
-                      </span>
-                    )}
-                  </div>
-                  <ComboboxContent>
-                    <ComboboxList dir="rtl" className="text-right max-h-60">
-                      {products.length === 0 && (
+                  <ComboboxTrigger className="flex items-center w-full h-9 px-3 border border-input rounded-md bg-white shadow-xs text-sm cursor-pointer">
+                    <span className="flex-1 text-right truncate">
+                      <ComboboxValue placeholder="ابحث عن منتج...">
+                        {(val) => {
+                          if (!val) return <span className="text-muted-foreground font-normal">ابحث عن منتج...</span>;
+                          const product = products.find(p => String(p.id) === val);
+                          return product?.name || val;
+                        }}
+                      </ComboboxValue>
+                    </span>
+                  </ComboboxTrigger>
+                  <ComboboxContent dir="rtl" className="z-50">
+                    <div className="p-2 border-b border-stroke">
+                      <input
+                        type="text"
+                        placeholder="ابحث عن منتج..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-3 py-1.5 text-sm border border-input rounded-md outline-hidden bg-white"
+                        dir="rtl"
+                      />
+                    </div>
+                    <ComboboxList className="text-right max-h-60">
+                      {filteredProducts.length === 0 && (
                         <div className="px-4 py-3 text-sm text-gray-500 text-center">لا توجد منتجات</div>
                       )}
-                      {products.map((product) => (
+                      {filteredProducts.map((product) => (
                         <ComboboxItem key={product.id} value={String(product.id)} className="text-right">
                           <div className="flex items-center gap-3 w-full">
                             <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">

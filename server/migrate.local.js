@@ -204,7 +204,8 @@ async function migrate() {
       color_hex VARCHAR(7) DEFAULT '',
       colors JSON DEFAULT NULL,
       delivery_price DECIMAL(10,2) DEFAULT 0,
-      offer_text VARCHAR(255) DEFAULT ''
+      offer_text VARCHAR(255) DEFAULT '',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )`);
     console.log('  ✓ lefted_orders');
 
