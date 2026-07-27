@@ -10,7 +10,10 @@ const HEADERS = [
   'البلدية',
   'التوصيل',
   'سعر التوصيل',
-  'المنتجات',
+  'المنتج',
+  'الكمية',
+  'العرض',
+  'الكمية لكل لون',
   'السعر الإجمالي',
   'الحالة',
 ];
@@ -65,14 +68,14 @@ async function ensureHeaders(sheets, auth, fileId, sheetName) {
   try {
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: fileId,
-      range: `${sheetName}!A1:K1`,
+      range: `${sheetName}!A1:N1`,
       auth,
     });
 
     if (!res.data.values || res.data.values.length === 0 || res.data.values[0].length === 0) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: fileId,
-        range: `${sheetName}!A1:K1`,
+        range: `${sheetName}!A1:N1`,
         valueInputOption: 'USER_ENTERED',
         auth,
         requestBody: { values: [HEADERS] },
@@ -81,7 +84,7 @@ async function ensureHeaders(sheets, auth, fileId, sheetName) {
   } catch {
     await sheets.spreadsheets.values.update({
       spreadsheetId: fileId,
-      range: `${sheetName}!A1:K1`,
+      range: `${sheetName}!A1:N1`,
       valueInputOption: 'USER_ENTERED',
       auth,
       requestBody: { values: [HEADERS] },
@@ -90,11 +93,14 @@ async function ensureHeaders(sheets, auth, fileId, sheetName) {
 }
 
 async function lookupProductNames(items) {
+  const seen = new Set();
   const names = [];
   for (const item of items) {
+    if (seen.has(item.product_id)) continue;
+    seen.add(item.product_id);
     const rows = await query('SELECT name FROM products WHERE id = ?', [item.product_id]);
     const productName = rows.length > 0 ? rows[0].name : `#${item.product_id}`;
-    names.push(`${productName} ×${item.quantity}`);
+    names.push(productName);
   }
   return names.join('، ');
 }
@@ -102,6 +108,18 @@ async function lookupProductNames(items) {
 function calculateTotalPrice(orderData) {
   const itemsTotal = orderData.items.reduce((sum, item) => sum + (item.quantity * item.price_per_unit), 0);
   return itemsTotal + (Number(orderData.delivery_Price) || 0);
+}
+
+function buildOfferString(items) {
+  const offers = [...new Set(items.map(i => i.offer_text).filter(Boolean))];
+  return offers.join(', ');
+}
+
+function buildColorsString(items) {
+  return items
+    .filter(i => i.color_name)
+    .map(i => `${i.color_name} (${i.quantity})`)
+    .join(', ');
 }
 
 export async function syncOrderToSheets(orderData) {
@@ -115,7 +133,8 @@ export async function syncOrderToSheets(orderData) {
     const auth = await authenticateWithCredentials(credRows[0].credentials);
     const sheets = google.sheets({ version: 'v4', auth });
 
-    const productsStr = await lookupProductNames(orderData.items);
+    const productNames = await lookupProductNames(orderData.items);
+    const totalQty = orderData.items.reduce((s, i) => s + Number(i.quantity), 0);
     const totalPrice = calculateTotalPrice(orderData);
 
     const row = [
@@ -127,7 +146,10 @@ export async function syncOrderToSheets(orderData) {
       orderData.baladiya || '',
       translateDeliveryType(orderData.delivery_type),
       Number(orderData.delivery_Price) || 0,
-      productsStr,
+      productNames,
+      totalQty,
+      buildOfferString(orderData.items),
+      buildColorsString(orderData.items),
       totalPrice,
       translateStatus(orderData.current_status || 'new'),
     ];
@@ -137,7 +159,7 @@ export async function syncOrderToSheets(orderData) {
         await ensureHeaders(sheets, auth, sheet.file_id, sheet.paper_name);
         await sheets.spreadsheets.values.append({
           spreadsheetId: sheet.file_id,
-          range: `${sheet.paper_name}!A:K`,
+          range: `${sheet.paper_name}!A:N`,
           valueInputOption: 'USER_ENTERED',
           auth,
           requestBody: { values: [row] },

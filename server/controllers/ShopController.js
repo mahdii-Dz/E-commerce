@@ -2010,6 +2010,9 @@ export const ConvertLeftedOrder = async (req, res) => {
           product_id: lo.product_id,
           quantity: Number(c.quantity) || 1,
           price_per_unit: lo.price_per_unit || lo.product_price || 0,
+          offer_text: lo.offer_text || null,
+          color_name: c.color_name || null,
+          color_hex: c.color_hex || null,
         });
       }
     } else {
@@ -2031,6 +2034,9 @@ export const ConvertLeftedOrder = async (req, res) => {
         product_id: lo.product_id,
         quantity: lo.quantity || 1,
         price_per_unit: lo.price_per_unit || lo.product_price || 0,
+        offer_text: lo.offer_text || null,
+        color_name: lo.color_name || null,
+        color_hex: lo.color_hex || null,
       });
     }
 
