@@ -173,3 +173,120 @@ export async function syncOrderToSheets(orderData) {
     console.error('❌ Google Sheets sync error:', err.message);
   }
 }
+
+export async function updateOrderRowInSheets(orderId) {
+  try {
+    const rows = await query(`
+      SELECT 
+        o.order_number, o.first_name, o.last_name, o.phone,
+        o.wilaya, o.baladiya, o.delivery_type, o.delivery_Price,
+        o.current_status, o.created_at,
+        oi.product_id, oi.quantity, oi.price_per_unit,
+        oi.color_name, oi.color_hex, oi.offer_text
+      FROM order_info o
+      JOIN order_items oi ON o.id = oi.order_id
+      WHERE o.id = ?
+    `, [orderId]);
+
+    if (!rows || rows.length === 0) return;
+
+    const items = rows.map(r => ({
+      product_id: r.product_id,
+      quantity: r.quantity,
+      price_per_unit: r.price_per_unit,
+      color_name: r.color_name,
+      color_hex: r.color_hex,
+      offer_text: r.offer_text,
+    }));
+
+    const orderData = {
+      orderNumber: rows[0].order_number,
+      first_name: rows[0].first_name,
+      last_name: rows[0].last_name,
+      phone: rows[0].phone,
+      wilaya: rows[0].wilaya,
+      baladiya: rows[0].baladiya,
+      delivery_type: rows[0].delivery_type,
+      delivery_Price: rows[0].delivery_Price,
+      current_status: rows[0].current_status,
+      created_at: rows[0].created_at,
+      items,
+    };
+
+    const productNames = await lookupProductNames(items);
+    const totalQty = items.reduce((s, i) => s + Number(i.quantity), 0);
+    const totalPrice = calculateTotalPrice(orderData);
+
+    const row = [
+      formatDate(orderData.created_at || new Date()),
+      orderData.orderNumber,
+      `${orderData.first_name || ''} ${orderData.last_name || ''}`.trim(),
+      orderData.phone || '',
+      orderData.wilaya || '',
+      orderData.baladiya || '',
+      translateDeliveryType(orderData.delivery_type),
+      Number(orderData.delivery_Price) || 0,
+      productNames,
+      totalQty,
+      buildOfferString(orderData.items),
+      buildColorsString(orderData.items),
+      totalPrice,
+      translateStatus(orderData.current_status || 'new'),
+    ];
+
+    const activeSheets = await query('SELECT * FROM google_sheets WHERE is_active = 1');
+    if (activeSheets.length === 0) return;
+
+    const credRows = await query('SELECT credentials FROM google_credentials WHERE id = 1');
+    if (credRows.length === 0) return;
+
+    const auth = await authenticateWithCredentials(credRows[0].credentials);
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    for (const sheet of activeSheets) {
+      try {
+        await ensureHeaders(sheets, auth, sheet.file_id, sheet.paper_name);
+
+        const res = await sheets.spreadsheets.values.get({
+          spreadsheetId: sheet.file_id,
+          range: `${sheet.paper_name}!B:B`,
+          auth,
+        });
+
+        const values = res.data.values || [];
+        let rowIndex = -1;
+        for (let i = 1; i < values.length; i++) {
+          const cell = values[i] && values[i][0];
+          if (cell && String(cell).trim() === String(orderData.orderNumber).trim()) {
+            rowIndex = i + 1;
+            break;
+          }
+        }
+
+        if (rowIndex > 0) {
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: sheet.file_id,
+            range: `${sheet.paper_name}!A${rowIndex}:N${rowIndex}`,
+            valueInputOption: 'USER_ENTERED',
+            auth,
+            requestBody: { values: [row] },
+          });
+          console.log(`Order ${orderData.orderNumber} updated in sheet "${sheet.file_name}"`);
+        } else {
+          await sheets.spreadsheets.values.append({
+            spreadsheetId: sheet.file_id,
+            range: `${sheet.paper_name}!A:N`,
+            valueInputOption: 'USER_ENTERED',
+            auth,
+            requestBody: { values: [row] },
+          });
+          console.log(`Order ${orderData.orderNumber} appended to sheet "${sheet.file_name}" (was missing)`);
+        }
+      } catch (err) {
+        console.error(`Failed to update order in sheet "${sheet.file_name}":`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('Google Sheets update error:', err.message);
+  }
+}

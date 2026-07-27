@@ -1,7 +1,7 @@
 // controllers/ShopController.js
 import { query, execute } from '../db.js';
 import axios from 'axios';
-import { syncOrderToSheets } from '../services/GoogleSheetsService.js';
+import { syncOrderToSheets, updateOrderRowInSheets } from '../services/GoogleSheetsService.js';
 
 // Netlify cache invalidation
 const NETLIFY_BUILD_HOOK = process.env.NETLIFY_BUILD_HOOK;
@@ -1102,6 +1102,8 @@ export const UpdateOrder = async (req, res) => {
       }
     }
 
+    updateOrderRowInSheets(orderId).catch(err => console.error('Sheet update error:', err.message));
+
     return res.status(200).json({ message: "Order updated successfully" });
   } catch (error) {
     return handleDbError(res, error, "updating order");
@@ -1150,6 +1152,8 @@ export const AcceptOrder = async (req, res) => {
       [orderId]
     );
 
+    updateOrderRowInSheets(orderId).catch(err => console.error('Sheet update error:', err.message));
+
     return res.status(200).json({ message: "Order accepted successfully" });
   } catch (error) {
     return handleDbError(res, error, "accepting order");
@@ -1179,6 +1183,8 @@ export const RejectOrder = async (req, res) => {
       "UPDATE order_info SET current_status = 'ملغي من المتجر' WHERE id = ?",
       [orderId]
     );
+
+    updateOrderRowInSheets(orderId).catch(err => console.error('Sheet update error:', err.message));
 
     return res.status(200).json({ message: "Order rejected successfully" });
   } catch (error) {
