@@ -507,6 +507,18 @@ export default function OrdersPage() {
     setEditForm(prev => ({ ...prev, wilaya: value, wilaya_code: code, baladiya: newBaladiya }));
   };
 
+  // Auto-calculate delivery price when wilaya or delivery type changes
+  useEffect(() => {
+    const code = Object.keys(wilayaData).find(key => wilayaData[key]?.name === editForm.wilaya);
+    if (code) {
+      const wilayaInfo = wilayaData[code];
+      const autoPrice = editForm.delivery_type === 'domicile'
+        ? (wilayaInfo.domicilePrice || 0)
+        : (wilayaInfo.stopDeskPrice || 0);
+      setEditForm(prev => ({ ...prev, delivery_Price: autoPrice }));
+    }
+  }, [editForm.wilaya, editForm.delivery_type, wilayaData]);
+
   const handleEditItemColorChange = (itemIdx, colorIdx, field, value) => {
     setEditItems(prev => {
       const updated = [...prev];

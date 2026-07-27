@@ -139,14 +139,21 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
             if (leftedTimerRef.current) clearTimeout(leftedTimerRef.current);
             const debounceMs = hasSavedOnce.current ? 2000 : 20000;
             leftedTimerRef.current = setTimeout(async () => {
-                const colorsArr = colors.length > 0
-                  ? colors
-                      .map(c => ({ name: c.name, hex: c.hex, quantity: colorQuantities[c.hex] || 0 }))
-                      .filter(c => c.quantity > 0)
+                const selectedColors = colors.length > 0
+                  ? colors.filter(c => (colorQuantities[c.hex] || 0) > 0)
                   : [];
-                const qty = colorsArr.length > 0
-                  ? colorsArr.reduce((s, c) => s + c.quantity, 0)
-                  : (selectedOffer?.quantity || 1);
+                const offerQty = selectedOffer?.quantity || 1;
+                let colorsArr = [];
+                if (selectedColors.length > 0) {
+                  const perQty = Math.max(1, Math.floor(offerQty / selectedColors.length));
+                  let remainder = offerQty;
+                  colorsArr = selectedColors.map((c, i) => {
+                    const itemQty = i === selectedColors.length - 1 ? remainder : Math.min(perQty, remainder);
+                    remainder -= itemQty;
+                    return { name: c.name, hex: c.hex, quantity: itemQty };
+                  });
+                }
+                const qty = offerQty;
                 const payload = {
                     phone: formData.phoneNumber,
                     first_name: formData.firstName,
@@ -160,9 +167,9 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                     product_name: productName,
                     quantity: qty,
                     price_per_unit: effectivePrice,
-                    colors: colorsArr.length > 0 ? colorsArr : undefined,
-                    color_name: colorsArr.length === 1 ? colorsArr[0].name : null,
-                    color_hex: colorsArr.length === 1 ? colorsArr[0].hex : null,
+                    colors: colorsArr.length > 0
+                      ? colorsArr.map(c => ({ color_name: c.name, color_hex: c.hex, quantity: c.quantity }))
+                      : [],
                     offer_text: selectedOffer ? `${selectedOffer.quantity} for ${selectedOffer.price} DA` : null,
                 };
                 try {

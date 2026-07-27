@@ -25,19 +25,14 @@ function formatPhoneForWhatsApp(phone) {
 
 function renderColorsWithQty(order) {
   const colors = order.colors;
-  if (!colors || !Array.isArray(colors) || colors.length === 0) {
-    if (order.color_name) {
-      return <span className="text-xs text-gray-500">{order.color_name}</span>;
-    }
-    return null;
-  }
+  if (!colors || !Array.isArray(colors) || colors.length === 0) return null;
   return (
-    <div className="flex flex-col gap-0.5">
+    <div className="flex flex-wrap gap-1.5">
       {colors.map((c, i) => (
-        <span key={i} className="inline-flex items-center gap-1 text-xs text-gray-500">
+        <span key={i} className="inline-flex items-center gap-1 text-xs bg-gray-100 rounded-full px-2 py-0.5">
           <span className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0"
-            style={{ backgroundColor: `#${c.hex}` }} />
-          {c.name} <span className="text-gray-400 font-medium">×{c.quantity}</span>
+            style={{ backgroundColor: `#${c.color_hex || c.hex}` }} />
+          <span>{c.color_name || c.name} <span className="text-gray-500 font-medium">{Number(c.quantity) || 0}</span></span>
         </span>
       ))}
     </div>
@@ -63,7 +58,7 @@ export default function LeftedOrdersPage() {
   const [editForm, setEditForm] = useState({
     first_name: '', last_name: '', phone: '',
     wilaya: 'Alger', baladiya: '', delivery_type: 'domicile',
-    delivery_price: 0,
+    delivery_price: 0, wilaya_code: '',
   });
   const [editItems, setEditItems] = useState([]);
   const [productColorsMap, setProductColorsMap] = useState({});
@@ -228,6 +223,10 @@ export default function LeftedOrdersPage() {
   };
 
   const handleConvert = async (order) => {
+    if (!order.wilaya || !order.baladiya) {
+      showToast('يرجى تحديد الولاية والبلدية قبل تحويل الطلب', 'error');
+      return;
+    }
     setConverting(prev => new Set(prev).add(order.id));
     try {
       const response = await axios.post(`/api/shop/lefted-orders/${order.id}`);
@@ -280,12 +279,15 @@ export default function LeftedOrdersPage() {
       baladiya,
       delivery_type: order.delivery_type || 'domicile',
       delivery_price: Number(order.delivery_price) || 0,
+      wilaya_code: code || '',
     });
     const initialColors = order.colors && Array.isArray(order.colors) && order.colors.length > 0
-      ? order.colors.map(c => ({ color_name: c.name, color_hex: c.hex || '', quantity: Number(c.quantity) || 1 }))
-      : order.color_name
-        ? [{ color_name: order.color_name, color_hex: order.color_hex || '', quantity: order.quantity || 1 }]
-        : [];
+      ? order.colors.map(c => ({
+          color_name: c.color_name || c.name || '',
+          color_hex: c.color_hex || c.hex || '',
+          quantity: Number(c.quantity) || 1,
+        }))
+      : [];
     const totalQty = initialColors.length > 0
       ? initialColors.reduce((s, c) => s + c.quantity, 0)
       : (order.quantity || 1);
@@ -398,7 +400,7 @@ export default function LeftedOrdersPage() {
     const data = wilayaData[code];
     const newCommunes = data?.municipalities || [];
     const newBaladiya = newCommunes.length > 0 ? newCommunes[0] : '';
-    setEditForm(prev => ({ ...prev, wilaya: value, baladiya: newBaladiya }));
+    setEditForm(prev => ({ ...prev, wilaya: value, wilaya_code: code, baladiya: newBaladiya }));
   };
 
   const editCommunes = useMemo(() => {
@@ -424,13 +426,10 @@ export default function LeftedOrdersPage() {
 
     if (colors.length > 0) {
       const sumColors = colors.reduce((s, c) => s + (Number(c.quantity) || 0), 0);
-      if (item.offer_text) {
-        const match = item.offer_text.match(/(\d+)\s*for\s*(\d+)/);
-        const expected = match ? Number(match[1]) : Number(item.quantity) || 1;
-        if (sumColors !== expected) {
-          showToast(`مجموع كميات الألوان (${sumColors}) لا يساوي الكمية الإجمالية (${expected}) للمنتج "${item.product_name}"`, 'error');
-          return;
-        }
+      const expected = Number(item.quantity) || 1;
+      if (sumColors !== expected) {
+        showToast(`مجموع كميات الألوان (${sumColors}) لا يساوي الكمية الإجمالية (${expected}) للمنتج "${item.product_name}"`, 'error');
+        return;
       }
     }
 
@@ -446,8 +445,9 @@ export default function LeftedOrdersPage() {
         product_name: item.product_name,
         price_per_unit: item.price_per_unit,
         quantity: totalQty,
-        colors: colors.length > 0 ? colors.map(c => ({ name: c.color_name, hex: c.color_hex, quantity: Number(c.quantity) || 1 })) : [],
+        colors: colors.length > 0 ? colors.map(c => ({ color_name: c.color_name, color_hex: c.color_hex, quantity: Number(c.quantity) || 1 })) : [],
         offer_text: item.offer_text || '',
+        wilaya_code: editForm.wilaya_code || '',
       };
 
       const response = await axios.put(`/api/shop/lefted-orders/${editingOrder.id}`, payload);
@@ -738,20 +738,14 @@ export default function LeftedOrdersPage() {
                         {order.colors && Array.isArray(order.colors) && order.colors.length > 0 ? (
                           <div>
                             <span className="text-gray-500">الألوان: </span>
-                            <div className="flex flex-col gap-0.5 mt-1">
+                            <div className="flex flex-wrap gap-1.5 mt-1">
                               {order.colors.map((c, i) => (
-                                <div key={i} className="flex items-center gap-1">
-                                  <span className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: `#${c.hex}` }} />
-                                  <span>{c.name} ×{c.quantity}</span>
-                                </div>
+                                <span key={i} className="inline-flex items-center gap-1 text-xs bg-gray-100 rounded-full px-2 py-0.5">
+                                  <span className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: `#${c.color_hex || c.hex}` }} />
+                                  <span>{c.color_name || c.name} <span className="text-gray-500 font-medium">{Number(c.quantity) || 0}</span></span>
+                                </span>
                               ))}
                             </div>
-                          </div>
-                        ) : order.color_name ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-500">اللون: </span>
-                            <span className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: `#${order.color_hex}` }} />
-                            <span>{order.color_name}</span>
                           </div>
                         ) : null}
                         {order.offer_text && <div><span className="text-gray-500">العرض: </span>{order.offer_text}</div>}
@@ -818,20 +812,14 @@ export default function LeftedOrdersPage() {
                 {viewingOrder.colors && Array.isArray(viewingOrder.colors) && viewingOrder.colors.length > 0 ? (
                   <div>
                     <span className="text-gray-500">الألوان: </span>
-                    <div className="flex flex-col gap-1 mt-1">
+                    <div className="flex flex-wrap gap-1.5 mt-1">
                       {viewingOrder.colors.map((c, i) => (
-                        <div key={i} className="flex items-center gap-1">
-                          <span className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: `#${c.hex}` }} />
-                          <span>{c.name} - {c.quantity}</span>
-                        </div>
+                        <span key={i} className="inline-flex items-center gap-1 text-xs bg-gray-100 rounded-full px-2 py-0.5">
+                          <span className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: `#${c.color_hex || c.hex}` }} />
+                          <span>{c.color_name || c.name} <span className="text-gray-500 font-medium">{Number(c.quantity) || 0}</span></span>
+                        </span>
                       ))}
                     </div>
-                  </div>
-                ) : viewingOrder.color_name ? (
-                  <div className="flex items-center gap-1">
-                    <span className="text-gray-500">اللون: </span>
-                    <span className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: `#${viewingOrder.color_hex}` }} />
-                    <span>{viewingOrder.color_name}</span>
                   </div>
                 ) : null}
                 {viewingOrder.offer_text && <div><span className="text-gray-500">العرض: </span><span>{viewingOrder.offer_text}</span></div>}
