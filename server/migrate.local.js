@@ -77,6 +77,14 @@ async function migrate() {
     )`);
     console.log('  ✓ banners');
 
+    // Add package_naming column to products if missing
+    try {
+      await connection.execute("ALTER TABLE products ADD COLUMN package_naming JSON DEFAULT NULL AFTER offers");
+      console.log('  ✓ package_naming column added to products');
+    } catch (e) {
+      if (!e.message.includes('Duplicate column')) console.error('  package_naming column error:', e.message);
+    }
+
     // ============ 5. SHOP WORKERS ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS shop_workers (
       id INT AUTO_INCREMENT PRIMARY KEY,

@@ -392,7 +392,8 @@ export const GetProductById = async (req, res) => {
         p.created_at,
         p.type,
         p.colors,
-        p.offers
+        p.offers,
+        p.package_naming
       FROM products p
       WHERE p.id = ? AND p.is_active = true
     `, [productIdNum]);
@@ -422,6 +423,7 @@ export const GetProductById = async (req, res) => {
     product.images = safeJsonParse(product.images, []).map(normalizeImage);
     product.colors = safeJsonParse(product.colors, null);
     product.offers = safeJsonParse(product.offers, null);
+    product.package_naming = safeJsonParse(product.package_naming, null);
     product.landing_page_image = product.landing_page_image || null;
     product.price = parseFloat(product.price) || 0;
     product.compare_price = parseFloat(product.compare_price) || 0;
@@ -584,6 +586,7 @@ export const AddProduct = async (req, res) => {
       colors,
       offers,
       compare_price,
+      package_naming,
     } = req.body;
 
     // Validation
@@ -601,8 +604,8 @@ export const AddProduct = async (req, res) => {
     const productResult = await execute(
       `INSERT INTO products (
         name, description, big_description, price, compare_price, type, images,
-        landing_page_image, thumbnail, discount_percentage, colors, offers
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        landing_page_image, thumbnail, discount_percentage, colors, offers, package_naming
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         name.trim(),
         description || null,
@@ -616,6 +619,7 @@ export const AddProduct = async (req, res) => {
         discount_percentage || 0,
         colors ? JSON.stringify(colors) : null,
         offers ? JSON.stringify(offers) : null,
+        package_naming ? JSON.stringify(package_naming) : null,
       ]
     );
 
@@ -677,6 +681,7 @@ export const UpdateProduct = async (req, res) => {
       colors,
       offers,
       compare_price,
+      package_naming,
     } = req.body;
 
     // Verify product exists first
@@ -695,7 +700,7 @@ export const UpdateProduct = async (req, res) => {
        SET name = ?, description = ?, big_description = ?, price = ?,
            compare_price = ?, discount_percentage = ?, images = ?,
            landing_page_image = ?, thumbnail = ?,
-           type = ?, colors = ?, offers = ?
+           type = ?, colors = ?, offers = ?, package_naming = ?
        WHERE id = ?`,
       [
         name?.trim(),
@@ -710,6 +715,7 @@ export const UpdateProduct = async (req, res) => {
         type || null,
         colors ? JSON.stringify(colors) : null,
         offers ? JSON.stringify(offers) : null,
+        package_naming ? JSON.stringify(package_naming) : null,
         id,
       ]
     );
@@ -916,7 +922,9 @@ export const GetOrders = async (req, res) => {
         ROUND(oi.quantity * oi.price_per_unit) AS fullPrice,
         p.name AS product_name,
         p.id AS product_id,
-        oi.offer_text
+        oi.offer_text,
+        p.offers,
+        p.package_naming
       FROM
         order_info o
         JOIN order_items oi ON o.id = oi.order_id
@@ -960,6 +968,12 @@ export const GetOrders = async (req, res) => {
       // Find or create item
       let item = order.items.find(i => i.product_id === row.product_id && i.offer_text === (row.offer_text || ''));
       if (!item) {
+        // Parse package_naming and offers for ecotrack naming
+        let pkgNaming = null;
+        let productOffers = [];
+        try { pkgNaming = typeof row.package_naming === 'string' ? JSON.parse(row.package_naming) : row.package_naming; } catch (e) {}
+        try { productOffers = typeof row.offers === 'string' ? JSON.parse(row.offers) : (row.offers || []); } catch (e) {}
+
         item = {
           item_id: row.item_id,
           product_id: row.product_id,
@@ -968,7 +982,9 @@ export const GetOrders = async (req, res) => {
           price_per_unit: Number(row.price) || 0,
           fullPrice: 0,
           offer_text: row.offer_text || null,
-          colors: []
+          colors: [],
+          package_naming: pkgNaming,
+          offer_data: productOffers,
         };
         order.items.push(item);
       }
