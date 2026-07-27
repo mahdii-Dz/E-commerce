@@ -1988,6 +1988,8 @@ export const ConvertLeftedOrder = async (req, res) => {
         : null;
     }
 
+    const itemsForSync = [];
+
     if (colorsArr && colorsArr.length > 0) {
       for (const c of colorsArr) {
         await execute(
@@ -2004,6 +2006,11 @@ export const ConvertLeftedOrder = async (req, res) => {
             lo.offer_text || null
           ]
         );
+        itemsForSync.push({
+          product_id: lo.product_id,
+          quantity: Number(c.quantity) || 1,
+          price_per_unit: lo.price_per_unit || lo.product_price || 0,
+        });
       }
     } else {
       await execute(
@@ -2020,7 +2027,26 @@ export const ConvertLeftedOrder = async (req, res) => {
           lo.offer_text || null
         ]
       );
+      itemsForSync.push({
+        product_id: lo.product_id,
+        quantity: lo.quantity || 1,
+        price_per_unit: lo.price_per_unit || lo.product_price || 0,
+      });
     }
+
+    syncOrderToSheets({
+      orderNumber,
+      first_name: lo.first_name?.trim() || '',
+      last_name: lo.last_name?.trim() || '',
+      phone: lo.phone || '',
+      wilaya: lo.wilaya || '',
+      baladiya: lo.baladiya || '',
+      delivery_type: lo.delivery_type || 'domicile',
+      delivery_Price: deliveryPrice,
+      current_status: 'new',
+      items: itemsForSync,
+      created_at: new Date(),
+    }).catch(err => console.error('Google Sheets sync failed:', err));
 
     await execute('DELETE FROM lefted_orders WHERE id = ?', [id]);
 
