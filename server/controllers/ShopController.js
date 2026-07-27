@@ -1697,6 +1697,38 @@ export const GetDashboardStats = async (req, res) => {
 
 // ==================== LEFTED ORDERS CONTROLLERS ====================
 
+function normalizeColors(colors) {
+  if (!colors || !Array.isArray(colors) || colors.length === 0) return null;
+  const result = [];
+  for (const c of colors) {
+    const name = c.color_name || c.name || '';
+    const hex = c.color_hex || c.hex || '';
+    const qty = Number(c.quantity) || 1;
+    if (name.includes(',') || hex.includes(',')) {
+      const names = name.split(',').map(s => s.trim()).filter(Boolean);
+      const hexes = hex.split(',').map(s => s.trim()).filter(Boolean);
+      if (names.length === 0) {
+        result.push({ color_name: name, color_hex: hex, quantity: qty });
+        continue;
+      }
+      const perQty = Math.max(1, Math.floor(qty / names.length));
+      let remainder = qty;
+      names.forEach((n, i) => {
+        const itemQty = i === names.length - 1 ? remainder : Math.min(perQty, remainder);
+        remainder -= itemQty;
+        result.push({
+          color_name: n,
+          color_hex: hexes[i] || hexes[0] || '',
+          quantity: itemQty,
+        });
+      });
+    } else {
+      result.push({ color_name: name, color_hex: hex, quantity: qty });
+    }
+  }
+  return result.length > 0 ? result : null;
+}
+
 export const AddLeftedOrder = async (req, res) => {
   try {
     const { phone, first_name, last_name, wilaya, wilaya_code, baladiya, delivery_type, product_id, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text, delivery_price } = req.body;
@@ -1705,22 +1737,30 @@ export const AddLeftedOrder = async (req, res) => {
       return res.status(400).json({ error: "Phone number is required" });
     }
 
-    const colorsArr = colors && Array.isArray(colors) && colors.length > 0
+    const rawArr = colors && Array.isArray(colors) && colors.length > 0
       ? colors
-      : (color_name ? [{ name: color_name, hex: color_hex || '', quantity: quantity || 1 }] : null);
+      : (color_name ? [{ color_name, color_hex: color_hex || '', quantity: quantity || 1 }] : null);
 
+    const colorsArr = normalizeColors(rawArr);
     const colorsJson = colorsArr ? JSON.stringify(colorsArr) : null;
-    const finalColorName = colorsArr ? colorsArr.map(c => c.name).filter(Boolean).join(', ') : (color_name || '');
-    const finalColorHex = colorsArr ? colorsArr.map(c => c.hex).filter(Boolean).join(',') : (color_hex || '');
+    const finalColorName = colorsArr ? colorsArr.map(c => c.color_name).filter(Boolean).join(', ') : (color_name || '');
+    const finalColorHex = colorsArr ? colorsArr.map(c => c.color_hex).filter(Boolean).join(',') : (color_hex || '');
     const finalQuantity = colorsArr ? colorsArr.reduce((s, c) => s + (Number(c.quantity) || 0), 0) : (quantity || 1);
     const finalDeliveryPrice = Number(delivery_price) || 0;
 
     const existing = await query(
-      "SELECT id FROM lefted_orders WHERE phone = ? AND created_at > NOW() - INTERVAL 1 DAY",
+      "SELECT id, colors FROM lefted_orders WHERE phone = ? AND created_at > NOW() - INTERVAL 1 DAY",
       [phone]
     );
 
     if (existing && existing.length > 0) {
+      let finalColorsJson = colorsJson;
+      if (colorsArr === null && existing[0].colors) {
+        const existingColors = (() => { try { return JSON.parse(existing[0].colors); } catch { return null; } })();
+        if (existingColors) {
+          finalColorsJson = existing[0].colors;
+        }
+      }
       await execute(
         `UPDATE lefted_orders SET
          first_name = ?, last_name = ?, wilaya = ?, wilaya_code = ?, baladiya = ?,
@@ -1732,7 +1772,7 @@ export const AddLeftedOrder = async (req, res) => {
           first_name || '', last_name || '', wilaya || '', wilaya_code || '', baladiya || '',
           delivery_type || 'domicile', product_id || null, product_name || '',
           price_per_unit || product_price || 0, finalQuantity,
-          finalColorName, finalColorHex, colorsJson, finalDeliveryPrice, offer_text || '', phone
+          finalColorName, finalColorHex, finalColorsJson, finalDeliveryPrice, offer_text || '', phone
         ]
       );
       return res.status(200).json({ message: "Lefted order updated", id: existing[0].id });
@@ -1776,10 +1816,31 @@ export const GetLeftedOrders = async (req, res) => {
       "SELECT * FROM lefted_orders WHERE created_at <= NOW() - INTERVAL 5 MINUTE ORDER BY created_at DESC"
     );
 
-    const parsed = (rows || []).map(row => ({
-      ...row,
-      colors: row.colors ? (() => { try { return JSON.parse(row.colors); } catch { return null; } })() : null,
-    }));
+    const parsed = (rows || []).map(row => {
+      let colors = null;
+      if (row.colors) {
+        try { colors = JSON.parse(row.colors); } catch { colors = null; }
+      }
+      colors = normalizeColors(colors);
+      if (!colors && row.color_name) {
+        const names = row.color_name.split(',').map(s => s.trim()).filter(Boolean);
+        const hexes = (row.color_hex || '').split(',').map(s => s.trim()).filter(Boolean);
+        const totalQty = Number(row.quantity) || 1;
+        if (names.length > 0) {
+          const perQty = Math.max(1, Math.floor(totalQty / names.length));
+          let remainder = totalQty;
+          colors = names.map((n, i) => {
+            const itemQty = i === names.length - 1 ? remainder : Math.min(perQty, remainder);
+            remainder -= itemQty;
+            return { color_name: n, color_hex: hexes[i] || hexes[0] || '', quantity: itemQty };
+          });
+        }
+      }
+      return {
+        ...row,
+        colors,
+      };
+    });
 
     return res.status(200).json(parsed || []);
   } catch (error) {
@@ -1790,15 +1851,24 @@ export const GetLeftedOrders = async (req, res) => {
 export const UpdateLeftedOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { first_name, last_name, phone, wilaya, baladiya, delivery_type, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text, delivery_price } = req.body;
+    const { first_name, last_name, phone, wilaya, baladiya, delivery_type, product_name, price_per_unit, product_price, quantity, color_name, color_hex, colors, offer_text, delivery_price, wilaya_code } = req.body;
 
-    const colorsArr = colors && Array.isArray(colors) && colors.length > 0
+    const rawArr = colors && Array.isArray(colors) && colors.length > 0
       ? colors
-      : (color_name ? [{ name: color_name, hex: color_hex || '', quantity: quantity || 1 }] : null);
+      : (color_name ? [{ color_name, color_hex: color_hex || '', quantity: quantity || 1 }] : null);
 
-    const colorsJson = colorsArr ? JSON.stringify(colorsArr) : null;
-    const finalColorName = colorsArr ? colorsArr.map(c => c.name).filter(Boolean).join(', ') : (color_name || '');
-    const finalColorHex = colorsArr ? colorsArr.map(c => c.hex).filter(Boolean).join(',') : (color_hex || '');
+    const colorsArr = normalizeColors(rawArr);
+    let colorsJson = colorsArr ? JSON.stringify(colorsArr) : null;
+
+    if (colorsArr === null && !color_name) {
+      const existing = await query("SELECT colors FROM lefted_orders WHERE id = ?", [id]);
+      if (existing && existing.length > 0 && existing[0].colors) {
+        colorsJson = existing[0].colors;
+      }
+    }
+
+    const finalColorName = colorsArr ? colorsArr.map(c => c.color_name).filter(Boolean).join(', ') : (color_name || '');
+    const finalColorHex = colorsArr ? colorsArr.map(c => c.color_hex).filter(Boolean).join(',') : (color_hex || '');
     const finalQuantity = colorsArr ? colorsArr.reduce((s, c) => s + (Number(c.quantity) || 0), 0) : (quantity || 1);
     const finalDeliveryPrice = Number(delivery_price) || 0;
 
@@ -1806,13 +1876,15 @@ export const UpdateLeftedOrder = async (req, res) => {
       `UPDATE lefted_orders SET
        first_name = ?, last_name = ?, phone = ?, wilaya = ?, baladiya = ?,
        delivery_type = ?, product_name = ?, product_price = ?, quantity = ?,
-       color_name = ?, color_hex = ?, colors = ?, delivery_price = ?, offer_text = ?
+       color_name = ?, color_hex = ?, colors = ?, delivery_price = ?, offer_text = ?,
+       wilaya_code = ?
        WHERE id = ?`,
       [
         first_name || '', last_name || '', phone || '', wilaya || '', baladiya || '',
         delivery_type || 'domicile', product_name || '',
         price_per_unit || product_price || 0, finalQuantity,
-        finalColorName, finalColorHex, colorsJson, finalDeliveryPrice, offer_text || '', id
+        finalColorName, finalColorHex, colorsJson, finalDeliveryPrice, offer_text || '',
+        wilaya_code || '', id
       ]
     );
 
@@ -1868,6 +1940,10 @@ export const ConvertLeftedOrder = async (req, res) => {
     }
     const lo = leftedRows[0];
 
+    if (!lo.wilaya || !lo.baladiya) {
+      return res.status(400).json({ error: "الولاية والبلدية مطلوبتان لتحويل الطلب" });
+    }
+
     const orderNumber = generateOrderNumber();
     const deliveryPrice = Number(lo.delivery_price) || 0;
     const insertParams = [
@@ -1905,9 +1981,10 @@ export const ConvertLeftedOrder = async (req, res) => {
 
     let colorsArr = null;
     try { colorsArr = lo.colors ? JSON.parse(lo.colors) : null; } catch { colorsArr = null; }
-    if (!colorsArr || !Array.isArray(colorsArr) || colorsArr.length === 0) {
+    colorsArr = normalizeColors(colorsArr);
+    if (!colorsArr) {
       colorsArr = lo.color_name
-        ? [{ name: lo.color_name, hex: lo.color_hex || '', quantity: lo.quantity || 1 }]
+        ? normalizeColors([{ color_name: lo.color_name, color_hex: lo.color_hex || '', quantity: lo.quantity || 1 }])
         : null;
     }
 
@@ -1922,8 +1999,8 @@ export const ConvertLeftedOrder = async (req, res) => {
             lo.product_id,
             Number(c.quantity) || 1,
             lo.price_per_unit || lo.product_price || 0,
-            c.name || null,
-            c.hex || null,
+            c.color_name || null,
+            c.color_hex || null,
             lo.offer_text || null
           ]
         );

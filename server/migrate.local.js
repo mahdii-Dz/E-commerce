@@ -217,6 +217,20 @@ async function migrate() {
     )`);
     console.log('  ✓ lefted_orders');
 
+    // Widen color_hex column for lefted_orders and order_items (supports multiple hex values joined by comma)
+    try {
+      await connection.execute("ALTER TABLE lefted_orders MODIFY COLUMN color_hex VARCHAR(255) DEFAULT ''");
+      console.log('  ✓ color_hex widened to VARCHAR(255) in lefted_orders');
+    } catch (e) {
+      if (!e.message.includes('Duplicate column') && !e.message.includes('Unknown column')) console.error('  color_hex widen error:', e.message);
+    }
+    try {
+      await connection.execute("ALTER TABLE order_items MODIFY COLUMN color_hex VARCHAR(255) DEFAULT NULL");
+      console.log('  ✓ color_hex widened to VARCHAR(255) in order_items');
+    } catch (e) {
+      if (!e.message.includes('Duplicate column') && !e.message.includes('Unknown column')) console.error('  color_hex widen error:', e.message);
+    }
+
     // ============ 12. WILAYAS ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS wilayas (
       code VARCHAR(10) PRIMARY KEY,
