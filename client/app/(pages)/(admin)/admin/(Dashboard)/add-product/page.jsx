@@ -77,6 +77,9 @@ export default function AddProductPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerForm, setOfferForm] = useState({ quantity: '', price: '', savedMoney: 0, isBestOffer: false, freeDelivery: false });
 
+  // Package naming state
+  const [packageNaming, setPackageNaming] = useState({ enabled: false, mainName: '' });
+
 
   useEffect(() => {
     const imageUrl = images[0]?.url || "";
@@ -177,6 +180,7 @@ export default function AddProductPage() {
       savedMoney: Math.round(offerForm.savedMoney),
       isBestOffer: offerForm.isBestOffer,
       freeDelivery: offerForm.freeDelivery,
+      packageName: '',
     };
 
     setOffers(prev => [...prev, newOffer]);
@@ -371,6 +375,7 @@ export default function AddProductPage() {
         landing_page_image: finalLandingPageUrl,
         colors: colors,
         offers: offers,
+        package_naming: packageNaming,
       });
 
       showToast("تم إضافة المنتج بنجاح!", "success");
@@ -858,39 +863,7 @@ export default function AddProductPage() {
             )}
           </div>
 
-          {/* Offers Section */}
-          <div className="flex flex-col gap-3 w-full">
-            <div className="flex items-center justify-between">
-              <label className="text-lg font-semibold text-black">Offers (عروض):</label>
-              <button
-                onClick={openOfferModal}
-                disabled={isSubmitting}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-              >
-                <Plus size={18} />
-                <span>إضافة عرض</span>
-              </button>
-            </div>
-
-            {offers.length > 0 && (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleOfferDragEnd}>
-                <SortableContext items={offers.map(o => o.id)} strategy={rectSwappingStrategy}>
-                  <div className="flex flex-col gap-2">
-                    {offers.map((offer) => (
-                      <SortableOffer
-                        key={offer.id}
-                        offer={offer}
-                        isSubmitting={isSubmitting}
-                        onRemove={handleRemoveOffer}
-                        onToggle={handleToggleOfferFlag}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            )}
-          </div>
-
+          {/* Price Section */}
           <div className="flex items-center gap-6 w-full">
             <div className="flex flex-col gap-3 flex-1">
               <label className="text-lg font-semibold text-black">سعر البيع: <span className="text-red-500">*</span></label>
@@ -926,7 +899,6 @@ export default function AddProductPage() {
                 <input
                   type="number"
                   value={formData.discount}
-                  // onChange={(e) => handleChange("discount", e.target.value)}
                   placeholder="0"
                   disabled
                   className="w-full text-base text-gray-800 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -934,6 +906,92 @@ export default function AddProductPage() {
                 <Percent size={20} className="text-gray-600 mr-2" />
               </div>
             </div>
+
+          {/* Offers Section */}
+          <div className="flex flex-col gap-3 w-full">
+            <div className="flex items-center justify-between">
+              <label className="text-lg font-semibold text-black">Offers (عروض):</label>
+              <button
+                onClick={openOfferModal}
+                disabled={isSubmitting}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <Plus size={18} />
+                <span>إضافة عرض</span>
+              </button>
+            </div>
+
+            {offers.length > 0 && (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleOfferDragEnd}>
+                <SortableContext items={offers.map(o => o.id)} strategy={rectSwappingStrategy}>
+                  <div className="flex flex-col gap-2">
+                    {offers.map((offer) => (
+                      <SortableOffer
+                        key={offer.id}
+                        offer={offer}
+                        isSubmitting={isSubmitting}
+                        onRemove={handleRemoveOffer}
+                        onToggle={handleToggleOfferFlag}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
+
+          {/* Package Naming Section */}
+          <div className="flex flex-col gap-3 w-full">
+            <div className="flex items-center justify-between">
+              <label className="text-lg font-semibold text-black">Product Package Naming (تسمية الحزمة):</label>
+              <button
+                onClick={() => setPackageNaming(prev => ({ ...prev, enabled: !prev.enabled, mainName: !prev.enabled ? prev.mainName : '' }))}
+                disabled={isSubmitting}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${packageNaming.enabled ? 'bg-[#FA3145]' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${packageNaming.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {packageNaming.enabled && (
+              <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">Package Main Name (اسم الحزمة الرئيسي):</label>
+                  <input
+                    type="text"
+                    value={packageNaming.mainName}
+                    onChange={(e) => setPackageNaming(prev => ({ ...prev, mainName: e.target.value }))}
+                    placeholder="اسم الحزمة..."
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100"
+                  />
+                </div>
+
+                {offers.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    <label className="text-sm font-medium text-gray-700">Offer Package Names (أسماء عروض الحزمة):</label>
+                    {offers.map((offer) => (
+                      <div key={offer.id} className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600 min-w-[180px]">Buy {offer.quantity} at {offer.price} DA:</span>
+                        <input
+                          type="text"
+                          value={offer.packageName || ''}
+                          onChange={(e) => {
+                            setOffers(prev => prev.map(o =>
+                              o.id === offer.id ? { ...o, packageName: e.target.value } : o
+                            ));
+                          }}
+                          placeholder="اسم العرض في الحزمة..."
+                          disabled={isSubmitting}
+                          className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex flex-col gap-3 w-full">
             <label className="text-lg font-semibold text-black">النوع:</label>

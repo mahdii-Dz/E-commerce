@@ -387,6 +387,18 @@ export default function OrdersPage() {
       const fullName = `${order.first_name || ''} ${order.last_name || ''}`.trim();
       const produit = order.items?.map(item => {
         const colorQtys = item.colors?.map(c => `${c.color_name} (${c.quantity})`).join(', ') || '';
+        const pkgNaming = item.package_naming;
+        if (pkgNaming?.enabled && pkgNaming.mainName) {
+          let offerName = item.offer_text || '';
+          if (item.offer_text && item.offer_data) {
+            const match = item.offer_text.match(/(\d+)\s*for\s*(\d+)/);
+            if (match) {
+              const matchedOffer = item.offer_data.find(o => o.quantity === parseInt(match[1]) && o.price === parseFloat(match[2]));
+              if (matchedOffer?.packageName) offerName = matchedOffer.packageName;
+            }
+          }
+          return `${pkgNaming.mainName}${offerName ? ' - ' + offerName : ''} (${colorQtys})`;
+        }
         return `${item.product_name}${item.offer_text ? ' - ' + item.offer_text : ''} (${colorQtys})`;
       }).join(', ');
 

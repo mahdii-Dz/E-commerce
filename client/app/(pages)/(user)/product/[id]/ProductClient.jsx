@@ -71,18 +71,10 @@ export default function ProductClient({ product, relatedProducts }) {
 
     useEffect(() => {
         if (product) {
-            const buyOneOffer = {
-                quantity: 1,
-                price: product.price,
-                savedMoney: 0,
-                isBestOffer: false,
-                freeDelivery: false,
-            };
             const productOffers = product.offers && Array.isArray(product.offers) ? product.offers : [];
-            const allOffers = [buyOneOffer, ...productOffers];
-            setOffers(allOffers);
+            setOffers(productOffers);
 
-            setSelectedOffer(buyOneOffer);
+            setSelectedOffer(productOffers.length > 0 ? productOffers[0] : null);
             setTimeout(() => { isInitialSelection.current = false; }, 0);
         }
     }, [product])

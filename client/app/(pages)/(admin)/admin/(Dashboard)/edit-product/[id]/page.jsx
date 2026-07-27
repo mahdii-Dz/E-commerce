@@ -93,6 +93,9 @@ export default function EditProductPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerForm, setOfferForm] = useState({ quantity: '', price: '', savedMoney: 0, isBestOffer: false, freeDelivery: false });
 
+  // Package naming state
+  const [packageNaming, setPackageNaming] = useState({ enabled: false, mainName: '' });
+
   // Combobox anchor for categories
   const categoryAnchor = useComboboxAnchor();
 
@@ -145,7 +148,12 @@ export default function EditProductPage() {
 
         // Populate offers if they exist
         if (data.offers && Array.isArray(data.offers)) {
-          setOffers(data.offers.map(o => ({ ...o, id: o.id || crypto.randomUUID() })));
+          setOffers(data.offers.map(o => ({ ...o, id: o.id || crypto.randomUUID(), packageName: o.packageName || '' })));
+        }
+
+        // Populate package naming if it exists
+        if (data.package_naming) {
+          setPackageNaming(data.package_naming);
         }
 
         // Populate landing page image if it exists
@@ -276,6 +284,7 @@ export default function EditProductPage() {
       savedMoney: Math.round(offerForm.savedMoney),
       isBestOffer: offerForm.isBestOffer,
       freeDelivery: offerForm.freeDelivery,
+      packageName: '',
     };
 
     setOffers(prev => [...prev, newOffer]);
@@ -483,6 +492,7 @@ export default function EditProductPage() {
         landing_page_image: finalLandingPageUrl,
         colors: colors,
         offers: offers,
+        package_naming: packageNaming,
       });
 
       showToast("تم تحديث المنتج بنجاح!", "success");
@@ -949,6 +959,50 @@ export default function EditProductPage() {
             </div>
           </div>
 
+          {/* Price Section */}
+          <div className="flex flex-col sm:flex-row items-center gap-6 w-full max-w-[671px]">
+            <div className="flex flex-col gap-3 flex-1 w-full sm:w-auto">
+              <label className="text-lg font-semibold text-black">السعر: <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                value={formData.price}
+                onChange={(e) => handleChange("price", e.target.value)}
+                placeholder="0"
+                disabled={isSubmitting}
+                className="w-full px-5 py-4 bg-white border border-gray-200 rounded-xl text-base text-primary focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 ">
+              <label className="text-lg font-semibold text-black">سعر المقارنة:</label>
+              <input
+                type="number"
+                value={ComparePrice}
+                onChange={(e) => {
+                  setComparePrice(e.target.value)
+                  handleChange("discount", Math.floor(100 - (formData.price / e.target.value) * 100))
+                }}
+                placeholder="0"
+                disabled={isSubmitting}
+                className="w-full px-5 py-4 bg-white border border-gray-200 rounded-xl text-base text-primary focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100 disabled:cursor-not-allowed"
+              />
+            </div>
+
+          </div>
+            <div className="flex flex-col gap-3 w-full max-w-[246px]">
+              <label className="text-lg font-semibold text-black text-center">الخصم</label>
+              <div className="flex items-center px-5 py-4 bg-white border border-gray-200 rounded-xl">
+                <input
+                  type="number"
+                  value={formData.discount}
+                  placeholder="0"
+                  disabled
+                  className="w-full text-base text-gray-800 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none "
+                />
+                <Percent size={20} className="text-gray-600 mr-2" />
+              </div>
+            </div>
+
           {/* Offers Section */}
           <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <div className="flex items-center justify-between">
@@ -979,6 +1033,59 @@ export default function EditProductPage() {
                   </div>
                 </SortableContext>
               </DndContext>
+            )}
+          </div>
+
+          {/* Package Naming Section */}
+          <div className="flex flex-col gap-3 w-full max-w-[671px]">
+            <div className="flex items-center justify-between">
+              <label className="text-lg font-semibold text-black">Product Package Naming (تسمية الحزمة):</label>
+              <button
+                onClick={() => setPackageNaming(prev => ({ ...prev, enabled: !prev.enabled, mainName: !prev.enabled ? prev.mainName : '' }))}
+                disabled={isSubmitting}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${packageNaming.enabled ? 'bg-[#FA3145]' : 'bg-gray-300'}`}
+              >
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${packageNaming.enabled ? '-translate-x-6' : '-translate-x-1'}`} />
+              </button>
+            </div>
+
+            {packageNaming.enabled && (
+              <div className="flex flex-col gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div className="flex flex-col gap-2">
+                  <label className="text-sm font-medium text-gray-700">Package Main Name (اسم الحزمة الرئيسي):</label>
+                  <input
+                    type="text"
+                    value={packageNaming.mainName}
+                    onChange={(e) => setPackageNaming(prev => ({ ...prev, mainName: e.target.value }))}
+                    placeholder="اسم الحزمة..."
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100"
+                  />
+                </div>
+
+                {offers.length > 0 && (
+                  <div className="flex flex-col gap-3">
+                    <label className="text-sm font-medium text-gray-700">Offer Package Names (أسماء عروض الحزمة):</label>
+                    {offers.map((offer) => (
+                      <div key={offer.id} className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600 min-w-[180px]">Buy {offer.quantity} at {offer.price} DA:</span>
+                        <input
+                          type="text"
+                          value={offer.packageName || ''}
+                          onChange={(e) => {
+                            setOffers(prev => prev.map(o =>
+                              o.id === offer.id ? { ...o, packageName: e.target.value } : o
+                            ));
+                          }}
+                          placeholder="اسم العرض في الحزمة..."
+                          disabled={isSubmitting}
+                          className="flex-1 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 
@@ -1046,50 +1153,6 @@ export default function EditProductPage() {
               </Combobox>
             )}
           </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-6 w-full max-w-[671px]">
-            <div className="flex flex-col gap-3 flex-1 w-full sm:w-auto">
-              <label className="text-lg font-semibold text-black">السعر: <span className="text-red-500">*</span></label>
-              <input
-                type="number"
-                value={formData.price}
-                onChange={(e) => handleChange("price", e.target.value)}
-                placeholder="0"
-                disabled={isSubmitting}
-                className="w-full px-5 py-4 bg-white border border-gray-200 rounded-xl text-base text-primary focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            <div className="flex flex-col gap-3 ">
-              <label className="text-lg font-semibold text-black">سعر المقارنة:</label>
-              <input
-                type="number"
-                value={ComparePrice}
-                onChange={(e) => {
-                  setComparePrice(e.target.value)
-                  handleChange("discount", Math.floor(100 - (formData.price / e.target.value) * 100))
-                }}
-                placeholder="0"
-                disabled={isSubmitting}
-                className="w-full px-5 py-4 bg-white border border-gray-200 rounded-xl text-base text-primary focus:outline-none focus:ring-2 focus:ring-[#FA3145] disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-
-          </div>
-            <div className="flex flex-col gap-3 w-full max-w-[246px]">
-              <label className="text-lg font-semibold text-black text-center">الخصم</label>
-              <div className="flex items-center px-5 py-4 bg-white border border-gray-200 rounded-xl">
-                <input
-                  type="number"
-                  value={formData.discount}
-                  // onChange={(e) => handleChange("discount", e.target.value)}
-                  placeholder="0"
-                  disabled
-                  className="w-full text-base text-gray-800 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none "
-                />
-                <Percent size={20} className="text-gray-600 mr-2" />
-              </div>
-            </div>
 
           <div className="flex flex-col gap-3 w-full max-w-[671px]">
             <label className="text-lg font-semibold text-black">النوع:</label>
