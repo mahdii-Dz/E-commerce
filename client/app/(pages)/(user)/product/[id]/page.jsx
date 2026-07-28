@@ -14,7 +14,7 @@ export async function generateStaticParams() {
   }
 }
 
-export const revalidate = 300; // ISR - regenerate every 5 minutes
+export const dynamic = 'force-dynamic';
 
 function getOgImage(image) {
   const url = image?.url || image;

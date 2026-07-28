@@ -41,8 +41,7 @@ async function fetchWithFallback(url, fallback, options = {}) {
 export async function getProducts() {
   const data = await fetchWithFallback(
     `${BACKEND_URL}/api/shop/get-products?limit=100`,
-    [],
-    { next: { revalidate: 300 } }
+    []
   );
   return Array.isArray(data) ? data : (data.products || []);
 }
@@ -50,8 +49,7 @@ export async function getProducts() {
 export async function getProduct(id) {
   const data = await fetchWithFallback(
     `${BACKEND_URL}/api/shop/get-product/${id}`,
-    null,
-    { next: { revalidate: 3600 } }
+    null
   );
   return data;
 }
@@ -59,8 +57,7 @@ export async function getProduct(id) {
 export async function getCategories() {
   const data = await fetchWithFallback(
     `${BACKEND_URL}/api/shop/get-categories`,
-    [],
-    { next: { revalidate: 3600 } }
+    []
   );
   return Array.isArray(data) ? data : (data.categories || []);
 }
@@ -68,8 +65,7 @@ export async function getCategories() {
 export async function getPromotions() {
   const data = await fetchWithFallback(
     `${BACKEND_URL}/api/shop/get-products?limit=100`,
-    [],
-    { next: { revalidate: 300 } }
+    []
   );
   const products = Array.isArray(data) ? data : (data.products || []);
   return products.filter(product => product.discount_percentage > 0);
@@ -78,8 +74,7 @@ export async function getPromotions() {
 export async function getBanners() {
   const data = await fetchWithFallback(
     `${BACKEND_URL}/api/shop/get-banners`,
-    { success: true, banners: [] },
-    { next: { revalidate: 3600 } }
+    { success: true, banners: [] }
   );
   return data;
 }
@@ -108,8 +103,7 @@ export async function getFilteredProducts({ category, minPrice, maxPrice, minDis
   const fallback = { products: [], total: 0, page, totalPages: 1 };
   const data = await fetchWithFallback(
     `${BACKEND_URL}/api/shop/get-products?${params}`,
-    fallback,
-    { next: { revalidate: 60 } }
+    fallback
   );
 
   return Array.isArray(data)

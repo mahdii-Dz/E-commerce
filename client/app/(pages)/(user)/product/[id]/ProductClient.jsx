@@ -8,6 +8,7 @@ import ReviewsSection from '@/components/ReviewsSection';
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Percent, ShoppingCart, Sparkles, Tag, Truck, Van, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import React, { useContext, useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import 'swiper/css';
 import 'swiper/css/thumbs';
@@ -17,8 +18,22 @@ import 'swiper/css/pagination';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Thumbs, FreeMode, Navigation, Pagination } from 'swiper/modules';
 
-export default function ProductClient({ product, relatedProducts }) {
+export default function ProductClient({ product: initialProduct, relatedProducts }) {
     const { Cart, setCart } = useContext(GlobalContext)
+
+    const { data: freshProduct } = useQuery({
+        queryKey: ['product', initialProduct.id],
+        queryFn: async () => {
+            const res = await fetch(`/api/shop/products/${initialProduct.id}`);
+            if (!res.ok) throw new Error('Failed to fetch');
+            return res.json();
+        },
+        initialData: initialProduct,
+        refetchInterval: 60 * 1000,
+        staleTime: 30 * 1000,
+    });
+
+    const product = freshProduct || initialProduct;
     const [thumbsSwiper, setThumbsSwiper] = useState(null);
     const mainSwiperRef = useRef(null);
     const [fullscreenIndex, setFullscreenIndex] = useState(0);
