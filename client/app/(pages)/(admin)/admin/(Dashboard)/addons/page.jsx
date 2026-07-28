@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { FileSpreadsheet, Plus, Trash2, Eye, ExternalLink, Upload, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import axios from 'axios'
 
 function DetailsModal({ sheet, credentialInfo, onClose }) {
@@ -100,6 +101,7 @@ export default function AddonsPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [replaceTarget, setReplaceTarget] = useState(null);
   const [credentialFile, setCredentialFile] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -197,6 +199,27 @@ export default function AddonsPage() {
     } catch {
       showToast('فشل في حذف الملف', 'error');
       setDeleteTarget(null);
+    }
+  };
+
+  const handleStatusChange = async (sheetId, newStatus) => {
+    setUpdatingId(sheetId);
+    try {
+      const sheet = sheets.find(s => s.id === sheetId);
+      await axios.put(`/api/shop/sheets/${sheetId}`, {
+        file_name: sheet.file_name,
+        file_id: sheet.file_id,
+        paper_name: sheet.paper_name,
+        is_active: newStatus === 'true'
+      });
+      setSheets(prev => prev.map(s =>
+        s.id === sheetId ? { ...s, is_active: newStatus === 'true' } : s
+      ));
+      showToast('تم تحديث الحالة بنجاح');
+    } catch {
+      showToast('فشل في تحديث الحالة', 'error');
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -428,9 +451,35 @@ export default function AddonsPage() {
                     <td className="px-4 py-3 text-xs text-gray-500 dir-ltr">{sheet.file_id}</td>
                     <td className="px-4 py-3 text-sm text-gray-700">{sheet.paper_name}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sheet.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {sheet.is_active ? 'نشط' : 'غير نشط'}
-                      </span>
+                      {updatingId === sheet.id ? (
+                        <div className="flex items-center justify-center w-[110px] h-8">
+                          <Loader2 size={14} className="animate-spin text-gray-400" />
+                        </div>
+                      ) : (
+                        <Select
+                        dir='rtl'
+                          value={sheet.is_active ? 'true' : 'false'}
+                          onValueChange={(value) => handleStatusChange(sheet.id, value)}
+                        >
+                          <SelectTrigger className="w-[110px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="true">
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                                نشط
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="false">
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                                غير نشط
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-500">{new Date(sheet.created_at).toLocaleDateString('ar-DZ')}</td>
                     <td className="px-4 py-3">
