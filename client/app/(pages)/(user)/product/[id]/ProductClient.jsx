@@ -92,10 +92,15 @@ export default function ProductClient({ product: initialProduct, relatedProducts
         }
     }, [product])
 
+    const getNavbarOffset = () => {
+        const val = document.documentElement.style.getPropertyValue('--navbar-offset');
+        return val ? parseInt(val) + 16 : 112;
+    };
+
     const scrollToCheckout = () => {
         const el = checkoutRef.current;
         if (el) {
-            const top = el.getBoundingClientRect().top + window.scrollY - 100;
+            const top = el.getBoundingClientRect().top + window.scrollY - getNavbarOffset();
             window.scrollTo({ top, behavior: 'smooth' });
         }
     };
@@ -635,7 +640,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                     onClick={() => {
                     const el = offersRef.current;
                     if (el) {
-                        const top = el.getBoundingClientRect().top + window.scrollY - 100;
+                        const top = el.getBoundingClientRect().top + window.scrollY - getNavbarOffset();
                         window.scrollTo({ top, behavior: 'smooth' });
                     }
                 }}
