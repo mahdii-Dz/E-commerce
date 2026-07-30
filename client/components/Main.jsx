@@ -93,7 +93,7 @@ function Main({ Banners, Products = [], onOpenCategorySidebar }) {
       </div>
 
       {/* Products sections... */}
-      <section className='mt-10 px-4 lg:px-0'>
+      <section className='mt-10 px-2.5 lg:px-0'>
         <div className='flex justify-between items-center'>
           <h1 className='text-xl lg:text-2xl font-semibold'>تخفيضات</h1>
           <Link href="/products/Promotions" className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit text-sm lg:text-base'>
@@ -104,7 +104,7 @@ function Main({ Banners, Products = [], onOpenCategorySidebar }) {
         <RenderProducts Products={Promotions && Promotions.slice(0, 3)} Class={'mt-8'} />
       </section>
 
-      <section className='mt-10 px-4 lg:px-0'>
+      <section className='mt-10 px-2.5 lg:px-0'>
         <div className='flex justify-between items-center'>
           <h1 className='text-xl lg:text-2xl font-semibold'>أحدث المنتجات</h1>
           <Link href="/products/Newest" className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit text-sm lg:text-base'>
@@ -115,7 +115,7 @@ function Main({ Banners, Products = [], onOpenCategorySidebar }) {
         <RenderProducts Products={NewestProducts.slice(0, 3)} Class={'mt-8'} />
       </section>
 
-      <section className='mt-10 px-4 lg:px-0 mb-10'>
+      <section className='mt-10 px-2.5 lg:px-0 mb-10'>
         <div className='flex justify-between items-center'>
           <h1 className='text-xl lg:text-2xl font-semibold'>جميع المنتجات</h1>
           <Link href="/products/All" className='text-[#3B65FA] flex items-center gap-1 cursor-pointer hover:underline w-fit text-sm lg:text-base'>

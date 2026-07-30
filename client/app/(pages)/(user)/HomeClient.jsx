@@ -12,7 +12,7 @@ export default function HomeClient({ banners = [], products = [], categories }) 
   return (
     <>
       <div>
-        <div className="flex flex-col lg:flex-row gap-6 px-4 lg:px-20">
+        <div className="flex flex-col lg:flex-row gap-6 px-2.5 lg:px-20">
           <SideBar
             category={categories || []}
             isLoadingCategories={isLoadingCategories}

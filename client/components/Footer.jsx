@@ -7,7 +7,7 @@ import Image from 'next/image'
 function Footer() {
   const currentYear = new Date().getFullYear();
   return (
-    <footer className='flex flex-col items-center px-4 sm:px-6 lg:px-20 xl:px-39 pb-3 w-full h-auto bg-white border-t border-stroke mt-16 lg:mt-32 overflow-x-hidden'>
+    <footer className='flex flex-col items-center px-2.5 sm:px-6 lg:px-20 xl:px-39 pb-3 w-full h-auto bg-white border-t border-stroke mt-16 lg:mt-32 overflow-x-hidden'>
       {/* Features Section */}
       <div className='w-full flex flex-col lg:flex-row border-b border-stroke justify-center items-center py-6 lg:py-11 gap-4 lg:gap-0'>
         {/* Feature 1 */}

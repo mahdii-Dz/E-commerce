@@ -46,7 +46,6 @@ export default function ProductClient({ product: initialProduct, relatedProducts
     const deliveryDate = new Date(date.setDate(date.getDate() + 2));
     const ArriveDay = deliveryDate.getDate();
     const month = deliveryDate.toLocaleString('default', { month: 'long' });
-    const year = deliveryDate.getFullYear();
     const [mounted, setMounted] = useState(false)
     const [selectedColor, setSelectedColor] = useState(null)
 
@@ -81,8 +80,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
     const checkoutRef = useRef(null);
     const isInitialSelection = useRef(true);
 
-    // Find manually marked best offer
-    const manualBestOffer = offers.find(o => o.isBestOffer);
+   
 
     useEffect(() => {
         if (product) {
@@ -157,7 +155,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
 
     return (
         <>
-            <main className='px-4 lg:px-20 pb-16 lg:pb-0 w-full --font-Rubik-sans'>
+            <main className='px-3 lg:px-20 pb-16 lg:pb-0 w-full --font-Rubik-sans'>
                 <style>{`
                   .product-swiper .swiper-button-next,
                   .product-swiper .swiper-button-prev {
@@ -170,7 +168,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                 `}</style>
                 <Breadcrumb />
                 {/* Product Details Section */}
-                <section className='w-full mb-12 lg:mb-20 px-4 lg:px-6 py-6 lg:py-8 mt-0 rounded-xl'>
+                <section className='w-full mb-12 lg:mb-20 lg:px-6 py-6 lg:py-8 mt-0 rounded-xl'>
                     <div className='lg:grid lg:grid-cols-2 lg:gap-12'>
                         {/* TOP CONTENT - title, price, description (left column in RTL) */}
                         <div className='flex flex-col items-start gap-3 lg:gap-4 text-right w-full lg:col-start-2 lg:col-end-3'>
@@ -333,7 +331,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                                                     }
                                                 }}
                                                 className={cn(
-                                                    "flex flex-col w-30 relative items-center gap-3 p-2 rounded-xl border-2 transition-all cursor-pointer",
+                                                    "flex flex-col w-28 relative items-center gap-3 p-2 rounded-xl border-2 transition-all cursor-pointer",
                                                     selectedColor === color.hex
                                                         ? "border-primary bg-primary/5"
                                                         : "border-gray-200 hover:border-primary/30"

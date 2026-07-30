@@ -152,7 +152,7 @@ function NavBar() {
     <>
       <nav ref={navRef} className='w-full max-w-full fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white'>
         <ShopHeaderBanner />
-        <div className='h-16 lg:h-22 px-4 lg:px-20 flex items-center justify-between'>
+        <div className='h-16 lg:h-22 px-2.5 lg:px-20 flex items-center justify-between'>
         {/* Mobile Menu Button */}
         <button 
           onClick={handleToggleMenu}
