@@ -2,6 +2,7 @@
 import { query, execute } from '../db.js';
 import axios from 'axios';
 import { syncOrderToSheets, updateOrderRowInSheets } from '../services/GoogleSheetsService.js';
+import { getOrSet, bumpVersion, del } from '../services/cache.js';
 
 // Netlify cache invalidation
 const NETLIFY_BUILD_HOOK = process.env.NETLIFY_BUILD_HOOK;
@@ -93,13 +94,10 @@ const handleDbError = (res, error, context) => {
 
 export const GetCategories = async (req, res) => {
   try {
-    const rows = await query("SELECT * FROM categories ORDER BY id");
-    
-    if (!rows || !Array.isArray(rows)) {
-      return res.status(200).json([]);
-    }
-    
-    return res.status(200).json(rows);
+    const rows = await getOrSet('categories', null, 3600, () =>
+      query("SELECT * FROM categories ORDER BY id")
+    );
+    return res.status(200).json(!rows || !Array.isArray(rows) ? [] : rows);
   } catch (error) {
     return handleDbError(res, error, 'fetching categories');
   }
@@ -140,6 +138,7 @@ export const AddCategory = async (req, res) => {
 
     // Invalidate cache
     await invalidateCategoryCache();
+    await del('categories');
 
     return res.status(201).json({ 
       message: "Category added successfully",
@@ -171,6 +170,7 @@ export const DeleteCategory = async (req, res) => {
 
     // Invalidate cache
     await invalidateCategoryCache();
+    await del('categories');
 
     return res.status(200).json({ message: "Category deleted successfully" });
   } catch (error) {
@@ -242,123 +242,132 @@ export const GetProducts = async (req, res) => {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
     const offset = (pageNum - 1) * limitNum;
 
-    const { where, values, category: catFilter } = buildProductWhereClause({ category, minPrice, maxPrice, minDiscount, search });
-    const orderBy = buildProductOrderBy(sort);
+    const cacheParams = {};
+    if (category) cacheParams.cat = category;
+    if (minPrice) cacheParams.minp = minPrice;
+    if (maxPrice) cacheParams.maxp = maxPrice;
+    if (minDiscount) cacheParams.mind = minDiscount;
+    if (sort && sort !== 'Newest') cacheParams.sort = sort;
+    if (search) cacheParams.q = search;
+    cacheParams.p = pageNum;
+    cacheParams.l = limitNum;
 
-    // Build category filter for WHERE clause
-    let categoryFilter = '';
-    let categoryValues = [];
-    if (catFilter) {
-      categoryFilter = `AND EXISTS (
-        SELECT 1 FROM product_categories pc2 
-        JOIN categories c2 ON pc2.category_id = c2.id 
-        WHERE pc2.product_id = p.id AND c2.name = ?
-      )`;
-      categoryValues = [catFilter];
-    }
+    const result = await getOrSet('products', cacheParams, 300, async () => {
+      const { where, values, category: catFilter } = buildProductWhereClause({ category, minPrice, maxPrice, minDiscount, search });
+      const orderBy = buildProductOrderBy(sort);
 
-    // Sales join for TopSold sorting
-    const isTopSold = sort === 'TopSold';
-    const salesJoin = isTopSold ? `
-      LEFT JOIN (
-        SELECT oi.product_id, SUM(oi.quantity) as total_sold
-        FROM order_items oi
-        GROUP BY oi.product_id
-      ) sales ON p.id = sales.product_id
-    ` : '';
-
-    // Count total for pagination
-    const countQuery = `
-      SELECT COUNT(DISTINCT p.id) as total
-      FROM products p
-      ${salesJoin}
-      WHERE ${where} ${categoryFilter}
-    `;
-    const countResult = await query(countQuery, [...values, ...categoryValues]);
-    const total = countResult?.[0]?.total || 0;
-    const totalPages = Math.ceil(total / limitNum);
-
-    // Main query - fetch products without categories first
-    const productQuery = `
-      SELECT
-        p.id,
-        p.name,
-        p.description,
-        p.big_description,
-        p.discount_percentage,
-        p.price,
-        p.compare_price,
-        p.image_url,
-        p.is_active,
-        p.images,
-        p.landing_page_image,
-        p.thumbnail,
-        p.created_at,
-        p.type,
-        p.offers,
-        p.colors
-      FROM products p
-      ${salesJoin}
-      WHERE ${where} ${categoryFilter}
-      ORDER BY ${orderBy}
-      LIMIT ? OFFSET ?
-    `;
-    const productValues = [...values, ...categoryValues, limitNum, offset];
-    const rows = await query(productQuery, productValues);
-
-    // Fetch categories separately for these products
-    const productIds = rows.map(r => r.id);
-    let categoriesMap = new Map();
-    
-    if (productIds.length > 0) {
-      const placeholders = productIds.map(() => '?').join(',');
-      const catQuery = `
-        SELECT 
-          pc.product_id,
-          c.id AS category_id,
-          c.name AS category_name
-        FROM product_categories pc
-        JOIN categories c ON pc.category_id = c.id
-        WHERE pc.product_id IN (${placeholders})
-      `;
-      const catRows = await query(catQuery, productIds);
-      
-      for (const catRow of catRows) {
-        if (!categoriesMap.has(catRow.product_id)) {
-          categoriesMap.set(catRow.product_id, []);
-        }
-        categoriesMap.get(catRow.product_id).push({
-          id: catRow.category_id,
-          name: catRow.category_name
-        });
+      let categoryFilter = '';
+      let categoryValues = [];
+      if (catFilter) {
+        categoryFilter = `AND EXISTS (
+          SELECT 1 FROM product_categories pc2 
+          JOIN categories c2 ON pc2.category_id = c2.id 
+          WHERE pc2.product_id = p.id AND c2.name = ?
+        )`;
+        categoryValues = [catFilter];
       }
-    }
 
-    if (!rows || !Array.isArray(rows)) {
-      return res.status(200).json({ products: [], total, page: pageNum, totalPages });
-    }
+      const isTopSold = sort === 'TopSold';
+      const salesJoin = isTopSold ? `
+        LEFT JOIN (
+          SELECT oi.product_id, SUM(oi.quantity) as total_sold
+          FROM order_items oi
+          GROUP BY oi.product_id
+        ) sales ON p.id = sales.product_id
+      ` : '';
 
-    const products = rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      discount_percentage: row.discount_percentage || 0,
-      description: row.description,
-      big_description: row.big_description,
-      price: parseFloat(row.price) || 0,
-      compare_price: parseFloat(row.compare_price) || 0,
-      image_url: row.image_url,
-      images: filterActive(safeJsonParse(row.images, []).map(normalizeImage)),
-      landing_page_image: row.landing_page_image,
-      thumbnail: row.thumbnail,
-      is_active: row.is_active === 1,
-      created_at: row.created_at,
-      type: row.type,
-      colors: filterActive(safeJsonParse(row.colors, null)),
-      offers: safeJsonParse(row.offers, null),
-      categories: categoriesMap.get(row.id) || [],
-    }));
+      const countQuery = `
+        SELECT COUNT(DISTINCT p.id) as total
+        FROM products p
+        ${salesJoin}
+        WHERE ${where} ${categoryFilter}
+      `;
+      const countResult = await query(countQuery, [...values, ...categoryValues]);
+      const total = countResult?.[0]?.total || 0;
+      const totalPages = Math.ceil(total / limitNum);
 
-    return res.status(200).json({ products, total, page: pageNum, totalPages });
+      const productQuery = `
+        SELECT
+          p.id,
+          p.name,
+          p.description,
+          p.big_description,
+          p.discount_percentage,
+          p.price,
+          p.compare_price,
+          p.image_url,
+          p.is_active,
+          p.images,
+          p.landing_page_image,
+          p.thumbnail,
+          p.created_at,
+          p.type,
+          p.offers,
+          p.colors
+        FROM products p
+        ${salesJoin}
+        WHERE ${where} ${categoryFilter}
+        ORDER BY ${orderBy}
+        LIMIT ? OFFSET ?
+      `;
+      const productValues = [...values, ...categoryValues, limitNum, offset];
+      const rows = await query(productQuery, productValues);
+
+      const productIds = rows.map(r => r.id);
+      let categoriesMap = new Map();
+      
+      if (productIds.length > 0) {
+        const placeholders = productIds.map(() => '?').join(',');
+        const catQuery = `
+          SELECT 
+            pc.product_id,
+            c.id AS category_id,
+            c.name AS category_name
+          FROM product_categories pc
+          JOIN categories c ON pc.category_id = c.id
+          WHERE pc.product_id IN (${placeholders})
+        `;
+        const catRows = await query(catQuery, productIds);
+        
+        for (const catRow of catRows) {
+          if (!categoriesMap.has(catRow.product_id)) {
+            categoriesMap.set(catRow.product_id, []);
+          }
+          categoriesMap.get(catRow.product_id).push({
+            id: catRow.category_id,
+            name: catRow.category_name
+          });
+        }
+      }
+
+      if (!rows || !Array.isArray(rows)) {
+        return { products: [], total, page: pageNum, totalPages };
+      }
+
+      const products = rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        discount_percentage: row.discount_percentage || 0,
+        description: row.description,
+        big_description: row.big_description,
+        price: parseFloat(row.price) || 0,
+        compare_price: parseFloat(row.compare_price) || 0,
+        image_url: row.image_url,
+        images: filterActive(safeJsonParse(row.images, []).map(normalizeImage)),
+        landing_page_image: row.landing_page_image,
+        thumbnail: row.thumbnail,
+        is_active: row.is_active === 1,
+        created_at: row.created_at,
+        type: row.type,
+        colors: filterActive(safeJsonParse(row.colors, null)),
+        offers: safeJsonParse(row.offers, null),
+        categories: categoriesMap.get(row.id) || [],
+      }));
+
+      return { products, total, page: pageNum, totalPages };
+    });
+
+    return res.status(200).json(result);
   } catch (error) {
     return handleDbError(res, error, "fetching products");
   }
@@ -374,68 +383,79 @@ export const GetProductById = async (req, res) => {
       return res.status(400).json({ error: "Invalid product ID" });
     }
 
-    // Fetch product first
-    const productRows = await query(`
-      SELECT
-        p.id,
-        p.name,
-        p.description,
-        p.big_description,
-        p.discount_percentage,
-        p.price,
-        p.compare_price,
-        p.image_url,
-        p.thumbnail,
-        p.images,
-        p.landing_page_image,
-        p.is_active,
-        p.created_at,
-        p.type,
-        p.colors,
-        p.offers,
-        p.package_naming
-      FROM products p
-      WHERE p.id = ? AND p.is_active = true
-    `, [productIdNum]);
+    const fetchProduct = async () => {
+      const productRows = await query(`
+        SELECT
+          p.id,
+          p.name,
+          p.description,
+          p.big_description,
+          p.discount_percentage,
+          p.price,
+          p.compare_price,
+          p.image_url,
+          p.thumbnail,
+          p.images,
+          p.landing_page_image,
+          p.is_active,
+          p.created_at,
+          p.type,
+          p.colors,
+          p.offers,
+          p.package_naming
+        FROM products p
+        WHERE p.id = ? AND p.is_active = true
+      `, [productIdNum]);
 
-    if (!productRows || productRows.length === 0) {
-      return res.status(404).json({ error: "Product not found" });
+      if (!productRows || productRows.length === 0) {
+        return { _notFound: true };
+      }
+
+      const product = productRows[0];
+
+      const catRows = await query(`
+        SELECT 
+          c.id AS category_id,
+          c.name AS category_name
+        FROM product_categories pc
+        JOIN categories c ON pc.category_id = c.id
+        WHERE pc.product_id = ?
+      `, [productIdNum]);
+
+      product.categories = catRows.map(catRow => ({
+        id: catRow.category_id,
+        name: catRow.category_name
+      }));
+
+      product.images = safeJsonParse(product.images, []).map(normalizeImage);
+      product.colors = safeJsonParse(product.colors, null);
+      product.offers = safeJsonParse(product.offers, null);
+      product.package_naming = safeJsonParse(product.package_naming, null);
+      product.landing_page_image = product.landing_page_image || null;
+      product.price = parseFloat(product.price) || 0;
+      product.compare_price = parseFloat(product.compare_price) || 0;
+      product.discount_percentage = product.discount_percentage || 0;
+      product.is_active = product.is_active === 1;
+
+      if (!isAdmin) {
+        product.images = filterActive(product.images);
+        if (product.colors) {
+          product.colors = filterActive(product.colors);
+        }
+      }
+
+      return product;
+    };
+
+    let product;
+    if (isAdmin) {
+      product = await fetchProduct();
+    } else {
+      product = await getOrSet(`product:${productIdNum}`, null, 600, fetchProduct);
     }
 
-    const product = productRows[0];
-
-    // Fetch categories separately
-    const catRows = await query(`
-      SELECT 
-        c.id AS category_id,
-        c.name AS category_name
-      FROM product_categories pc
-      JOIN categories c ON pc.category_id = c.id
-      WHERE pc.product_id = ?
-    `, [productIdNum]);
-
-    product.categories = catRows.map(catRow => ({
-      id: catRow.category_id,
-      name: catRow.category_name
-    }));
-
-    // Parse JSON fields
-    product.images = safeJsonParse(product.images, []).map(normalizeImage);
-    product.colors = safeJsonParse(product.colors, null);
-    product.offers = safeJsonParse(product.offers, null);
-    product.package_naming = safeJsonParse(product.package_naming, null);
-    product.landing_page_image = product.landing_page_image || null;
-    product.price = parseFloat(product.price) || 0;
-    product.compare_price = parseFloat(product.compare_price) || 0;
-    product.discount_percentage = product.discount_percentage || 0;
-    product.is_active = product.is_active === 1;
-
-    // For public requests, filter out inactive images and colors
-    if (!isAdmin) {
-      product.images = filterActive(product.images);
-      if (product.colors) {
-        product.colors = filterActive(product.colors);
-      }
+    if (product && product._notFound) {
+      return res.status(404).json({ error: "Product not found" });
     }
 
     return res.status(200).json(product);
@@ -458,113 +478,115 @@ export const GetProductsByCategory = async (req, res) => {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
     const offset = (pageNum - 1) * limitNum;
 
-    // Main query - filter by category using EXISTS to avoid GROUP BY issues
-    const productQuery = `
-      SELECT
-        p.id,
-        p.name,
-        p.description,
-        p.big_description,
-        p.discount_percentage,
-        p.price,
-        p.compare_price,
-        p.image_url,
-        p.thumbnail,
-        p.images,
-        p.is_active,
-        p.created_at,
-        p.type,
-        p.colors,
-        p.offers
-      FROM products p
-      WHERE p.is_active = true
-        AND EXISTS (
-          SELECT 1 FROM product_categories pc 
-          JOIN categories c ON pc.category_id = c.id 
-          WHERE pc.product_id = p.id AND c.id = ?
-        )
-      ORDER BY p.created_at DESC
-      LIMIT ? OFFSET ?
-    `;
+    const cacheParams = { catId: categoryIdNum, p: pageNum, l: limitNum };
 
-    const rows = await query(productQuery, [categoryIdNum, limitNum, offset]);
-
-    // Fetch categories for these products
-    const productIds = rows.map(r => r.id);
-    let categoriesMap = new Map();
-    
-    if (productIds.length > 0) {
-      const placeholders = productIds.map(() => '?').join(',');
-      const catQuery = `
-        SELECT 
-          pc.product_id,
-          c.id AS category_id,
-          c.name AS category_name
-        FROM product_categories pc
-        JOIN categories c ON pc.category_id = c.id
-        WHERE pc.product_id IN (${placeholders})
+    const result = await getOrSet('products', cacheParams, 300, async () => {
+      const productQuery = `
+        SELECT
+          p.id,
+          p.name,
+          p.description,
+          p.big_description,
+          p.discount_percentage,
+          p.price,
+          p.compare_price,
+          p.image_url,
+          p.thumbnail,
+          p.images,
+          p.is_active,
+          p.created_at,
+          p.type,
+          p.colors,
+          p.offers
+        FROM products p
+        WHERE p.is_active = true
+          AND EXISTS (
+            SELECT 1 FROM product_categories pc 
+            JOIN categories c ON pc.category_id = c.id 
+            WHERE pc.product_id = p.id AND c.id = ?
+          )
+        ORDER BY p.created_at DESC
+        LIMIT ? OFFSET ?
       `;
-      const catRows = await query(catQuery, productIds);
+
+      const rows = await query(productQuery, [categoryIdNum, limitNum, offset]);
+
+      const productIds = rows.map(r => r.id);
+      let categoriesMap = new Map();
       
-      for (const catRow of catRows) {
-        if (!categoriesMap.has(catRow.product_id)) {
-          categoriesMap.set(catRow.product_id, []);
+      if (productIds.length > 0) {
+        const placeholders = productIds.map(() => '?').join(',');
+        const catQuery = `
+          SELECT 
+            pc.product_id,
+            c.id AS category_id,
+            c.name AS category_name
+          FROM product_categories pc
+          JOIN categories c ON pc.category_id = c.id
+          WHERE pc.product_id IN (${placeholders})
+        `;
+        const catRows = await query(catQuery, productIds);
+        
+        for (const catRow of catRows) {
+          if (!categoriesMap.has(catRow.product_id)) {
+            categoriesMap.set(catRow.product_id, []);
+          }
+          categoriesMap.get(catRow.product_id).push({
+            id: catRow.category_id,
+            name: catRow.category_name
+          });
         }
-        categoriesMap.get(catRow.product_id).push({
-          id: catRow.category_id,
-          name: catRow.category_name
-        });
       }
-    }
 
-    // Get total count
-    const countResult = await query(`
-      SELECT COUNT(DISTINCT p.id) as total
-      FROM products p
-      WHERE p.is_active = true
-        AND EXISTS (
-          SELECT 1 FROM product_categories pc 
-          JOIN categories c ON pc.category_id = c.id 
-          WHERE pc.product_id = p.id AND c.id = ?
-        )
-    `, [categoryIdNum]);
-    
-    const total = countResult?.[0]?.total || 0;
-    const totalPages = Math.ceil(total / limitNum);
+      const countResult = await query(`
+        SELECT COUNT(DISTINCT p.id) as total
+        FROM products p
+        WHERE p.is_active = true
+          AND EXISTS (
+            SELECT 1 FROM product_categories pc 
+            JOIN categories c ON pc.category_id = c.id 
+            WHERE pc.product_id = p.id AND c.id = ?
+          )
+      `, [categoryIdNum]);
+      
+      const total = countResult?.[0]?.total || 0;
+      const totalPages = Math.ceil(total / limitNum);
 
-    if (!rows || !Array.isArray(rows)) {
-      return res.status(200).json({ products: [], total, page: pageNum, totalPages });
-    }
-
-    const productMap = new Map();
-
-    for (const row of rows) {
-      const productId = row.id;
-
-      if (!productMap.has(productId)) {
-        productMap.set(productId, {
-          id: row.id,
-          name: row.name,
-          discount_percentage: row.discount_percentage || 0,
-          description: row.description,
-          big_description: row.big_description,
-          price: parseFloat(row.price) || 0,
-          compare_price: parseFloat(row.compare_price) || 0,
-          image_url: row.image_url,
-          thumbnail: row.thumbnail,
-          images: filterActive(safeJsonParse(row.images, []).map(normalizeImage)),
-          is_active: row.is_active === 1,
-          created_at: row.created_at,
-          type: row.type,
-          colors: filterActive(safeJsonParse(row.colors, null)),
-          offers: safeJsonParse(row.offers, null),
-          categories: categoriesMap.get(productId) || [],
-        });
+      if (!rows || !Array.isArray(rows)) {
+        return { products: [], total, page: pageNum, totalPages };
       }
-    }
 
-    const products = Array.from(productMap.values());
-    return res.status(200).json({ products, total, page: pageNum, totalPages });
+      const productMap = new Map();
+
+      for (const row of rows) {
+        const productId = row.id;
+
+        if (!productMap.has(productId)) {
+          productMap.set(productId, {
+            id: row.id,
+            name: row.name,
+            discount_percentage: row.discount_percentage || 0,
+            description: row.description,
+            big_description: row.big_description,
+            price: parseFloat(row.price) || 0,
+            compare_price: parseFloat(row.compare_price) || 0,
+            image_url: row.image_url,
+            thumbnail: row.thumbnail,
+            images: filterActive(safeJsonParse(row.images, []).map(normalizeImage)),
+            is_active: row.is_active === 1,
+            created_at: row.created_at,
+            type: row.type,
+            colors: filterActive(safeJsonParse(row.colors, null)),
+            offers: safeJsonParse(row.offers, null),
+            categories: categoriesMap.get(productId) || [],
+          });
+        }
+      }
+
+      return { products: Array.from(productMap.values()), total, page: pageNum, totalPages };
+    });
+
+    return res.status(200).json(result);
   } catch (error) {
     return handleDbError(res, error, "fetching products by category");
   }
@@ -651,8 +673,9 @@ export const AddProduct = async (req, res) => {
       }
     }
 
-    // Invalidate Netlify cache
+    // Invalidate Netlify cache and Redis
     await invalidateNetlifyCache();
+    await bumpVersion('products');
 
     return res.status(201).json({
       message: "Product created successfully",
@@ -742,8 +765,10 @@ export const UpdateProduct = async (req, res) => {
       }
     }
 
-    // Invalidate Netlify cache
+    // Invalidate Netlify cache and Redis
     await invalidateNetlifyCache();
+    await bumpVersion('products');
+    await del(`product:${id}`);
 
     return res.status(200).json({
       success: true,
@@ -777,8 +802,9 @@ export const DeleteProduct = async (req, res) => {
       [id]
     );
 
-    // Invalidate Netlify cache
+    // Invalidate Netlify cache and Redis
     await invalidateNetlifyCache();
+    await bumpVersion('products');
 
     return res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
@@ -1196,8 +1222,9 @@ export const RejectOrder = async (req, res) => {
 
 export const getBanners = async (req, res) => {
   try {
-    const banners = await query('SELECT * FROM banners ORDER BY position ASC');
-    
+    const banners = await getOrSet('banners', null, 3600, () =>
+      query('SELECT * FROM banners ORDER BY position ASC')
+    );
     return res.status(200).json({
       success: true,
       banners: banners || []
@@ -1249,6 +1276,7 @@ export const updateBanners = async (req, res) => {
 
     // Invalidate cache
     await invalidateBannerCache();
+    await del('banners');
 
     return res.status(200).json({
       success: true,
@@ -1280,6 +1308,7 @@ export const deleteBanner = async (req, res) => {
 
     // Invalidate cache
     await invalidateBannerCache();
+    await del('banners');
 
     return res.status(200).json({
       success: true,
@@ -1294,7 +1323,9 @@ export const deleteBanner = async (req, res) => {
 
 export const getHeader = async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM shop_header LIMIT 1');
+    const rows = await getOrSet('header', null, 3600, () =>
+      query('SELECT * FROM shop_header LIMIT 1')
+    );
     const header = rows && rows.length > 0 ? rows[0] : {};
 
     return res.status(200).json({
@@ -1345,6 +1376,7 @@ export const updateHeader = async (req, res) => {
     }
 
     await invalidateHeaderCache();
+    await del('header');
 
     return res.status(200).json({
       success: true,
@@ -2155,6 +2187,8 @@ export const UpdateDeliveryWilayas = async (req, res) => {
 
     await execute(sql, params);
 
+    await del('public-wilayas');
+
     return res.status(200).json({ success: true, message: 'Wilayas updated successfully' });
   } catch (error) {
     return handleDbError(res, error, 'updating delivery wilayas');
@@ -2205,6 +2239,8 @@ export const UpdateWilayaStopDesk = async (req, res) => {
       );
     }
 
+    await del('public-wilayas');
+
     return res.status(200).json({ success: true, message: 'Stopdesk baladiyas updated' });
   } catch (error) {
     return handleDbError(res, error, 'updating stopdesk baladiyas');
@@ -2234,44 +2270,46 @@ export const GetDeliveryStats = async (req, res) => {
 
 export const GetPublicWilayas = async (req, res) => {
   try {
-    const rows = await query(`
-      SELECT
-        w.code,
-        w.name,
-        w.home_delivery_price,
-        w.stopdesk_delivery_price,
-        w.free_delivery,
-        w.is_active,
-        (SELECT COUNT(*) FROM baladiyas b WHERE b.wilaya_code = w.code AND b.has_stopdesk = 1) > 0 AS has_stopdesk
-      FROM wilayas w
-      WHERE w.is_active = 1
-      ORDER BY CAST(w.code AS UNSIGNED) ASC
-    `);
+    const result = await getOrSet('public-wilayas', null, 3600, async () => {
+      const rows = await query(`
+        SELECT
+          w.code,
+          w.name,
+          w.home_delivery_price,
+          w.stopdesk_delivery_price,
+          w.free_delivery,
+          w.is_active,
+          (SELECT COUNT(*) FROM baladiyas b WHERE b.wilaya_code = w.code AND b.has_stopdesk = 1) > 0 AS has_stopdesk
+        FROM wilayas w
+        WHERE w.is_active = 1
+        ORDER BY CAST(w.code AS UNSIGNED) ASC
+      `);
 
-    const allBaladiyas = await query(`
-      SELECT wilaya_code, name, has_stopdesk
-      FROM baladiyas
-      ORDER BY wilaya_code ASC, name ASC
-    `);
+      const allBaladiyas = await query(`
+        SELECT wilaya_code, name, has_stopdesk
+        FROM baladiyas
+        ORDER BY wilaya_code ASC, name ASC
+      `);
 
-    const baladiyasByCode = {};
-    for (const b of allBaladiyas || []) {
-      if (!baladiyasByCode[b.wilaya_code]) baladiyasByCode[b.wilaya_code] = [];
-      baladiyasByCode[b.wilaya_code].push({
-        name: b.name,
-        has_stopdesk: Boolean(b.has_stopdesk)
-      });
-    }
+      const baladiyasByCode = {};
+      for (const b of allBaladiyas || []) {
+        if (!baladiyasByCode[b.wilaya_code]) baladiyasByCode[b.wilaya_code] = [];
+        baladiyasByCode[b.wilaya_code].push({
+          name: b.name,
+          has_stopdesk: Boolean(b.has_stopdesk)
+        });
+      }
 
-    const result = (rows || []).map(w => ({
-      ...w,
-      home_delivery_price: Number(w.home_delivery_price) || 0,
-      stopdesk_delivery_price: Number(w.stopdesk_delivery_price) || 0,
-      free_delivery: Boolean(w.free_delivery),
-      is_active: Boolean(w.is_active),
-      has_stopdesk: Boolean(w.has_stopdesk),
-      municipalities: baladiyasByCode[w.code] || []
-    }));
+      return (rows || []).map(w => ({
+        ...w,
+        home_delivery_price: Number(w.home_delivery_price) || 0,
+        stopdesk_delivery_price: Number(w.stopdesk_delivery_price) || 0,
+        free_delivery: Boolean(w.free_delivery),
+        is_active: Boolean(w.is_active),
+        has_stopdesk: Boolean(w.has_stopdesk),
+        municipalities: baladiyasByCode[w.code] || []
+      }));
+    });
 
     return res.status(200).json(result);
   } catch (error) {
