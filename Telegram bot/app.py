@@ -351,7 +351,7 @@ def format_order_message(order: Dict) -> str:
     return message
 
 def get_call_url(phone: str) -> str:
-    base = os.getenv("RENDER_EXTERNAL_URL", f"http://localhost:{os.getenv('PORT', 10000)}")
+    base = os.getenv("CALL_BASE_URL", "https://la-maison-dor-store.netlify.app")
     return f"{base}/call?phone={quote(phone)}"
 
 def get_phone_keyboard(phone: str) -> InlineKeyboardMarkup:
