@@ -4,13 +4,14 @@ load_dotenv()
 
 # ===== REST OF IMPORTS =====
 import os
+import sys
 import threading
-import tempfile
 import html
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 from typing import Dict
 import pymysql
+from dbutils.pooled_db import PooledDB
 from flask import Flask, request
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -18,6 +19,13 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 # ===== FLASK APP FOR HEALTH CHECKS & CALL REDIRECT =====
 flask_app = Flask(__name__)
+
+# Fix Windows console encoding for emoji log output
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 
 def format_phone(phone: str) -> str:
     phone = phone.strip()
@@ -49,31 +57,35 @@ AUTHORIZED_ADMINS = [aid.strip() for aid in ADMIN_IDS_ENV.split(",") if aid.stri
 
 # ===== DATABASE CONFIGURATION =====
 def get_db_connection_config():
-    """Create DB config with SSL using system CA certificates"""
-    config = {
-        'host': os.getenv("DB_HOST"),
-        'port': int(os.getenv("DB_PORT", 4000)),
-        'user': os.getenv("DB_USER"),
-        'password': os.getenv("DB_PASSWORD"),
-        'database': os.getenv("DB_NAME"),
+    """Create plain MySQL DB config (no SSL, works with localhost or a VPS)"""
+    return {
+        'host': os.getenv("DB_HOST", "127.0.0.1"),
+        'port': int(os.getenv("DB_PORT", 3306)),
+        'user': os.getenv("DB_USER", "root"),
+        'password': os.getenv("DB_PASSWORD", ""),
+        'database': os.getenv("DB_NAME", "e_commerce"),
         'charset': 'utf8mb4',
         'autocommit': True,
+        'connect_timeout': 15,
     }
-    
-    # SSL with CA certificate (required by TiDB Cloud)
-    config['ssl'] = {'check_hostname': True}
-    ca_candidate = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ca.pem')
-    if os.path.exists(ca_candidate):
-        config['ssl']['ca'] = ca_candidate
-        print("✅ Using ca.pem from local file")
-    elif os.getenv("CA_CERT"):
-        tmp_ca = os.path.join(tempfile.gettempdir(), 'tidb-ca.pem')
-        with open(tmp_ca, 'w') as f:
-            f.write(os.getenv("CA_CERT"))
-        config['ssl']['ca'] = tmp_ca
-        print("✅ Using ca.pem from CA_CERT env var")
-    config['connect_timeout'] = 15
-    return config
+
+db_pool = None
+
+def get_db_pool():
+    """Lazily create a shared connection pool (thread-safe)"""
+    global db_pool
+    if db_pool is None:
+        db_pool = PooledDB(
+            creator=pymysql,
+            maxconnections=int(os.getenv("DB_POOL_SIZE", 5)),
+            mincached=1,
+            maxcached=5,
+            blocking=True,
+            ping=1,
+            **get_db_connection_config(),
+        )
+        print(f"✅ Connection pool ready (max {int(os.getenv('DB_POOL_SIZE', 5))})")
+    return db_pool
 
 # Print config for debugging
 print(f"🤖 Starting Order Bot...")
@@ -96,17 +108,17 @@ if not AUTHORIZED_ADMINS:
 # ===== DATABASE FUNCTIONS =====
 
 def get_db_connection():
-    """Create a new database connection"""
+    """Get a connection from the pool"""
     try:
-        db_config = get_db_connection_config()
-        conn = pymysql.connect(**db_config)
+        conn = get_db_pool().connection()
+        conn.ping(reconnect=True)
         return conn
     except Exception as e:
         print(f"❌ Failed to connect to database: {e}")
         return None
 
 def init_notified_column():
-    """Add telegram_notified column if it doesn't exist"""
+    """Add telegram_notified column if it doesn't exist (MySQL-compatible)"""
     conn = None
     cursor = None
     try:
@@ -115,9 +127,15 @@ def init_notified_column():
             return False
         cursor = conn.cursor()
         cursor.execute(
-            "ALTER TABLE order_info ADD COLUMN IF NOT EXISTS telegram_notified TINYINT(1) DEFAULT 0"
+            "SELECT COUNT(*) FROM information_schema.COLUMNS "
+            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'order_info' "
+            "AND COLUMN_NAME = 'telegram_notified'"
         )
-        conn.commit()
+        if cursor.fetchone()[0] == 0:
+            cursor.execute(
+                "ALTER TABLE order_info ADD COLUMN telegram_notified TINYINT(1) DEFAULT 0"
+            )
+            conn.commit()
         print("✅ telegram_notified column ready")
         return True
     except Exception as e:

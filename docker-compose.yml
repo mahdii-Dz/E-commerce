@@ -44,15 +44,15 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # telegram-bot:
-  #   build: ./Telegram bot
-  #   env_file: ./Telegram bot/.env
-  #   environment:
-  #     DB_HOST: mysql
-  #   depends_on:
-  #     mysql:
-  #       condition: service_healthy
-  #   restart: unless-stopped
+  telegram-bot:
+    build: ./Telegram bot
+    env_file: ./Telegram bot/.env
+    environment:
+      DB_HOST: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   mysql-data:
