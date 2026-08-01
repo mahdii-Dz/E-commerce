@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo, Fragment } from "react";
-import { Plus, Search, Filter, Edit, ChevronLeft, ChevronRight, X, ChevronDown, Package, Percent, Tag, Hash } from "lucide-react";
+import { Plus, Search, Filter, Edit, ChevronLeft, ChevronRight, X, ChevronDown, Package, Percent, Tag, Hash, Trash2, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import axios from "axios";
 import { useFetchAllProducts } from "@/components/useFetchAllProducts";
 
 const getBadgeStyle = (type) => {
@@ -21,7 +22,7 @@ const ITEMS_PER_PAGE = 10;
 const FILTER_TYPES = ["All", "New", "Top Sold", "Promotions", "Best Deal"];
 
 export default function ProductDashboard() {
-  const { data: productsData, isLoading: productsLoading } = useFetchAllProducts('/api/shop/products', {
+  const { data: productsData, isLoading: productsLoading, refetch } = useFetchAllProducts('/api/shop/products', {
     staleTime: 60 * 1000,
   });
   const Products = Array.isArray(productsData) ? productsData : (productsData?.products || []);
@@ -30,6 +31,33 @@ export default function ProductDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [expandedProductId, setExpandedProductId] = useState(null);
+  const [deletingProductId, setDeletingProductId] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleDeleteProduct = async (product) => {
+    if (!confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeletingProductId(product.id);
+
+    try {
+      await axios.delete(`/api/shop/products/${product.id}`);
+      showToast("تم حذف المنتج بنجاح!", "success");
+      setSelectedProducts(prev => prev.filter(id => id !== product.id));
+      refetch();
+    } catch (error) {
+      console.error("Delete failed:", error);
+      showToast("فشل حذف المنتج", "error");
+    } finally {
+      setDeletingProductId(null);
+    }
+  };
 
   const toggleExpand = (productId) => {
     setExpandedProductId(prev => prev === productId ? null : productId);
@@ -190,6 +218,14 @@ export default function ProductDashboard() {
 
   return (
     <div className="w-full relative">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg transition-all duration-300 ${toast.type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+          {toast.type === "success" ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+          <span className="font-medium">{toast.message}</span>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between mb-11">
         <h1 className="text-3xl font-semibold text-black tracking-tight">
@@ -383,9 +419,21 @@ export default function ProductDashboard() {
                       {/* Actions */}
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Link href={`/admin/edit-product/${product.id}`} className="p-2 text-gray-400 hover:text-[#FA3145] hover:bg-red-50 rounded-lg transition-colors cursor-pointer hidden md:flex"                             title="تعديل المنتج">
+                          <Link href={`/admin/edit-product/${product.id}`} className="p-2 text-gray-400 hover:text-[#FA3145] hover:bg-red-50 rounded-lg transition-colors cursor-pointer hidden md:flex"                            title="تعديل المنتج">
                             <Edit size={20} />
                           </Link>
+                          <button
+                            onClick={() => handleDeleteProduct(product)}
+                            disabled={deletingProductId === product.id}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="حذف المنتج"
+                          >
+                            {deletingProductId === product.id ? (
+                              <Loader2 size={20} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={20} />
+                            )}
+                          </button>
                           {/* Expand button - visible on mobile/tablet, hidden on desktop where all info is shown */}
                           <button
                             onClick={() => toggleExpand(product.id)}
