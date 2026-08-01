@@ -15,7 +15,6 @@ import {
   EyeOff
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import axios from "axios";
 import Image from "next/image";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
@@ -23,8 +22,6 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 export default function BannerCategoriesPage() {
-  const router = useRouter();
-  
   // Toast state
   const [toast, setToast] = useState(null);
   
@@ -88,70 +85,70 @@ export default function BannerCategoriesPage() {
   }, [categoriesData]);
 
   // Fetch existing banner images on mount - handle empty case gracefully
-  useEffect(() => {
-    const fetchBanners = async () => {
-      try {
-        setIsLoadingBanners(true);
-        const response = await axios.get('/api/shop/banners');
-        const data = response.data;
-        
-        // Always ensure we have 2 banner slots, fill with DB data if available
-        const newBannerImages = [
-          { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
-          { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
-        ];
+  const fetchBanners = async (silent = false) => {
+    try {
+      if (!silent) setIsLoadingBanners(true);
+      const response = await axios.get('/api/shop/banners');
+      const data = response.data;
 
-        if (data && data.banners && Array.isArray(data.banners) && data.banners.length > 0) {
-          data.banners.forEach((banner, idx) => {
-            if (idx < 2 && banner && banner.url) {
-              newBannerImages[idx] = {
-                url: banner.url,
-                publicId: banner.public_id || banner.publicId || null,
-                isExisting: true,
-                file: null,
-                linkedProductId: banner.linked_product_id || null,
-              };
-            }
-          });
-        }
-        
-        setBannerImages(newBannerImages);
-      } catch (error) {
-        console.error("Failed to fetch banners:", error);
-        // Don't show error toast - just start with empty banners
-        setBannerImages([
-          { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
-          { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
-        ]);
-      } finally {
-        setIsLoadingBanners(false);
+      // Always ensure we have 2 banner slots, fill with DB data if available
+      const newBannerImages = [
+        { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
+        { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
+      ];
+
+      if (data && data.banners && Array.isArray(data.banners) && data.banners.length > 0) {
+        data.banners.forEach((banner, idx) => {
+          if (idx < 2 && banner && banner.url) {
+            newBannerImages[idx] = {
+              url: banner.url,
+              publicId: banner.public_id || banner.publicId || null,
+              isExisting: true,
+              file: null,
+              linkedProductId: banner.linked_product_id || null,
+            };
+          }
+        });
       }
-    };
 
+      setBannerImages(newBannerImages);
+    } catch (error) {
+      console.error("Failed to fetch banners:", error);
+      // Don't show error toast - just start with empty banners
+      setBannerImages([
+        { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
+        { url: null, publicId: null, isExisting: false, file: null, linkedProductId: null },
+      ]);
+    } finally {
+      if (!silent) setIsLoadingBanners(false);
+    }
+  };
+
+  useEffect(() => {
     fetchBanners();
   }, []);
 
   // Fetch existing header config on mount
-  useEffect(() => {
-    const fetchHeader = async () => {
-      try {
-        setIsHeaderLoading(true);
-        const response = await axios.get('/api/shop/header');
-        const data = response.data;
-        if (data && data.content) {
-          setHeaderConfig({
-            content: data.content || '',
-            backgroundColor: data.backgroundColor || '#000000',
-            isActive: data.isActive !== false,
-          });
-        }
-      } catch (error) {
-        console.error("Failed to fetch header:", error);
-      } finally {
-        setIsHeaderLoading(false);
+  const fetchHeader = async (silent = false) => {
+    try {
+      if (!silent) setIsHeaderLoading(true);
+      const response = await axios.get('/api/shop/header');
+      const data = response.data;
+      if (data && data.content) {
+        setHeaderConfig({
+          content: data.content || '',
+          backgroundColor: data.backgroundColor || '#000000',
+          isActive: data.isActive !== false,
+        });
       }
-    };
+    } catch (error) {
+      console.error("Failed to fetch header:", error);
+    } finally {
+      if (!silent) setIsHeaderLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchHeader();
   }, []);
 
@@ -323,7 +320,7 @@ export default function BannerCategoriesPage() {
     cat.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleConfirm = async () => {
+  const handleConfirmBanner = async () => {
     if (!bannerImages[0].url) {
       showToast("الرجاء رفع صورة البانر الأساسي", "error");
       return;
@@ -345,24 +342,49 @@ export default function BannerCategoriesPage() {
         banners: bannerData
       });
 
+      showToast("تم حفظ البانر بنجاح!", "success");
+      fetchBanners(true);
+
+    } catch (error) {
+      console.error("Save failed:", error);
+      showToast(error.response?.data?.message || "فشل حفظ البانر", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancelBanner = () => {
+    fetchBanners(true);
+  };
+
+  const handleConfirmHeader = async () => {
+    if (!headerConfig.content.trim()) {
+      showToast("الرجاء إدخال محتوى الهيدر", "error");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
       await axios.put('/api/shop/header', {
         content: headerConfig.content,
         backgroundColor: headerConfig.backgroundColor,
         isActive: headerConfig.isActive,
       });
 
-      showToast("تم حفظ التغييرات بنجاح!", "success");
+      showToast("تم حفظ الهيدر بنجاح!", "success");
+      fetchHeader(true);
 
     } catch (error) {
       console.error("Save failed:", error);
-      showToast(error.response?.data?.message || "فشل حفظ التغييرات", "error");
+      showToast(error.response?.data?.message || "فشل حفظ الهيدر", "error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleCancel = () => {
-    router.push("/admin/dashboard");
+  const handleCancelHeader = () => {
+    fetchHeader(true);
   };
 
   if (categoriesLoading || isLoadingBanners || isHeaderLoading) {
@@ -733,6 +755,31 @@ export default function BannerCategoriesPage() {
               );
             })()}
           </div>
+
+          {/* Banner Action Buttons */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleCancelBanner}
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-white border border-gray-200 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={handleConfirmBanner}
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-[#FA3145] hover:bg-[#e02a3b] rounded-lg text-base font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  جاري الحفظ...
+                </>
+              ) : (
+                "تأكيد"
+              )}
+            </button>
+          </div>
         </div>
         )}
 
@@ -805,6 +852,31 @@ export default function BannerCategoriesPage() {
             />
           </div>
 
+          {/* Header Action Buttons */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleCancelHeader}
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-white border border-gray-200 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              إلغاء
+            </button>
+            <button
+              onClick={handleConfirmHeader}
+              disabled={isSubmitting}
+              className="px-8 py-3 bg-[#FA3145] hover:bg-[#e02a3b] rounded-lg text-base font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  جاري الحفظ...
+                </>
+              ) : (
+                "تأكيد"
+              )}
+            </button>
+          </div>
+
         </div>
         )}
 
@@ -863,33 +935,8 @@ export default function BannerCategoriesPage() {
               ))
             )}
           </div>
-        </div>
+          </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleCancel}
-            disabled={isSubmitting}
-            className="px-8 py-3 bg-white border border-gray-200 rounded-lg text-base font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            إلغاء
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={isSubmitting}
-            className="px-8 py-3 bg-[#FA3145] hover:bg-[#e02a3b] rounded-lg text-base font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 size={18} className="animate-spin" />
-                جاري الحفظ...
-              </>
-            ) : (
-              "تأكيد"
-            )}
-          </button>
-        </div>
       </div>
     </div>
   );
