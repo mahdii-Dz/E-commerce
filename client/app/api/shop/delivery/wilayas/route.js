@@ -20,3 +20,15 @@ export async function PUT(request) {
     return NextResponse.json({ error: err.message }, { status: 502 });
   }
 }
+
+export async function POST(request) {
+  const auth = await adminAuth(request);
+  if (auth.error) return auth.error;
+  const body = await request.json();
+  try {
+    const data = await proxyRequest('POST', '/api/shop/create-delivery-wilaya', body);
+    return NextResponse.json(data);
+  } catch (err) {
+    return NextResponse.json({ error: err.message }, { status: 502 });
+  }
+}

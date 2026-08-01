@@ -2195,6 +2195,74 @@ export const UpdateDeliveryWilayas = async (req, res) => {
   }
 };
 
+export const CreateWilaya = async (req, res) => {
+  try {
+    const {
+      code,
+      name,
+      home_delivery_price = 0,
+      stopdesk_delivery_price = 0,
+      free_delivery = false,
+      is_active = true,
+      baladiyas = []
+    } = req.body;
+
+    if (!code || !String(code).trim()) {
+      return res.status(400).json({ error: 'wilaya code is required' });
+    }
+    if (!name || !String(name).trim()) {
+      return res.status(400).json({ error: 'wilaya name is required' });
+    }
+    if (!Array.isArray(baladiyas) || baladiyas.length === 0) {
+      return res.status(400).json({ error: 'baladiyas array is required' });
+    }
+
+    const cleanBaladiyas = baladiyas
+      .map(b => ({ name: String(b.name || '').trim(), has_stopdesk: b.has_stopdesk ? 1 : 0 }))
+      .filter(b => b.name.length > 0);
+
+    if (cleanBaladiyas.length === 0) {
+      return res.status(400).json({ error: 'at least one baladiya with a name is required' });
+    }
+
+    const wilayaCode = String(code).trim();
+    const wilayaName = String(name).trim();
+
+    try {
+      await execute(
+        `INSERT INTO wilayas (code, name, home_delivery_price, stopdesk_delivery_price, free_delivery, is_active)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [wilayaCode, wilayaName, Number(home_delivery_price) || 0, Number(stopdesk_delivery_price) || 0, free_delivery ? 1 : 0, is_active ? 1 : 0]
+      );
+    } catch (err) {
+      if (err && err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ error: 'Wilaya with this code already exists' });
+      }
+      throw err;
+    }
+
+    try {
+      await execute(
+        'INSERT INTO baladiyas (wilaya_code, name, has_stopdesk) VALUES ?',
+        [cleanBaladiyas.map(b => [wilayaCode, b.name, b.has_stopdesk])]
+      );
+    } catch (err) {
+      await execute('DELETE FROM wilayas WHERE code = ?', [wilayaCode]);
+      throw err;
+    }
+
+    await del('public-wilayas');
+
+    return res.status(201).json({
+      success: true,
+      message: 'Wilaya created successfully',
+      wilaya: { code: wilayaCode, name: wilayaName, baladiyas: cleanBaladiyas.length }
+    });
+  } catch (error) {
+    return handleDbError(res, error, 'creating wilaya');
+  }
+};
+
 export const GetWilayaBaladiyas = async (req, res) => {
   try {
     const { code } = req.params;

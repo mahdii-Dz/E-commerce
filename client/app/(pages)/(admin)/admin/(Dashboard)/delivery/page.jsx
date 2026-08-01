@@ -12,7 +12,8 @@ import {
   X,
   ChevronDown,
   Globe,
-  XCircle
+  XCircle,
+  Plus
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -58,6 +59,18 @@ export default function DeliveryPage() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newWilaya, setNewWilaya] = useState({
+    code: "",
+    name: "",
+    home_delivery_price: 0,
+    stopdesk_delivery_price: 0,
+    free_delivery: false
+  });
+  const [baladiyaInput, setBaladiyaInput] = useState("");
+  const [newBaladiyas, setNewBaladiyas] = useState([]);
+
   useEffect(() => {
     if (wilayas && Array.isArray(wilayas)) {
       const initial = {};
@@ -84,6 +97,74 @@ export default function DeliveryPage() {
       ...prev,
       [code]: { ...prev[code], [field]: value, changed: true }
     }));
+  };
+
+  const updateNewField = (field, value) => {
+    setNewWilaya(prev => ({ ...prev, [field]: value }));
+  };
+
+  const addBaladiya = () => {
+    const name = baladiyaInput.trim();
+    if (!name) {
+      showToast("أدخل اسم البلدية", "error");
+      return;
+    }
+    if (newBaladiyas.some(b => b.name === name)) {
+      showToast("هذه البلدية موجودة مسبقًا", "error");
+      return;
+    }
+    setNewBaladiyas(prev => [...prev, { name, has_stopdesk: false }]);
+    setBaladiyaInput("");
+  };
+
+  const removeBaladiya = (index) => {
+    setNewBaladiyas(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const toggleBaladiyaStopdesk = (index) => {
+    setNewBaladiyas(prev => prev.map((b, i) => (i === index ? { ...b, has_stopdesk: !b.has_stopdesk } : b)));
+  };
+
+  const resetAddForm = () => {
+    setNewWilaya({ code: "", name: "", home_delivery_price: 0, stopdesk_delivery_price: 0, free_delivery: false });
+    setBaladiyaInput("");
+    setNewBaladiyas([]);
+  };
+
+  const handleAddWilaya = async () => {
+    if (!newWilaya.code.trim()) {
+      showToast("أدخل رقم الولاية", "error");
+      return;
+    }
+    if (!newWilaya.name.trim()) {
+      showToast("أدخل اسم الولاية", "error");
+      return;
+    }
+    if (newBaladiyas.length === 0) {
+      showToast("أضف بلدية واحدة على الأقل", "error");
+      return;
+    }
+    setIsAdding(true);
+    try {
+      await axios.post('/api/shop/delivery/wilayas', {
+        code: newWilaya.code.trim(),
+        name: newWilaya.name.trim(),
+        home_delivery_price: Number(newWilaya.home_delivery_price) || 0,
+        stopdesk_delivery_price: Number(newWilaya.stopdesk_delivery_price) || 0,
+        free_delivery: newWilaya.free_delivery,
+        is_active: true,
+        baladiyas: newBaladiyas
+      });
+      showToast("تمت إضافة الولاية بنجاح", "success");
+      setShowAddModal(false);
+      resetAddForm();
+      refetch();
+    } catch (error) {
+      const data = error.response?.data;
+      showToast(data?.error || data?.message || "فشلت إضافة الولاية", "error");
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const filteredWilayas = useMemo(() => {
@@ -298,15 +379,9 @@ export default function DeliveryPage() {
       </div>
 
       {/* Table */}
-      {filteredWilayas.length === 0 ? (
-        <div className="w-full py-16 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-          <Search size={40} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-lg font-medium text-gray-400 mb-1">لا توجد ولايات تطابق بحثك</p>
-          <p className="text-sm text-gray-400">حاول تغيير معايير البحث أو إعادة تعيين الفلاتر</p>
-        </div>
-      ) : (
-        <div className="bg-white border-2 border-gray-100 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full">
+      <div className="bg-white border-2 border-gray-100 rounded-xl overflow-hidden shadow-sm">
+        <table className="w-full">
+          {filteredWilayas.length > 0 && (
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-right px-6 py-4 text-sm font-semibold text-gray-700">الولاية</th>
@@ -316,75 +391,87 @@ export default function DeliveryPage() {
                 <th className="text-right px-6 py-4 text-sm font-semibold text-gray-700">الحالة</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredWilayas.map((w, idx) => {
-                const edit = edits[w.code] || {};
-                const homePrice = edit.changed ? edit.home_delivery_price : (Number(w.home_delivery_price) || 0);
-                const stopPrice = edit.changed ? edit.stopdesk_delivery_price : (Number(w.stopdesk_delivery_price) || 0);
-                const isFree = edit.changed ? edit.free_delivery : Boolean(w.free_delivery);
-                const isActive = edit.changed ? edit.is_active : Boolean(w.is_active);
+          )}
+          <tbody>
+            {filteredWilayas.map((w, idx) => {
+              const edit = edits[w.code] || {};
+              const homePrice = edit.changed ? edit.home_delivery_price : (Number(w.home_delivery_price) || 0);
+              const stopPrice = edit.changed ? edit.stopdesk_delivery_price : (Number(w.stopdesk_delivery_price) || 0);
+              const isFree = edit.changed ? edit.free_delivery : Boolean(w.free_delivery);
+              const isActive = edit.changed ? edit.is_active : Boolean(w.is_active);
 
-                return (
-                  <tr key={w.code} className={`border-b border-gray-100 hover:bg-gray-50/80 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col">
-                        <span className="text-base font-medium text-gray-800">
-                          {w.code} - {w.name}
-                        </span>
-                        <Link
-                          href={`/admin/delivery/manage-stopdesk?code=${w.code}`}
-                          className="inline-flex items-center gap-1 text-sm text-[#FA3145] hover:text-[#e02a3b] underline underline-offset-2 mt-1"
-                        >
-                          <Pencil size={14} />
-                          إدارة نقطة التوصيل
-                        </Link>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={homePrice}
-                          onChange={e => updateField(w.code, 'home_delivery_price', parseInt(e.target.value) || 0)}
-                          className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 text-sm"
-                        />
-                        <span className="text-sm text-gray-500">د.ج</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          value={stopPrice}
-                          onChange={e => updateField(w.code, 'stopdesk_delivery_price', parseInt(e.target.value) || 0)}
-                          className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 text-sm"
-                        />
-                        <span className="text-sm text-gray-500">د.ج</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <CustomSelect
-                        value={String(isFree)}
-                        onChange={(val) => updateField(w.code, 'free_delivery', val === 'true')}
-                        options={DELIVERY_TYPE_OPTIONS}
-                        isUpdating={false}
+              return (
+                <tr key={w.code} className={`border-b border-gray-100 hover:bg-gray-50/80 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
+                  <td className="px-6 py-5">
+                    <div className="flex flex-col">
+                      <span className="text-base font-medium text-gray-800">
+                        {w.code} - {w.name}
+                      </span>
+                      <Link
+                        href={`/admin/delivery/manage-stopdesk?code=${w.code}`}
+                        className="inline-flex items-center gap-1 text-sm text-[#FA3145] hover:text-[#e02a3b] underline underline-offset-2 mt-1"
+                      >
+                        <Pencil size={14} />
+                        إدارة نقطة التوصيل
+                      </Link>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={homePrice}
+                        onChange={e => updateField(w.code, 'home_delivery_price', parseInt(e.target.value) || 0)}
+                        className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 text-sm"
                       />
-                    </td>
-                    <td className="px-6 py-5">
-                      <CustomSelect
-                        value={String(isActive)}
-                        onChange={(val) => updateField(w.code, 'is_active', val === 'true')}
-                        options={STATUS_TOGGLE_OPTIONS}
-                        isUpdating={false}
+                      <span className="text-sm text-gray-500">د.ج</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={stopPrice}
+                        onChange={e => updateField(w.code, 'stopdesk_delivery_price', parseInt(e.target.value) || 0)}
+                        className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 text-sm"
                       />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                      <span className="text-sm text-gray-500">د.ج</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-5">
+                    <CustomSelect
+                      value={String(isFree)}
+                      onChange={(val) => updateField(w.code, 'free_delivery', val === 'true')}
+                      options={DELIVERY_TYPE_OPTIONS}
+                      isUpdating={false}
+                    />
+                  </td>
+                  <td className="px-6 py-5">
+                    <CustomSelect
+                      value={String(isActive)}
+                      onChange={(val) => updateField(w.code, 'is_active', val === 'true')}
+                      options={STATUS_TOGGLE_OPTIONS}
+                      isUpdating={false}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+            {/* Add Wilaya Row */}
+            <tr className="bg-gray-50/50">
+              <td colSpan={5} className="px-6 py-6 text-center">
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-lg font-medium transition-colors cursor-pointer"
+                >
+                  <Plus size={18} />
+                  إضافة ولاية
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       {/* Save Button */}
       <div className="flex justify-start mt-8">
@@ -401,6 +488,162 @@ export default function DeliveryPage() {
           حفظ الكل
         </button>
       </div>
+
+      {/* Add Wilaya Modal */}
+      {showAddModal && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => !isAdding && setShowAddModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto p-8"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">إضافة ولاية جديدة</h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                disabled={isAdding}
+                className="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-2">رقم الولاية</label>
+                <input
+                  type="number"
+                  value={newWilaya.code}
+                  onChange={e => updateNewField('code', e.target.value)}
+                  placeholder="مثال: 59"
+                  className="h-11 px-4 rounded-xl border border-stroke bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145]"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-2">اسم الولاية</label>
+                <input
+                  type="text"
+                  value={newWilaya.name}
+                  onChange={e => updateNewField('name', e.target.value)}
+                  placeholder="اسم الولاية"
+                  className="h-11 px-4 rounded-xl border border-stroke bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145]"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-2">سعر التوصيل للمنزل</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={newWilaya.home_delivery_price}
+                    onChange={e => updateNewField('home_delivery_price', parseInt(e.target.value) || 0)}
+                    className="h-11 w-full px-4 rounded-xl border border-stroke bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145]"
+                  />
+                  <span className="text-sm text-gray-500">د.ج</span>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label className="block text-sm font-medium text-gray-700 mb-2">سعر التوصيل للنقطة</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={newWilaya.stopdesk_delivery_price}
+                    onChange={e => updateNewField('stopdesk_delivery_price', parseInt(e.target.value) || 0)}
+                    className="h-11 w-full px-4 rounded-xl border border-stroke bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145]"
+                  />
+                  <span className="text-sm text-gray-500">د.ج</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">نوع التوصيل</label>
+              <div className="w-64">
+                <CustomSelect
+                  value={String(newWilaya.free_delivery)}
+                  onChange={(val) => updateNewField('free_delivery', val === 'true')}
+                  options={DELIVERY_TYPE_OPTIONS}
+                  isUpdating={false}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">البلديات</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={baladiyaInput}
+                  onChange={e => setBaladiyaInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addBaladiya();
+                    }
+                  }}
+                  placeholder="اسم البلدية"
+                  className="flex-1 h-11 px-4 rounded-xl border border-stroke bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#FA3145]/20 focus:border-[#FA3145]"
+                />
+                <button
+                  onClick={addBaladiya}
+                  className="h-11 px-5 bg-gray-800 hover:bg-gray-700 text-white rounded-xl font-medium transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  <Plus size={16} />
+                  إضافة
+                </button>
+              </div>
+
+              {newBaladiyas.length > 0 ? (
+                <div className="mt-3 flex flex-col gap-2 max-h-48 overflow-y-auto">
+                  {newBaladiyas.map((b, index) => (
+                    <div key={index} className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-gray-50 border border-gray-100">
+                      <span className="text-sm text-gray-700 font-medium">{b.name}</span>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600">
+                          <input
+                            type="checkbox"
+                            checked={b.has_stopdesk}
+                            onChange={() => toggleBaladiyaStopdesk(index)}
+                            className="w-4 h-4 accent-[#FA3145]"
+                          />
+                          نقطة توصيل
+                        </label>
+                        <button
+                          onClick={() => removeBaladiya(index)}
+                          className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-gray-400">لم تتم إضافة أي بلدية بعد</p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-8">
+              <button
+                onClick={() => setShowAddModal(false)}
+                disabled={isAdding}
+                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors cursor-pointer disabled:opacity-50"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={handleAddWilaya}
+                disabled={isAdding}
+                className="px-6 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+              >
+                {isAdding ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
+                إضافة الولاية
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
