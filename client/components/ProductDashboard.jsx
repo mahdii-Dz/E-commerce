@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import axios from "axios";
 import { useFetchAllProducts } from "@/components/useFetchAllProducts";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 const getBadgeStyle = (type) => {
   switch (type) {
@@ -32,6 +33,7 @@ export default function ProductDashboard() {
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [expandedProductId, setExpandedProductId] = useState(null);
   const [deletingProductId, setDeletingProductId] = useState(null);
+  const [pendingDelete, setPendingDelete] = useState(null);
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = "success") => {
@@ -39,17 +41,16 @@ export default function ProductDashboard() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handleDeleteProduct = async (product) => {
-    if (!confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
-      return;
-    }
+  const handleDeleteProduct = async () => {
+    if (!pendingDelete) return;
 
-    setDeletingProductId(product.id);
+    setDeletingProductId(pendingDelete.id);
 
     try {
-      await axios.delete(`/api/shop/products/${product.id}`);
+      await axios.delete(`/api/shop/products/${pendingDelete.id}`);
       showToast("تم حذف المنتج بنجاح!", "success");
-      setSelectedProducts(prev => prev.filter(id => id !== product.id));
+      setSelectedProducts(prev => prev.filter(id => id !== pendingDelete.id));
+      setPendingDelete(null);
       refetch();
     } catch (error) {
       console.error("Delete failed:", error);
@@ -225,6 +226,16 @@ export default function ProductDashboard() {
           <span className="font-medium">{toast.message}</span>
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="حذف المنتج"
+        message="هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء."
+        pending={deletingProductId !== null}
+        onConfirm={handleDeleteProduct}
+        onCancel={() => setPendingDelete(null)}
+      />
 
       {/* Header */}
       <header className="flex items-center justify-between mb-11">
@@ -423,7 +434,7 @@ export default function ProductDashboard() {
                             <Edit size={20} />
                           </Link>
                           <button
-                            onClick={() => handleDeleteProduct(product)}
+                            onClick={() => setPendingDelete(product)}
                             disabled={deletingProductId === product.id}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             title="حذف المنتج"

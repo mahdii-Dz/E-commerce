@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useWilayaData } from '@/components/useWilayaData';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const ITEMS_PER_PAGE = 40;
 
@@ -52,6 +53,7 @@ export default function LeftedOrdersPage() {
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [converting, setConverting] = useState(new Set());
   const [deleting, setDeleting] = useState(new Set());
+  const [pendingDelete, setPendingDelete] = useState(null);
   const [expandedOrders, setExpandedOrders] = useState(new Set());
   const [viewingOrder, setViewingOrder] = useState(null);
   const [editingOrder, setEditingOrder] = useState(null);
@@ -245,12 +247,14 @@ export default function LeftedOrdersPage() {
     }
   };
 
-  const handleDelete = async (orderId) => {
-    if (!confirm('هل أنت متأكد من حذف هذا الطلب المتروك؟')) return;
+  const handleDelete = async () => {
+    if (!pendingDelete) return;
+    const orderId = pendingDelete;
     setDeleting(prev => new Set(prev).add(orderId));
     try {
       await axios.delete(`/api/shop/lefted-orders/${orderId}`);
       setOrders(prev => prev.filter(o => o.id !== orderId));
+      setPendingDelete(null);
       showToast('تم حذف الطلب المتروك', 'success');
     } catch (err) {
       showToast(err.response?.data?.error || 'فشل حذف الطلب', 'error');
@@ -525,6 +529,16 @@ export default function LeftedOrdersPage() {
         </div>
       )}
 
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="حذف الطلب المتروك"
+        message="هل أنت متأكد من حذف هذا الطلب المتروك؟"
+        pending={deleting.has(pendingDelete)}
+        onConfirm={handleDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
+
       <header className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-semibold text-black tracking-tight">الطلبات المتروكة</h1>
         <div className="flex items-center gap-2">
@@ -674,7 +688,7 @@ export default function LeftedOrdersPage() {
                                 <ShoppingBag className="w-5 h-5 text-green-600" />
                               )}
                             </button>
-                            <button onClick={() => handleDelete(order.id)}
+                            <button onClick={() => setPendingDelete(order.id)}
                               disabled={deleting.has(order.id)}
                               className={`p-1.5 rounded-lg transition-colors ${deleting.has(order.id) ? 'cursor-wait' : 'hover:bg-red-50 cursor-pointer'}`}
                               title="حذف">
@@ -771,7 +785,7 @@ export default function LeftedOrdersPage() {
                             )}
                             تحويل
                           </button>
-                          <button onClick={() => handleDelete(order.id)}
+                          <button onClick={() => setPendingDelete(order.id)}
                             disabled={deleting.has(order.id)}
                             className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${deleting.has(order.id) ? 'bg-red-100 text-red-800 cursor-wait' : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'}`}>
                             {deleting.has(order.id) ? (

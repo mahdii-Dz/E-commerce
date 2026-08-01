@@ -19,6 +19,7 @@ import axios from "axios";
 import Image from "next/image";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import RichTextEditor from "@/components/RichTextEditor";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
 
 export default function BannerCategoriesPage() {
@@ -49,6 +50,7 @@ export default function BannerCategoriesPage() {
   // New category form
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [pendingDelete, setPendingDelete] = useState(null);
   
   // Search query
   const [searchQuery, setSearchQuery] = useState("");
@@ -289,18 +291,17 @@ export default function BannerCategoriesPage() {
     }
   };
 
-  const handleDeleteCategory = async (categoryId, index) => {
-    if (!confirm("Are you sure you want to delete this category?")) {
-      return;
-    }
+  const handleDeleteCategory = async () => {
+    if (!pendingDelete) return;
 
+    const { categoryId, index } = pendingDelete;
     const category = categories[index];
-    
+
     setCategories(prev => prev.filter((_, i) => i !== index));
+    setPendingDelete(null);
 
     if (category.isExisting && categoryId) {
       try {
-        
         await axios.delete(`/api/shop/categories/${categoryId}`);
         showToast("تم حذف التصنيف", "success");
         refetchCategories?.();
@@ -407,6 +408,16 @@ export default function BannerCategoriesPage() {
           <span className="font-medium">{toast.message}</span>
         </div>
       )}
+
+      {/* Delete Category Confirmation */}
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="حذف التصنيف"
+        message="هل أنت متأكد من حذف هذا التصنيف؟"
+        pending={isSubmitting}
+        onConfirm={handleDeleteCategory}
+        onCancel={() => setPendingDelete(null)}
+      />
 
       {/* Add Category Modal */}
       {showAddCategoryModal && (
@@ -925,7 +936,7 @@ export default function BannerCategoriesPage() {
                   </span>
                   
                   <button
-                    onClick={() => handleDeleteCategory(category.id, index)}
+                    onClick={() => setPendingDelete({ categoryId: category.id, index })}
                     disabled={isSubmitting}
                     className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-400 hover:text-[#FA3145] transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
                   >

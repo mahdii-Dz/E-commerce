@@ -20,6 +20,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import StarRating from "@/components/StarRating";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { Combobox, ComboboxContent, ComboboxList, ComboboxItem, ComboboxTrigger, ComboboxValue } from '@/components/ui/combobox';
 
 export default function AdminReviewsPage() {
@@ -65,6 +66,8 @@ export default function AdminReviewsPage() {
   const [reviews, setReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [reviewActionPending, setReviewActionPending] = useState(false);
 
   // Initialize products from API data
   useEffect(() => {
@@ -184,10 +187,10 @@ export default function AdminReviewsPage() {
     }
   };
 
-  const handleDeleteReview = async (reviewId) => {
-    if (!window.confirm('Are you sure you want to delete this review?')) {
-      return;
-    }
+  const handleDeleteReview = async () => {
+    if (!confirmDialog) return;
+    const reviewId = confirmDialog.reviewId;
+    setReviewActionPending(true);
 
     try {
       const response = await fetch(`/api/shop/review/${reviewId}`, {
@@ -202,9 +205,12 @@ export default function AdminReviewsPage() {
       showToast('تم حذف المراجعة بنجاح!', 'success');
       // Remove from list
       setReviews(prev => prev.filter(r => r.id !== reviewId));
+      setConfirmDialog(null);
     } catch (err) {
       console.error('Error deleting review:', err);
       showToast(err.message || 'فشل حذف المراجعة', 'error');
+    } finally {
+      setReviewActionPending(false);
     }
   };
 
@@ -226,10 +232,10 @@ export default function AdminReviewsPage() {
     }
   };
 
-  const handleRejectReview = async (reviewId) => {
-    if (!window.confirm('هل أنت متأكد من رفض هذه المراجعة؟')) {
-      return;
-    }
+  const handleRejectReview = async () => {
+    if (!confirmDialog) return;
+    const reviewId = confirmDialog.reviewId;
+    setReviewActionPending(true);
 
     try {
       const response = await fetch(`/api/shop/reviews/${reviewId}/reject`, {
@@ -243,8 +249,11 @@ export default function AdminReviewsPage() {
 
       showToast('تم رفض المراجعة وحذفها!', 'success');
       setReviews(prev => prev.filter(r => r.id !== reviewId));
+      setConfirmDialog(null);
     } catch (err) {
       showToast(err.message || 'فشل رفض المراجعة', 'error');
+    } finally {
+      setReviewActionPending(false);
     }
   };
 
@@ -373,6 +382,16 @@ export default function AdminReviewsPage() {
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Delete / Reject Confirmation */}
+      <ConfirmDialog
+        open={!!confirmDialog}
+        title={confirmDialog?.type === 'reject' ? 'رفض المراجعة' : 'حذف المراجعة'}
+        message={confirmDialog?.type === 'reject' ? 'هل أنت متأكد من رفض هذه المراجعة؟' : 'هل أنت متأكد من حذف هذه المراجعة؟'}
+        pending={reviewActionPending}
+        onConfirm={confirmDialog?.type === 'reject' ? handleRejectReview : handleDeleteReview}
+        onCancel={() => setConfirmDialog(null)}
+      />
 
       <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
         {/* Form Column */}
@@ -666,7 +685,7 @@ export default function AdminReviewsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleRejectReview(review.id)}
+                            onClick={() => setConfirmDialog({ type: 'reject', reviewId: review.id })}
                             className='flex items-center gap-1 text-red-600 border-red-300 hover:bg-red-50'
                           >
                             <XCircle size={16} />
@@ -677,7 +696,7 @@ export default function AdminReviewsPage() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDeleteReview(review.id)}
+                        onClick={() => setConfirmDialog({ type: 'delete', reviewId: review.id })}
                         className='flex items-center gap-1'
                       >
                         <Trash2 size={16} />

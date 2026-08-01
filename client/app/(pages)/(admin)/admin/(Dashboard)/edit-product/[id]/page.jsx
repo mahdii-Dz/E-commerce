@@ -36,6 +36,7 @@ import axios from "axios";
 import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import AdminTestimonialForm from "@/components/AdminTestimonialForm";
 import RichTextEditor from "@/components/RichTextEditor";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 function extractPublicIdFromCloudinaryUrl(url) {
   if (!url) return null;
@@ -56,6 +57,7 @@ export default function EditProductPage() {
   const [toast, setToast] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [product, setProduct] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Fetch categories
   const { data: categoriesData, isLoading: categoriesLoading, refetch: refetchCategories } = useFetchSingleProduct('/api/shop/categories');
@@ -516,15 +518,12 @@ export default function EditProductPage() {
   };
 
   const DeleteProduct = async () => {
-    if (!confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
       await axios.delete(`/api/shop/products/${id}`);
       showToast("تم حذف المنتج بنجاح!", "success");
+      setShowDeleteConfirm(false);
 
       setTimeout(() => {
         router.push("/admin/all-products");
@@ -561,6 +560,16 @@ export default function EditProductPage() {
           <span className="font-medium">{toast.message}</span>
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="حذف المنتج"
+        message="هل أنت متأكد من حذف هذا المنتج؟ لا يمكن التراجع عن هذا الإجراء."
+        pending={isSubmitting}
+        onConfirm={DeleteProduct}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
 
       {/* Color Add Modal */}
       {showColorModal && (
@@ -767,7 +776,7 @@ export default function EditProductPage() {
         </Link>
 
         <button
-          onClick={DeleteProduct}
+          onClick={() => setShowDeleteConfirm(true)}
           disabled={isSubmitting}
           className="w-10 h-10 flex items-center justify-center rounded-full border cursor-pointer border-gray-200 hover:bg-red-50 hover:border-red-200 transition-colors group disabled:opacity-50"
         >
