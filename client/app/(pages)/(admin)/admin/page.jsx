@@ -157,7 +157,7 @@ export default function AdminPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-xl mb-4 shadow-lg">
             <Image src='/Logo.png' alt='Logo' width={64} height={64} className="rounded-xl" />
           </div>
-          <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D'or</h3>
+          <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D&apos;or</h3>
           <h1 className="text-2xl font-bold text-gray-900">لوحة الإدارة</h1>
           <p className="text-gray-500 mt-2 text-sm">دخول آمن مطلوب</p>
         </div>

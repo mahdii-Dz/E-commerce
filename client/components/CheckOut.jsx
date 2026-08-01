@@ -654,7 +654,7 @@ export default function CheckOut({ productPrice, productId, colors = [], selecte
                     <div className="flex flex-col gap-3">
                         {colors.map((color) => (
                             <div
-                                key={color.hex}
+                                key={`${color.hex}-${color.name}`}
                                 className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white"
                             >
                                 <div className="flex items-center gap-3">

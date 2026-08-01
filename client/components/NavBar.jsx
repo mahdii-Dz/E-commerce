@@ -4,10 +4,37 @@ import { GlobalContext } from '@/app/context/Context'
 import { Search, ShoppingCart, Menu, X, Image as ImageIcon } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useContext, useState, useCallback, useEffect, useRef, useLayoutEffect } from 'react'
+import { useContext, useState, useCallback, useEffect, useRef, useLayoutEffect, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/input'
 import ShopHeaderBanner from './ShopHeaderBanner'
+
+function SearchDropdown({ products, onSelect }) {
+  if (!products || products.length === 0) return null;
+  return (
+    <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden max-h-96 overflow-y-auto">
+      {products.map(p => (
+        <button
+          key={p.id}
+          onClick={() => onSelect(p)}
+          className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:opacity-70 active:scale-[0.98] transition-all duration-150 text-right cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
+            {(p.image_url || p.images?.[0]?.url) ? (
+              <Image src={p.image_url || p.images?.[0]?.url} alt={p.name} width={40} height={40} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={16} /></div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
+            <p className="text-xs text-gray-500">{p.price} دج</p>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function NavBar() {
   const { Cart, openCategorySidebar } = useContext(GlobalContext);
@@ -39,11 +66,7 @@ function NavBar() {
     return () => ro.disconnect();
   }, []);
   // Start with null to prevent hydration mismatch
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
   const cartCount = Cart.length;
 
@@ -121,33 +144,6 @@ function NavBar() {
     }
   };
 
-  const SearchDropdown = ({ products, onSelect }) => {
-    if (!products || products.length === 0) return null;
-    return (
-      <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden max-h-96 overflow-y-auto">
-        {products.map(p => (
-          <button
-            key={p.id}
-            onClick={() => onSelect(p)}
-            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:opacity-70 active:scale-[0.98] transition-all duration-150 text-right cursor-pointer"
-          >
-            <div className="w-10 h-10 rounded-lg overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-100">
-              {(p.image_url || p.images?.[0]?.url) ? (
-                <Image src={p.image_url || p.images?.[0]?.url} alt={p.name} width={40} height={40} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-300"><ImageIcon size={16} /></div>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-800 truncate">{p.name}</p>
-              <p className="text-xs text-gray-500">{p.price} دج</p>
-            </div>
-          </button>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <>
       <nav ref={navRef} className='w-full max-w-full fixed left-0 top-0 border-b-2 border-b-stroke z-50 bg-white'>
@@ -165,7 +161,7 @@ function NavBar() {
         {/* Logo */}
         <Link href="/" className='logo cursor-pointer flex-shrink-0 min-w-0 flex items-center gap-2'>
           <Image src='/Logo.png' alt='Logo' width={40} height={40} />
-          <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D'or</h3>
+          <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D&apos;or</h3>
         </Link>
 
         {/* Desktop Search */}

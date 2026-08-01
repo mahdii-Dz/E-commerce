@@ -7,7 +7,7 @@ import ProductCard from '@/components/ProductCard';
 import ReviewsSection from '@/components/ReviewsSection';
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Percent, ShoppingCart, Sparkles, Tag, Truck, Van, XIcon } from 'lucide-react';
 import Link from 'next/link';
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import 'swiper/css';
@@ -46,12 +46,11 @@ export default function ProductClient({ product: initialProduct, relatedProducts
     const deliveryDate = new Date(date.setDate(date.getDate() + 2));
     const ArriveDay = deliveryDate.getDate();
     const month = deliveryDate.toLocaleString('default', { month: 'long' });
-    const [mounted, setMounted] = useState(false)
     const [selectedColor, setSelectedColor] = useState(null)
 
-    useEffect(() => {
-        setMounted(true)
-    }, [])
+    // "mounted" must be derived, not set in an effect, to satisfy the
+    // react-hooks/set-state-in-effect rule.
+    const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
     useEffect(() => {
         if (!product) return;
@@ -76,20 +75,21 @@ export default function ProductClient({ product: initialProduct, relatedProducts
     // Offers state
     const [offers, setOffers] = useState([]);
     const [selectedOffer, setSelectedOffer] = useState(null);
+    const [prevProductId, setPrevProductId] = useState(null);
     const offersRef = useRef(null);
     const checkoutRef = useRef(null);
     const isInitialSelection = useRef(true);
 
-   
+    if (product && product.id !== prevProductId) {
+        setPrevProductId(product.id);
+        const productOffers = product.offers && Array.isArray(product.offers) ? product.offers : [];
+        setOffers(productOffers);
+        setSelectedOffer(productOffers.length > 0 ? productOffers[0] : null);
+    }
 
     useEffect(() => {
-        if (product) {
-            const productOffers = product.offers && Array.isArray(product.offers) ? product.offers : [];
-            setOffers(productOffers);
-
-            setSelectedOffer(productOffers.length > 0 ? productOffers[0] : null);
-            setTimeout(() => { isInitialSelection.current = false; }, 0);
-        }
+        const timer = setTimeout(() => { isInitialSelection.current = false; }, 0);
+        return () => clearTimeout(timer);
     }, [product])
 
     const getNavbarOffset = () => {
@@ -324,7 +324,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                                     <div className="flex flex-wrap gap-3">
                                         {product.colors.map((color) => (
                                             <button
-                                                key={color.hex}
+                                                key={`${color.hex}-${color.name}`}
                                                 onClick={() => {
                                                     setSelectedColor(color.hex);
                                                     const idx = product.images.findIndex(

@@ -197,7 +197,7 @@ export const DashBoardSideBar = ({ isCollapsed, isMobileOpen, closeMobileSidebar
             <div className="flex items-center justify-between mb-12">
               <div className="text-2xl font-bold text-black tracking-tight">
                 <Image src='/Logo.png' alt='Logo' width={40} height={40} />
-                <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D'or</h3>
+                <h3 className='text-xl lg:text-xl font-semibold truncate'>La Maison D&apos;or</h3>
               </div>
               <button
                 onClick={toggleSidebar}

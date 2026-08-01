@@ -3,18 +3,14 @@
 import { ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useSyncExternalStore } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { GlobalContext } from "@/app/context/Context";
 import { getProduct } from '@/lib/server-fetch';
 
 export default function ProductCard({ product, isCart, Cart, setCart }) {
   const queryClient = useQueryClient();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
   function handleAddToCart(product) {
     setCart(prevCart => {

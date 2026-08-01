@@ -37,6 +37,9 @@ export function AdminAuthGuard({ children }) {
   }, []);
 
   useEffect(() => {
+    // setState happens only after async fetch resolution (allowed by React docs);
+    // the compiler-based rule cannot distinguish async from sync here.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkAuth().then((w) => {
       if (!w) {
         handleUnauthorized();

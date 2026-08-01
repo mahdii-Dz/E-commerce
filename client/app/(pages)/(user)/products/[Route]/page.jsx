@@ -114,10 +114,16 @@ function getInitialFilter(route, searchParams) {
 export default async function ProductsPage({ params, searchParams }) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
+
+  let categories;
+  let productsData;
+  let routeLabel;
+  let initialFilter;
+
   try {
     const routeParams = getRouteParams(resolvedParams.Route, resolvedSearchParams);
 
-    const [categories, productsData] = await Promise.all([
+    [categories, productsData] = await Promise.all([
       getCategories(),
       getFilteredProducts({
         category: routeParams.category,
@@ -130,19 +136,21 @@ export default async function ProductsPage({ params, searchParams }) {
       }),
     ]);
 
-    const routeLabel = ROUTE_LABELS[resolvedParams.Route] || 'المنتجات';
-    const initialFilter = getInitialFilter(resolvedParams.Route, resolvedSearchParams);
+    routeLabel = ROUTE_LABELS[resolvedParams.Route] || 'المنتجات';
+    initialFilter = getInitialFilter(resolvedParams.Route, resolvedSearchParams);
+  } catch (error) {
+    console.error('Products page error:', error);
+    notFound();
+  }
 
-    return <ProductsClient 
-      categories={categories} 
+  return (
+    <ProductsClient
+      categories={categories}
       productsData={productsData}
       route={resolvedParams.Route}
       routeLabel={routeLabel}
       initialFilter={initialFilter}
       searchParams={resolvedSearchParams}
-    />;
-  } catch (error) {
-    console.error('Products page error:', error);
-    notFound();
-  }
+    />
+  );
 }

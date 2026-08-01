@@ -6,12 +6,13 @@ import Footer from '@/components/Footer';
 import RenderProducts from '@/components/RenderProducts'
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
-import { useContext } from 'react'
+import { useContext, useSyncExternalStore } from 'react'
 
 function CartPage() {
   const { Cart } = useContext(GlobalContext)
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
 
-  const isEmpty = !Cart || Cart.length === 0;
+  const isEmpty = !mounted || !Cart || Cart.length === 0;
 
   return (
     <div className='w-full h-auto min-h-screen px-2.5 sm:px-6 lg:px-20 overflow-x-hidden'>

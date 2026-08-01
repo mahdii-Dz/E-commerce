@@ -624,7 +624,7 @@ export default function AddOrderPage() {
                         {item.colors.map(color => {
                           const qty = item.colorQuantities[color.hex] || 0
                           return (
-                            <div key={color.hex} className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                            <div key={`${color.hex}-${color.name}`} className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
                               <span className="w-5 h-5 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: `#${color.hex}` }} />
                               <span className="text-xs font-medium text-gray-700 ml-1">{color.name}</span>
                               <button

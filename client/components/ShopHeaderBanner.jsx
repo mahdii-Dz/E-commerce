@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useSyncExternalStore } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 async function fetchHeader() {
@@ -10,11 +10,7 @@ async function fetchHeader() {
 }
 
 export default function ShopHeaderBanner() {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
 
   const { data } = useQuery({
     queryKey: ['shop-header'],

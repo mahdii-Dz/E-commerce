@@ -40,7 +40,7 @@ function Footer() {
         {/* Logo */}
         <div className='flex flex-col items-center lg:items-start gap-2 '>
           <Image src="/logo.png" alt="Logo" width={75} height={75} />
-          <h1 className='text-3xl lg:text-4xl font-bold order-1'>La Maison D'or</h1>
+          <h1 className='text-3xl lg:text-4xl font-bold order-1'>La Maison D&apos;or</h1>
         </div>
         
         {/* Contact Info */}
@@ -94,7 +94,7 @@ function Footer() {
 
       {/* Copyright */}
       <div className='mt-10 lg:mt-40 text-secondary text-sm text-center'>
-        <p>© {currentYear} La Maison D'or. جميع الحقوق محفوظة.</p>
+        <p>© {currentYear} La Maison D&apos;or. جميع الحقوق محفوظة.</p>
       </div>
     </footer>
   )
