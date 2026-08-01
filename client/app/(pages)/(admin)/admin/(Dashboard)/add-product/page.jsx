@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2, Sparkles, Truck, GripVertical, Upload, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -61,7 +61,6 @@ export default function AddProductPage() {
   const [colorForm, setColorForm] = useState({ name: "", hex: "#000000", image: "" });
 
   const [images, setImages] = useState([]);
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
   const fileInputRef = useRef(null);
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const [overallProgress, setOverallProgress] = useState(0);
@@ -79,12 +78,6 @@ export default function AddProductPage() {
 
   // Package naming state
   const [packageNaming, setPackageNaming] = useState({ enabled: false, mainName: '' });
-
-
-  useEffect(() => {
-    const imageUrl = images[0]?.url || "";
-    setThumbnailUrl(imageUrl.replace('/upload/', '/upload/w_800,h_800,c_fill,f_auto,q_auto/'));
-  }, [images])
 
   // Combobox anchor for categories
   const categoryAnchor = useComboboxAnchor();
@@ -312,6 +305,7 @@ export default function AddProductPage() {
 
     try {
       let finalImages = [...images];
+      let finalColors = [...colors];
 
       const localImages = images.filter(img => img.status === 'local');
       if (localImages.length > 0) {
@@ -336,11 +330,19 @@ export default function AddProductPage() {
               : img
           );
 
+          // Replace blob URLs with uploaded URLs in linked colors
+          finalColors = finalColors.map(c =>
+            c.image === localImages[i].url ? { ...c, image: uploadedUrl } : c
+          );
+
           setOverallProgress(((i + 1) / localImages.length) * 100);
         }
 
         setIsUploadingImages(false);
       }
+
+      // Drop colors whose linked image was removed before submit (blob URLs can never resolve)
+      finalColors = finalColors.filter(c => !c.image?.startsWith("blob:"));
 
       // Upload landing page image if local
       let finalLandingPageUrl = landingPageImage?.url || null;
@@ -371,15 +373,16 @@ export default function AddProductPage() {
         compare_price: parseFloat(ComparePrice) || 0,
         discount_percentage: parseFloat(formData.discount) || 0,
         images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null, is_active: img.is_active !== false })),
-        thumbnail: thumbnailUrl,
+        thumbnail: finalImages[0]?.url?.replace('/upload/', '/upload/w_800,h_800,c_fill,f_auto,q_auto/') || "",
         landing_page_image: finalLandingPageUrl,
-        colors: colors,
+        colors: finalColors,
         offers: offers,
         package_naming: packageNaming,
       });
 
       showToast("تم إضافة المنتج بنجاح!", "success");
       setCreatedProductId(response.data.id);
+      setTimeout(() => router.push("/admin/all-products"), 3000);
 
     } catch (error) {
       console.error("Submit failed:", error);

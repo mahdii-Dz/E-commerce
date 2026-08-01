@@ -421,6 +421,7 @@ export default function EditProductPage() {
 
     try {
       let finalImages = [...images];
+      let finalColors = [...colors];
 
       const localImages = images.filter(img => img.status === 'local');
       if (localImages.length > 0) {
@@ -443,6 +444,11 @@ export default function EditProductPage() {
             img.id === localImages[i].id
               ? { ...img, url: uploadedUrl, publicId: uploadedPublicId, status: 'uploaded', file: null }
               : img
+          );
+
+          // Replace blob URLs with uploaded URLs in linked colors
+          finalColors = finalColors.map(c =>
+            c.image === localImages[i].url ? { ...c, image: uploadedUrl } : c
           );
 
           setOverallProgress(((i + 1) / localImages.length) * 100);
@@ -490,7 +496,7 @@ export default function EditProductPage() {
         images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null, is_active: img.is_active !== false })),
         thumbnail: getThumbnailUrl(finalImages[0]?.url),
         landing_page_image: finalLandingPageUrl,
-        colors: colors,
+        colors: finalColors,
         offers: offers,
         package_naming: packageNaming,
       });
@@ -1131,7 +1137,7 @@ export default function EditProductPage() {
                     {(values) => (
                       <>
                         {values.map((value) => (
-                          <ComboboxChip key={value} className="bg-[#FA3145]/10 text-[#FA3145] border-[#FA3145]/20">
+                          <ComboboxChip key={value} className="bg-[#FA3145]/10 text-[#FA3145] border-[#FA3145]/20 !pr-2">
                             {value}
                           </ComboboxChip>
                         ))}
