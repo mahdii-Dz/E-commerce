@@ -840,7 +840,7 @@ export default function AddProductPage() {
                     {(values) => (
                       <>
                         {values.map((value) => (
-                          <ComboboxChip key={value} className="bg-[#FA3145]/10 text-[#FA3145] border-[#FA3145]/20">
+                          <ComboboxChip key={value} className="bg-[#FA3145]/10 text-[#FA3145] border-[#FA3145]/20 !pr-2">
                             {value}
                           </ComboboxChip>
                         ))}
@@ -949,7 +949,7 @@ export default function AddProductPage() {
                 disabled={isSubmitting}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors cursor-pointer ${packageNaming.enabled ? 'bg-[#FA3145]' : 'bg-gray-300'}`}
               >
-                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${packageNaming.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${packageNaming.enabled ? '-translate-x-6' : '-translate-x-1'}`} />
               </button>
             </div>
 

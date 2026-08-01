@@ -1,6 +1,7 @@
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { WILAYA_SEED, BALADIYA_SEED } from './wilaya-seed.js';
 
 dotenv.config();
 
@@ -242,6 +243,19 @@ async function migrate() {
     )`);
     console.log('  ✓ wilayas');
 
+    // Seed default wilayas on a fresh database
+    const [wilayaCountRows] = await connection.execute('SELECT COUNT(*) AS total FROM wilayas');
+    if (Number(wilayaCountRows[0].total) < 58 && WILAYA_SEED.length > 0) {
+      for (let i = 0; i < WILAYA_SEED.length; i += 500) {
+        const chunk = WILAYA_SEED.slice(i, i + 500);
+        await connection.query('INSERT INTO wilayas (code, name, home_delivery_price, stopdesk_delivery_price, free_delivery, is_active) VALUES ?',
+          [chunk.map(w => [w.code, w.name, w.home_delivery_price, w.stopdesk_delivery_price, w.free_delivery, w.is_active])]);
+      }
+      console.log(`  ✓ ${WILAYA_SEED.length} wilayas seeded`);
+    } else {
+      console.log(`  - wilayas table has ${wilayaCountRows[0].total} rows, skipping seed`);
+    }
+
     // ============ 13. BALADIYAS ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS baladiyas (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -251,6 +265,19 @@ async function migrate() {
       FOREIGN KEY (wilaya_code) REFERENCES wilayas(code) ON DELETE CASCADE
     )`);
     console.log('  ✓ baladiyas');
+
+    // Seed default baladiyas on a fresh database (wilayas seeded first, FK-safe)
+    const [baladiyaCountRows] = await connection.execute('SELECT COUNT(*) AS total FROM baladiyas');
+    if (Number(baladiyaCountRows[0].total) < 1542 && BALADIYA_SEED.length > 0) {
+      for (let i = 0; i < BALADIYA_SEED.length; i += 500) {
+        const chunk = BALADIYA_SEED.slice(i, i + 500);
+        await connection.query('INSERT INTO baladiyas (id, wilaya_code, name, has_stopdesk) VALUES ?',
+          [chunk.map(b => [b.id, b.wilaya_code, b.name, b.has_stopdesk])]);
+      }
+      console.log(`  ✓ ${BALADIYA_SEED.length} baladiyas seeded`);
+    } else {
+      console.log(`  - baladiyas table has ${baladiyaCountRows[0].total} rows, skipping seed`);
+    }
 
     // ============ 14. GOOGLE CREDENTIALS ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS google_credentials (
@@ -272,6 +299,24 @@ async function migrate() {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`);
     console.log('  ✓ google_sheets');
+
+    // ============ 16. SECONDARY INDEXES ============
+    const indexes = [
+      { table: 'order_info', name: 'idx_current_status', sql: 'ALTER TABLE order_info ADD INDEX idx_current_status (current_status)' },
+      { table: 'order_info', name: 'idx_created_at', sql: 'ALTER TABLE order_info ADD INDEX idx_created_at (created_at)' },
+      { table: 'lefted_orders', name: 'idx_phone', sql: 'ALTER TABLE lefted_orders ADD INDEX idx_phone (phone)' },
+      { table: 'lefted_orders', name: 'idx_created_at', sql: 'ALTER TABLE lefted_orders ADD INDEX idx_created_at (created_at)' },
+      { table: 'reviews', name: 'idx_product_approved', sql: 'ALTER TABLE reviews ADD INDEX idx_product_approved (product_id, is_approved)' },
+      { table: 'products', name: 'idx_is_active', sql: 'ALTER TABLE products ADD INDEX idx_is_active (is_active)' },
+    ];
+    for (const { table, name, sql } of indexes) {
+      try {
+        await connection.execute(sql);
+        console.log(`  ✓ ${name} index added to ${table}`);
+      } catch (e) {
+        if (!e.message.includes('Duplicate key name')) console.error(`  ${name} index error:`, e.message);
+      }
+    }
 
     console.log('\nMigration completed successfully!');
   } catch (error) {

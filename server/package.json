@@ -6,6 +6,7 @@
   "scripts": {
     "start": "nodemon index.js",
     "docker-start": "node migrate.local.js && node index.js",
+    "sync-wilayas": "node sync-wilayas.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "deploy": "wrangler deploy",
     "dev": "wrangler dev"
