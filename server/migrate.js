@@ -101,6 +101,17 @@ async function migrate() {
       console.log('  - linked_product_id column already exists, skipping');
     }
 
+    // ============ CATEGORIES IMAGE COLUMN ============
+    const checkCategoryImageColumn = await conn.execute("SHOW COLUMNS FROM categories LIKE 'image_url'");
+    const hasCategoryImageColumn = Array.isArray(checkCategoryImageColumn[0]) && checkCategoryImageColumn[0].length > 0;
+    if (!hasCategoryImageColumn) {
+      console.log('Adding image_url column to categories...');
+      await conn.execute("ALTER TABLE categories ADD COLUMN image_url TEXT DEFAULT NULL");
+      console.log('  ✓ image_url column added');
+    } else {
+      console.log('  - categories image_url column already exists, skipping');
+    }
+
     // ============ GOOGLE CREDENTIALS TABLE ============
     const checkCredTable = await conn.execute("SHOW TABLES LIKE 'google_credentials'");
     const hasCredTable = Array.isArray(checkCredTable) && checkCredTable.length > 0;

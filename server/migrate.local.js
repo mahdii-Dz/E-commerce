@@ -33,8 +33,18 @@ async function migrate() {
     // ============ 1. CATEGORIES ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS categories (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(255) NOT NULL UNIQUE
+      name VARCHAR(255) NOT NULL UNIQUE,
+      image_url TEXT DEFAULT NULL
     )`);
+
+    const checkCategoryImageColumn = await connection.execute("SHOW COLUMNS FROM categories LIKE 'image_url'");
+    const hasCategoryImageColumn = Array.isArray(checkCategoryImageColumn[0]) && checkCategoryImageColumn[0].length > 0;
+    if (!hasCategoryImageColumn) {
+      await connection.execute("ALTER TABLE categories ADD COLUMN image_url TEXT DEFAULT NULL");
+      console.log('  ✓ categories image_url column added');
+    } else {
+      console.log('  - categories image_url column already exists, skipping');
+    }
     console.log('  ✓ categories');
 
     // ============ 2. PRODUCTS ============

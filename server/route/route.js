@@ -1,5 +1,5 @@
 import express from 'express';
-import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, MarkOrderDeliverySent, getBanners, updateBanners, getHeader, updateHeader, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, ApproveReview, RejectReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic, GetDeliveryWilayas, UpdateDeliveryWilayas, CreateWilaya, GetWilayaBaladiyas, UpdateWilayaStopDesk, GetDeliveryStats, GetPublicWilayas } from '../controllers/ShopController.js';
+import { AddCategory, AddProduct, AddOrder, UpdateProduct, DeleteProduct, DeleteCategory, UpdateCategory, GetCategories, GetProducts, GetProductById, GetProductsByCategory, GetDashboardStats, GetOrders, AcceptOrder, RejectOrder, UpdateOrder, MarkOrderDeliverySent, getBanners, updateBanners, getHeader, updateHeader, GetProductReviews, AddUserReview, AddAdminReview, DeleteReview, ApproveReview, RejectReview, AddLeftedOrder, GetLeftedOrders, UpdateLeftedOrder, DeleteLeftedOrder, ConvertLeftedOrder, DeleteLeftedOrderPublic, GetDeliveryWilayas, UpdateDeliveryWilayas, CreateWilaya, GetWilayaBaladiyas, UpdateWilayaStopDesk, GetDeliveryStats, GetPublicWilayas } from '../controllers/ShopController.js';
 import { GetWorkers, GetWorker, CreateWorker, UpdateWorker, DeleteWorker, LoginWorker, LogoutWorker, CheckWorkerSession } from '../controllers/WorkerController.js';
 import { UploadCredentials, GetCredentialInfo, GetSheets, CreateSheet, GetSheet, UpdateSheet, DeleteSheet, ToggleSheetStatus } from '../controllers/SheetsController.js';
 import { verifyAdminSession } from '../middleware/sessionAuth.js';
@@ -53,6 +53,7 @@ router.put('/update-banners', verifyAdminSession, updateBanners);
 router.put('/update-header', verifyAdminSession, updateHeader);
 router.delete('/delete-product/:id', verifyAdminSession,DeleteProduct);
 router.delete('/delete-category/:id', verifyAdminSession,DeleteCategory);
+router.put('/update-category/:id', verifyAdminSession, UpdateCategory);
 
 // Delivery / Wilaya routes
 router.get('/get-public-wilayas', GetPublicWilayas);

@@ -114,15 +114,17 @@ async function invalidateCategoryCache() {
 
 export const AddCategory = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, image_url } = req.body;
     
     if (!name || typeof name !== "string" || name.trim().length === 0) {
       return res.status(400).json({ error: "Category name is required" });
     }
 
+    const imageUrl = image_url && typeof image_url === "string" ? image_url.trim() : null;
+
     const result = await execute(
-      "INSERT INTO categories (name) VALUES (?)",
-      [name.trim()]
+      "INSERT INTO categories (name, image_url) VALUES (?, ?)",
+      [name.trim(), imageUrl]
     );
 
     let categoryId = result.insertId;
@@ -149,6 +151,43 @@ export const AddCategory = async (req, res) => {
       return res.status(409).json({ error: "Category already exists" });
     }
     return handleDbError(res, error, "adding category");
+  }
+};
+
+export const UpdateCategory = async (req, res) => {
+  try {
+    const id = validateId(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid category ID" });
+
+    const { name, image_url } = req.body;
+
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return res.status(400).json({ error: "Category name is required" });
+    }
+
+    const imageUrl = image_url && typeof image_url === "string" ? image_url.trim() : null;
+
+    // Verify exists first
+    const check = await query("SELECT id FROM categories WHERE id = ?", [id]);
+    if (!check || check.length === 0) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+
+    await execute(
+      "UPDATE categories SET name = ?, image_url = ? WHERE id = ?",
+      [name.trim(), imageUrl, id]
+    );
+
+    // Invalidate cache
+    await invalidateCategoryCache();
+    await del('categories');
+
+    return res.status(200).json({ message: "Category updated successfully" });
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ error: "Category already exists" });
+    }
+    return handleDbError(res, error, "updating category");
   }
 };
 
