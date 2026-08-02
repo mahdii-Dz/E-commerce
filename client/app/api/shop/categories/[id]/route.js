@@ -18,3 +18,21 @@ export async function DELETE(request, { params }) {
     );
   }
 }
+
+export async function PUT(request, { params }) {
+  const auth = await adminAuth(request);
+  if (auth.error) return auth.error;
+
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const headers = { cookie: request.headers.get('cookie') };
+    const data = await proxyRequest('PUT', `/api/shop/update-category/${id}`, body, headers);
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+}

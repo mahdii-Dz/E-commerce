@@ -12,7 +12,9 @@ import {
   Search,
   Image as ImageIcon,
   Eye,
-  EyeOff
+  EyeOff,
+  Pencil,
+  UploadCloud
 } from "lucide-react";
 import Link from "next/link";
 import axios from "axios";
@@ -21,6 +23,81 @@ import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import RichTextEditor from "@/components/RichTextEditor";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
+
+function CategoryImageUploader({ imageUrl, uploading, onFileSelect, onRemove, disabled = false }) {
+  const [isDragging, setIsDragging] = useState(false);
+  const inputRef = useRef(null);
+
+  const handleFiles = (files) => {
+    const file = files && files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    onFileSelect(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">صورة التصنيف (اختياري)</label>
+      {imageUrl ? (
+        <div className="relative w-full h-36 rounded-xl overflow-hidden border border-gray-200 group">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imageUrl}
+            alt="صورة التصنيف"
+            className="w-full h-full object-cover"
+          />
+          <button
+            type="button"
+            onClick={onRemove}
+            disabled={disabled || uploading}
+            className="absolute top-2 left-2 w-8 h-8 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors disabled:opacity-50"
+            title="إزالة الصورة"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ) : (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+          onDragLeave={() => setIsDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => !disabled && inputRef.current?.click()}
+          className={`w-full h-36 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
+            isDragging ? 'border-[#FA3145] bg-[#FA3145]/5' : 'border-gray-300 bg-gray-50 hover:border-[#FA3145] hover:bg-[#FA3145]/5'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {uploading ? (
+            <>
+              <Loader2 size={24} className="animate-spin text-[#FA3145]" />
+              <span className="text-sm text-gray-500">جاري رفع الصورة...</span>
+            </>
+          ) : (
+            <>
+              <UploadCloud size={24} className="text-gray-400" />
+              <span className="text-sm text-gray-500">اسحب وأفلت الصورة هنا أو انقر للاختيار</span>
+              <span className="text-xs text-gray-400">PNG, JPG, WebP</span>
+            </>
+          )}
+        </div>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        onChange={(e) => {
+          handleFiles(e.target.files);
+          e.target.value = '';
+        }}
+        className="hidden"
+      />
+    </div>
+  );
+}
 
 export default function BannerCategoriesPage() {
   // Toast state
@@ -50,7 +127,16 @@ export default function BannerCategoriesPage() {
   // New category form
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryImage, setNewCategoryImage] = useState({ url: null, publicId: null });
+  const [isUploadingCategoryImage, setIsUploadingCategoryImage] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
+
+  // Edit category form
+  const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editCategoryName, setEditCategoryName] = useState("");
+  const [editCategoryImage, setEditCategoryImage] = useState({ url: null, publicId: null, isExisting: false });
+  const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
   
   // Search query
   const [searchQuery, setSearchQuery] = useState("");
@@ -81,6 +167,7 @@ export default function BannerCategoriesPage() {
       setCategories(categoriesData.map(cat => ({
         id: cat.id,
         name: cat.name,
+        image_url: cat.image_url || null,
         isExisting: true
       })));
     }
@@ -251,6 +338,130 @@ export default function BannerCategoriesPage() {
     }
   };
 
+  // Category image helpers
+  const extractPublicIdFromUrl = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    const parts = url.split('/');
+    const uploadIdx = parts.lastIndexOf('upload');
+    if (uploadIdx === -1) return null;
+    const after = parts.slice(uploadIdx + 1).join('/');
+    return after.replace(/^v\d+\//, '').replace(/\.[^.]+$/, '');
+  };
+
+  const uploadCategoryImage = async (file, mode) => {
+    const setUploading = mode === 'edit' ? setIsUploadingEditImage : setIsUploadingCategoryImage;
+    setUploading(true);
+
+    const formDataUpload = new FormData();
+    formDataUpload.append("image", file);
+
+    try {
+      const response = await axios.post("/api/cloudinary", formDataUpload, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const imageUrl = response.data.data.url;
+      const publicId = response.data.data.public_id;
+
+      if (mode === 'edit') {
+        setEditCategoryImage(prev => {
+          // Clean up the previously uploaded (replacement) image from Cloudinary
+          if (prev.publicId && !prev.isExisting) {
+            axios.delete(`/api/cloudinary/${prev.publicId}`).catch(() => {});
+          }
+          return { url: imageUrl, publicId, isExisting: false };
+        });
+      } else {
+        setNewCategoryImage(prev => {
+          if (prev.publicId) {
+            axios.delete(`/api/cloudinary/${prev.publicId}`).catch(() => {});
+          }
+          return { url: imageUrl, publicId, isExisting: false };
+        });
+      }
+
+      showToast("تم رفع صورة التصنيف", "success");
+    } catch (error) {
+      console.error("Upload failed:", error);
+      showToast("فشل رفع صورة التصنيف", "error");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveCategoryImage = async (mode) => {
+    if (mode === 'edit') {
+      const { publicId, isExisting, url } = editCategoryImage;
+      if (publicId) {
+        await axios.delete(`/api/cloudinary/${publicId}`).catch(() => {});
+      } else if (isExisting && url) {
+        const extracted = extractPublicIdFromUrl(url);
+        if (extracted) {
+          await axios.delete(`/api/cloudinary/${extracted}`).catch(() => {});
+        }
+      }
+      setEditCategoryImage({ url: null, publicId: null, isExisting: false });
+    } else {
+      const { publicId } = newCategoryImage;
+      if (publicId) {
+        await axios.delete(`/api/cloudinary/${publicId}`).catch(() => {});
+      }
+      setNewCategoryImage({ url: null, publicId: null });
+    }
+  };
+
+  const handleOpenEditCategory = (category) => {
+    setEditingCategory(category);
+    setEditCategoryName(category.name);
+    setEditCategoryImage({
+      url: category.image_url || null,
+      publicId: null,
+      isExisting: !!category.image_url,
+    });
+    setShowEditCategoryModal(true);
+  };
+
+  const handleSaveEditCategory = async () => {
+    if (!editingCategory) return;
+    if (!editCategoryName.trim()) {
+      showToast("الرجاء إدخال اسم التصنيف", "error");
+      return;
+    }
+
+    if (categories.some(cat =>
+      cat.id !== editingCategory.id &&
+      cat.name.toLowerCase() === editCategoryName.trim().toLowerCase()
+    )) {
+      showToast("التصنيف موجود مسبقاً", "error");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await axios.put(`/api/shop/categories/${editingCategory.id}`, {
+        name: editCategoryName.trim(),
+        image_url: editCategoryImage.url,
+      });
+
+      setCategories(prev => prev.map(cat =>
+        cat.id === editingCategory.id
+          ? { ...cat, name: editCategoryName.trim(), image_url: editCategoryImage.url }
+          : cat
+      ));
+      setShowEditCategoryModal(false);
+      setEditingCategory(null);
+      showToast("تم تحديث التصنيف بنجاح", "success");
+
+      refetchCategories?.();
+    } catch (error) {
+      console.error("Failed to update category:", error);
+      showToast(error.response?.data?.message || "فشل تحديث التصنيف", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Category management
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
@@ -267,18 +478,21 @@ export default function BannerCategoriesPage() {
 
     try {
       const response = await axios.post('/api/shop/categories', {
-        name: newCategoryName.trim()
+        name: newCategoryName.trim(),
+        image_url: newCategoryImage.url,
       });
 
       const newCategory = {
         id: response.data.id || Date.now(),
         name: newCategoryName.trim(),
+        image_url: newCategoryImage.url,
         isExisting: true,
         isNew: true
       };
 
       setCategories(prev => [...prev, newCategory]);
       setNewCategoryName("");
+      setNewCategoryImage({ url: null, publicId: null });
       setShowAddCategoryModal(false);
       showToast("تم إضافة التصنيف بنجاح", "success");
       
@@ -446,6 +660,14 @@ export default function BannerCategoriesPage() {
                   onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
                 />
               </div>
+
+              <CategoryImageUploader
+                imageUrl={newCategoryImage.url}
+                uploading={isUploadingCategoryImage}
+                onFileSelect={(file) => uploadCategoryImage(file, 'add')}
+                onRemove={() => handleRemoveCategoryImage('add')}
+                disabled={isSubmitting}
+              />
               
               <div className="flex gap-3 mt-4">
                 <button
@@ -466,6 +688,66 @@ export default function BannerCategoriesPage() {
                       <Plus size={18} />
                       إضافة
                     </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Category Modal */}
+      {showEditCategoryModal && editingCategory && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-6 w-96 shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-gray-900">تعديل التصنيف</h3>
+              <button 
+                onClick={() => setShowEditCategoryModal(false)}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X size={20} className="text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">اسم التصنيف *</label>
+                <input
+                  type="text"
+                  value={editCategoryName}
+                  onChange={(e) => setEditCategoryName(e.target.value)}
+                  placeholder="مثال: إلكترونيات"
+                  className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FA3145] text-gray-800"
+                  autoFocus
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveEditCategory()}
+                />
+              </div>
+
+              <CategoryImageUploader
+                imageUrl={editCategoryImage.url}
+                uploading={isUploadingEditImage}
+                onFileSelect={(file) => uploadCategoryImage(file, 'edit')}
+                onRemove={() => handleRemoveCategoryImage('edit')}
+                disabled={isSubmitting}
+              />
+              
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={() => setShowEditCategoryModal(false)}
+                  className="flex-1 px-4 py-3 border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={handleSaveEditCategory}
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-3 bg-[#FA3145] hover:bg-[#e02a3b] text-white rounded-xl transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    "حفظ"
                   )}
                 </button>
               </div>
@@ -931,17 +1213,41 @@ export default function BannerCategoriesPage() {
                   key={category.id || index}
                   className="w-full flex items-center justify-between px-5 py-4 bg-white rounded-xl border border-gray-200 hover:border-[#FA3145] transition-colors group"
                 >
-                  <span className="text-base text-gray-800 font-medium font-roboto">
-                    {category.name}
-                  </span>
+                  <div className="flex items-center gap-3 min-w-0">
+                    {category.image_url ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={category.image_url}
+                        alt={category.name}
+                        className="w-10 h-10 rounded-lg object-cover border border-gray-100 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                        <ImageIcon size={18} className="text-gray-400" />
+                      </div>
+                    )}
+                    <span className="text-base text-gray-800 font-medium font-roboto truncate">
+                      {category.name}
+                    </span>
+                  </div>
                   
-                  <button
-                    onClick={() => setPendingDelete({ categoryId: category.id, index })}
-                    disabled={isSubmitting}
-                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-400 hover:text-[#FA3145] transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEditCategory(category)}
+                      disabled={isSubmitting}
+                      title="تعديل التصنيف"
+                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                    >
+                      <Pencil size={18} />
+                    </button>
+                    <button
+                      onClick={() => setPendingDelete({ categoryId: category.id, index })}
+                      disabled={isSubmitting}
+                      className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 text-gray-400 hover:text-[#FA3145] transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))
             )}

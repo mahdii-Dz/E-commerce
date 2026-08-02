@@ -22,6 +22,7 @@ export default function HomeClient({ banners = [], products = [], categories }) 
           <Main
             Banners={banners}
             Products={products}
+            Categories={categories || []}
             onOpenCategorySidebar={openCategorySidebar}
           />
         </div>

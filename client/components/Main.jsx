@@ -4,11 +4,13 @@ import { ArrowRight, Menu } from 'lucide-react'
 import Link from 'next/link'
 import React, { useContext } from 'react'
 import RenderProducts from './RenderProducts'
+import CategoryCarousel from './CategoryCarousel'
 import Image from 'next/image'
 
-function Main({ Banners, Products = [], onOpenCategorySidebar }) {
+function Main({ Banners, Products = [], Categories = [], onOpenCategorySidebar }) {
   const { Promotions } = useContext(GlobalContext)
   const NewestProducts = Products.slice().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10)
+  const CategoriesWithImages = Categories.filter(cat => cat.image_url)
 
   const sortedBanners = Array.isArray(Banners)
     ? [...Banners].sort((a, b) => a.position - b.position)
@@ -17,7 +19,7 @@ function Main({ Banners, Products = [], onOpenCategorySidebar }) {
   const sideBanner = sortedBanners[1]
 
   return (
-    <main className='w-full flex-1 h-auto'>
+    <main className='w-full flex-1 min-w-0 h-auto'>
       {/* Shop by Category Button - Mobile only */}
       <button
         onClick={onOpenCategorySidebar}
@@ -91,6 +93,16 @@ function Main({ Banners, Products = [], onOpenCategorySidebar }) {
           )}
         </div>
       </div>
+
+      {/* Categories Section */}
+      {CategoriesWithImages.length > 0 && (
+        <section className='mt-10 px-2.5 lg:px-0'>
+          <div className='flex justify-between items-center mb-6'>
+            <h1 className='text-xl lg:text-2xl font-semibold'>تسوق حسب الفئة</h1>
+          </div>
+          <CategoryCarousel Categories={CategoriesWithImages} />
+        </section>
+      )}
 
       {/* Products sections... */}
       <section className='mt-10 px-2.5 lg:px-0'>

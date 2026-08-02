@@ -53,6 +53,17 @@ function SideBar({ category, isLoadingCategories, isOpen, onClose }) {
                         category.map((cat) => (
                             <Link key={cat.id} href={`/products/All?category=${cat.name}`} onClick={onClose}>
                                 <div className='flex items-center gap-3 font-medium p-3 cursor-pointer rounded-xl w-full hover:bg-primary/10 hover:text-primary'>
+                                    {cat.image_url ? (
+                                        <Image
+                                            src={cat.image_url}
+                                            width={40}
+                                            height={40}
+                                            alt={cat.name}
+                                            className='rounded-md object-cover w-10 h-10 flex-shrink-0'
+                                        />
+                                    ) : (
+                                        <span className='w-5 h-5 rounded-full bg-gray-200 flex-shrink-0' />
+                                    )}
                                     <span className="truncate">{cat.name}</span>
                                 </div>
                             </Link>
