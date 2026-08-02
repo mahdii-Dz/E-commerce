@@ -62,7 +62,7 @@ function SideBar({ category, isLoadingCategories, isOpen, onClose }) {
                                             className='rounded-md object-cover w-10 h-10 flex-shrink-0'
                                         />
                                     ) : (
-                                        <span className='w-5 h-5 rounded-full bg-gray-200 flex-shrink-0' />
+                                        null
                                     )}
                                     <span className="truncate">{cat.name}</span>
                                 </div>
