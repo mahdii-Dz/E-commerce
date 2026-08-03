@@ -37,16 +37,7 @@ import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import AdminTestimonialForm from "@/components/AdminTestimonialForm";
 import RichTextEditor from "@/components/RichTextEditor";
 import ConfirmDialog from "@/components/ConfirmDialog";
-
-function extractPublicIdFromCloudinaryUrl(url) {
-  if (!url) return null;
-  const uploadIndex = url.indexOf('/upload/');
-  if (uploadIndex === -1) return null;
-  const afterUpload = url.slice(uploadIndex + 8);
-  const withoutVersion = afterUpload.replace(/^v\d+\//, '');
-  const lastDot = withoutVersion.lastIndexOf('.');
-  return lastDot !== -1 ? withoutVersion.slice(0, lastDot) : withoutVersion;
-}
+import { getThumbnailUrl, extractKeyFromUrl } from "@/lib/imageUrl";
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -162,7 +153,7 @@ export default function EditProductPage() {
         if (data.landing_page_image) {
           setLandingPageImage({
             url: data.landing_page_image,
-            publicId: extractPublicIdFromCloudinaryUrl(data.landing_page_image),
+            publicId: extractKeyFromUrl(data.landing_page_image),
             status: 'existing'
           });
         }
@@ -396,11 +387,6 @@ export default function EditProductPage() {
       if (oldIndex === -1 || newIndex === -1) return prev;
       return arrayMove(prev, oldIndex, newIndex);
     });
-  };
-
-  const getThumbnailUrl = (url) => {
-    if (!url) return "";
-    return url.replace('/upload/', '/upload/w_800,h_800,c_fill,f_auto,q_auto/');
   };
 
   const handleSubmit = async () => {

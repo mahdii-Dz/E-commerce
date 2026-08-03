@@ -1,4 +1,9 @@
 import { withSentryConfig } from '@sentry/nextjs';
+
+const r2Hostname = process.env.NEXT_PUBLIC_R2_PUBLIC_URL
+  ? new URL(process.env.NEXT_PUBLIC_R2_PUBLIC_URL).hostname
+  : 'media.yourdomain.com';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -9,8 +14,8 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'res.cloudinary.com',
-        pathname: '/dvkftnjci/**',
+        hostname: r2Hostname,
+        pathname: '/**',
       },
     ],
   },

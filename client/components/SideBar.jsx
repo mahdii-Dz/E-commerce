@@ -59,7 +59,7 @@ function SideBar({ category, isLoadingCategories, isOpen, onClose }) {
                                             width={40}
                                             height={40}
                                             alt={cat.name}
-                                            className='rounded-md object-cover w-10 h-10 flex-shrink-0'
+                                            className='rounded-md object-cover w-10 h-10 shrink-0'
                                         />
                                     ) : (
                                         null

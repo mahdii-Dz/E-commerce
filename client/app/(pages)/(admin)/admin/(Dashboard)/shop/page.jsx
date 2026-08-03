@@ -23,6 +23,7 @@ import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import RichTextEditor from "@/components/RichTextEditor";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem } from '@/components/ui/combobox'
+import { extractKeyFromUrl } from "@/lib/imageUrl";
 
 function CategoryImageUploader({ imageUrl, uploading, onFileSelect, onRemove, disabled = false }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -338,15 +339,6 @@ export default function BannerCategoriesPage() {
     }
   };
 
-  // Category image helpers
-  const extractPublicIdFromUrl = (url) => {
-    if (!url || typeof url !== 'string') return null;
-    const parts = url.split('/');
-    const uploadIdx = parts.lastIndexOf('upload');
-    if (uploadIdx === -1) return null;
-    const after = parts.slice(uploadIdx + 1).join('/');
-    return after.replace(/^v\d+\//, '').replace(/\.[^.]+$/, '');
-  };
 
   const uploadCategoryImage = async (file, mode) => {
     const setUploading = mode === 'edit' ? setIsUploadingEditImage : setIsUploadingCategoryImage;
@@ -395,7 +387,7 @@ export default function BannerCategoriesPage() {
       if (publicId) {
         await axios.delete(`/api/cloudinary/${publicId}`).catch(() => {});
       } else if (isExisting && url) {
-        const extracted = extractPublicIdFromUrl(url);
+        const extracted = extractKeyFromUrl(url);
         if (extracted) {
           await axios.delete(`/api/cloudinary/${extracted}`).catch(() => {});
         }

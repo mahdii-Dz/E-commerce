@@ -5,6 +5,7 @@ import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { getThumbnailUrl } from "@/lib/imageUrl";
 import {
   DndContext,
   closestCenter,
@@ -373,7 +374,7 @@ export default function AddProductPage() {
         compare_price: parseFloat(ComparePrice) || 0,
         discount_percentage: parseFloat(formData.discount) || 0,
         images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null, is_active: img.is_active !== false })),
-        thumbnail: finalImages[0]?.url?.replace('/upload/', '/upload/w_800,h_800,c_fill,f_auto,q_auto/') || "",
+        thumbnail: getThumbnailUrl(finalImages[0]?.url) || "",
         landing_page_image: finalLandingPageUrl,
         colors: finalColors,
         offers: offers,
