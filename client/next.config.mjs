@@ -17,7 +17,13 @@ const nextConfig = {
         hostname: r2Hostname,
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/dvkftnjci/**',
+      },
     ],
+    qualities: [75, 85],
   },
 };
 
