@@ -3,6 +3,7 @@ import { query, execute } from '../db.js';
 import axios from 'axios';
 import { syncOrderToSheets, updateOrderRowInSheets } from '../services/GoogleSheetsService.js';
 import { getOrSet, bumpVersion, del } from '../services/cache.js';
+import { deleteImage, publicUrl } from '../utils/r2.js';
 
 // Netlify cache invalidation
 const NETLIFY_BUILD_HOOK = process.env.NETLIFY_BUILD_HOOK;
@@ -71,6 +72,28 @@ const normalizeImage = (img) => {
 const filterActive = (items) => {
   if (!items || !Array.isArray(items)) return items;
   return items.filter(item => item.is_active !== false);
+};
+
+const r2Origin = new URL(publicUrl).origin;
+
+// Extract the R2 object key from a media URL (also handles /cdn-cgi/image/<params>/ transforms).
+// Returns null for non-R2 URLs (e.g. legacy Cloudinary assets — R2 delete is a safe no-op).
+const extractR2Key = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.origin !== r2Origin) return null;
+    let path = parsed.pathname.slice(1);
+    const cdnMarker = 'cdn-cgi/image/';
+    if (path.startsWith(cdnMarker)) {
+      const afterMarker = path.slice(cdnMarker.length);
+      const paramsEnd = afterMarker.indexOf('/');
+      path = paramsEnd !== -1 ? afterMarker.slice(paramsEnd + 1) : '';
+    }
+    return path || null;
+  } catch {
+    return null;
+  }
 };
 
 // Helper function to validate ID
@@ -823,11 +846,15 @@ export const DeleteProduct = async (req, res) => {
     const id = validateId(req.params.id);
     if (!id) return res.status(400).json({ error: "Invalid product ID" });
 
-    // Verify product exists first
-    const check = await query("SELECT id FROM products WHERE id = ?", [id]);
+    // Fetch product media info before deleting
+    const check = await query(
+      "SELECT id, images, thumbnail, landing_page_image FROM products WHERE id = ?",
+      [id]
+    );
     if (!check || check.length === 0) {
       return res.status(404).json({ error: "Product not found" });
     }
+    const productRow = check[0];
 
     // Delete category relationships first
     await execute(
@@ -844,6 +871,32 @@ export const DeleteProduct = async (req, res) => {
     // Invalidate Netlify cache and Redis
     await invalidateNetlifyCache();
     await bumpVersion('products');
+
+    // Best-effort cleanup: remove all product images from R2
+    const imageUrls = [];
+    const images = safeJsonParse(productRow.images, []);
+    for (const img of images) {
+      const normalized = normalizeImage(img);
+      if (normalized.url) imageUrls.push(normalized.url);
+    }
+    if (productRow.thumbnail && typeof productRow.thumbnail === 'string') {
+      imageUrls.push(productRow.thumbnail);
+    }
+    if (productRow.landing_page_image && typeof productRow.landing_page_image === 'string') {
+      imageUrls.push(productRow.landing_page_image);
+    }
+
+    await Promise.allSettled(
+      imageUrls.map(async (url) => {
+        const key = extractR2Key(url);
+        if (!key) return;
+        try {
+          await deleteImage(key);
+        } catch (err) {
+          console.error(`Failed to delete R2 object ${key}:`, err.message);
+        }
+      })
+    );
 
     return res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {
