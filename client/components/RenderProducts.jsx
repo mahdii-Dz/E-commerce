@@ -27,7 +27,7 @@ function RenderProducts({ Products, Class, isCart = false, scrollable = false })
   const nextRef = useRef(null);
   const isDesktop = useSyncExternalStore(subscribeToDesktopQuery, getDesktopSnapshot, getDesktopServerSnapshot);
 
-  const hasManyProducts = Array.isArray(Products) && Products.length > 4;
+  const hasManyProducts = Array.isArray(Products) && Products.length > 3;
   const useCarousel = scrollable && (!isDesktop || hasManyProducts);
 
   // Determine grid columns based on Class prop and screen size
