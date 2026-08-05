@@ -107,7 +107,7 @@ export default function AddOrderPage() {
   }
 
   const handleProductSelect = async (idx, productId) => {
-    const numId = Number(productId)
+    const numId = String(productId).trim()
     if (!numId) return
 
     setItems(prev => {

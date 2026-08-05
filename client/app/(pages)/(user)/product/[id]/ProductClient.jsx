@@ -171,7 +171,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                     color: #EEC910;
                   }
                 `}</style>
-                <Breadcrumb />
+                <Breadcrumb productName={product.name} />
                 {/* Product Details Section */}
                 <section className='w-full mb-12 lg:mb-20 lg:px-6 py-6 lg:py-8 mt-0 rounded-xl'>
                     <div className='lg:grid lg:grid-cols-2 lg:gap-12'>

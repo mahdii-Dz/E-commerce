@@ -49,7 +49,7 @@ async function migrate() {
 
     // ============ 2. PRODUCTS ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS products (
-      id INT AUTO_INCREMENT PRIMARY KEY,
+      id VARCHAR(36) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       description TEXT,
       big_description TEXT,
@@ -71,7 +71,7 @@ async function migrate() {
 
     // ============ 3. PRODUCT_CATEGORIES ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS product_categories (
-      product_id INT NOT NULL,
+      product_id VARCHAR(36) NOT NULL,
       category_id INT NOT NULL,
       PRIMARY KEY (product_id, category_id),
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
@@ -84,7 +84,7 @@ async function migrate() {
       position INT NOT NULL PRIMARY KEY,
       url TEXT NOT NULL,
       public_id VARCHAR(255),
-      linked_product_id INT DEFAULT NULL
+      linked_product_id VARCHAR(36) DEFAULT NULL
     )`);
     console.log('  ✓ banners');
 
@@ -170,7 +170,7 @@ async function migrate() {
     await connection.execute(`CREATE TABLE IF NOT EXISTS order_items (
       id INT AUTO_INCREMENT PRIMARY KEY,
       order_id INT NOT NULL,
-      product_id INT NOT NULL,
+      product_id VARCHAR(36) NOT NULL,
       quantity INT NOT NULL,
       price_per_unit DECIMAL(10,2) NOT NULL,
       color_name VARCHAR(255) DEFAULT NULL,
@@ -185,7 +185,7 @@ async function migrate() {
     // ============ 10. REVIEWS ============
     await connection.execute(`CREATE TABLE IF NOT EXISTS reviews (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      product_id INT NOT NULL,
+      product_id VARCHAR(36) NOT NULL,
       customer_name VARCHAR(255) NOT NULL,
       review_text TEXT NOT NULL,
       stars TINYINT NOT NULL,
@@ -215,7 +215,7 @@ async function migrate() {
       wilaya_code VARCHAR(10) DEFAULT '',
       baladiya VARCHAR(255) DEFAULT '',
       delivery_type VARCHAR(50) DEFAULT 'domicile',
-      product_id INT DEFAULT NULL,
+      product_id VARCHAR(36) DEFAULT NULL,
       product_name VARCHAR(255) DEFAULT '',
       product_price DECIMAL(10,2) DEFAULT 0,
       quantity INT DEFAULT 1,
@@ -310,7 +310,58 @@ async function migrate() {
     )`);
     console.log('  ✓ google_sheets');
 
-    // ============ 16. SECONDARY INDEXES ============
+    // ============ 16. PRODUCT UUID MIGRATION ============
+    // Widen products.id (and every FK column pointing to it) to VARCHAR(36)
+    // so new products can be saved with UUID ids while existing integer ids are kept as strings.
+    const getColumnType = async (table, column) => {
+      const [rows] = await connection.query(`SHOW COLUMNS FROM \`${table}\` LIKE '${column}'`);
+      return rows.length ? rows[0].Type : null;
+    };
+    const productIdType = await getColumnType('products', 'id');
+    const needsUuidMigration = productIdType && productIdType.toLowerCase().startsWith('int');
+    if (needsUuidMigration) {
+      const [fkRows] = await connection.execute(
+        `SELECT TABLE_NAME, CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE
+         WHERE TABLE_SCHEMA = ? AND COLUMN_NAME = 'product_id' AND REFERENCED_TABLE_NAME = 'products'`,
+        [dbName]
+      );
+      for (const fk of fkRows || []) {
+        await connection.execute(`ALTER TABLE \`${fk.TABLE_NAME}\` DROP FOREIGN KEY \`${fk.CONSTRAINT_NAME}\``);
+        console.log(`  ✓ dropped FK ${fk.CONSTRAINT_NAME} on ${fk.TABLE_NAME}`);
+      }
+      await connection.execute('ALTER TABLE products MODIFY id VARCHAR(36) NOT NULL');
+      await connection.execute('ALTER TABLE product_categories MODIFY product_id VARCHAR(36) NOT NULL');
+      await connection.execute('ALTER TABLE order_items MODIFY product_id VARCHAR(36) NOT NULL');
+      await connection.execute('ALTER TABLE reviews MODIFY product_id VARCHAR(36) NOT NULL');
+      await connection.execute('ALTER TABLE lefted_orders MODIFY product_id VARCHAR(36) DEFAULT NULL');
+      await connection.execute('ALTER TABLE banners MODIFY linked_product_id VARCHAR(36) DEFAULT NULL');
+      console.log('  ✓ product id columns widened to VARCHAR(36)');
+    } else {
+      console.log('  - products.id already VARCHAR(36), skipping UUID migration');
+    }
+
+    // Re-add product_id foreign keys if missing (idempotent on re-runs)
+    const hasFkToProducts = async (table, column) => {
+      const [rows] = await connection.execute(
+        `SELECT 1 FROM information_schema.KEY_COLUMN_USAGE
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME = 'products' LIMIT 1`,
+        [dbName, table, column]
+      );
+      return rows.length > 0;
+    };
+    const fkRestores = [
+      { table: 'product_categories', column: 'product_id', sql: 'ALTER TABLE product_categories ADD CONSTRAINT fk_pc_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE' },
+      { table: 'order_items', column: 'product_id', sql: 'ALTER TABLE order_items ADD CONSTRAINT fk_oi_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE' },
+      { table: 'reviews', column: 'product_id', sql: 'ALTER TABLE reviews ADD CONSTRAINT fk_review_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE' },
+    ];
+    for (const fk of fkRestores) {
+      if (!(await hasFkToProducts(fk.table, fk.column))) {
+        await connection.execute(fk.sql);
+        console.log(`  ✓ re-added FK on ${fk.table}.${fk.column}`);
+      }
+    }
+
+    // ============ 17. SECONDARY INDEXES ============
     const indexes = [
       { table: 'order_info', name: 'idx_current_status', sql: 'ALTER TABLE order_info ADD INDEX idx_current_status (current_status)' },
       { table: 'order_info', name: 'idx_created_at', sql: 'ALTER TABLE order_info ADD INDEX idx_created_at (created_at)' },

@@ -96,10 +96,18 @@ const extractR2Key = (url) => {
   }
 };
 
-// Helper function to validate ID
+// Helper function to validate ID (numeric ids for orders/categories/reviews, UUIDs for products)
 const validateId = (id) => {
-  const num = parseInt(id, 10);
-  return !isNaN(num) && num > 0 ? num : null;
+  if (id === null || id === undefined) return null;
+  const str = String(id).trim();
+  if (/^\d+$/.test(str)) {
+    const num = parseInt(str, 10);
+    return num > 0 ? num : null;
+  }
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)) {
+    return str.toLowerCase();
+  }
+  return null;
 };
 
 function generateOrderNumber() {
@@ -684,13 +692,17 @@ export const AddProduct = async (req, res) => {
       return res.status(400).json({ error: "categoryIds must be an array" });
     }
 
+    // Generate a UUID for the product id
+    const productId = crypto.randomUUID();
+
     // Insert product
-    const productResult = await execute(
+    await execute(
       `INSERT INTO products (
-        name, description, big_description, price, compare_price, type, images,
+        id, name, description, big_description, price, compare_price, type, images,
         landing_page_image, thumbnail, discount_percentage, colors, offers, package_naming
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
+        productId,
         name.trim(),
         description || null,
         big_description || null,
@@ -706,18 +718,6 @@ export const AddProduct = async (req, res) => {
         package_naming ? JSON.stringify(package_naming) : null,
       ]
     );
-
-    let productId = productResult.insertId;
-
-    // If insertId is 0 or missing, fetch it using LAST_INSERT_ID()
-    if (!productId || productId === 0) {
-      const lastIdResult = await query('SELECT LAST_INSERT_ID() as id');
-      productId = lastIdResult && lastIdResult[0] ? lastIdResult[0].id : 0;
-    }
-    
-    if (!productId || productId === 0) {
-      return res.status(500).json({ error: "Failed to retrieve product ID" });
-    }
 
     // Insert category relationships
     if (categoryIds.length > 0) {

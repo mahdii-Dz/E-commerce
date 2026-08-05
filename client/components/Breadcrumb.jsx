@@ -5,7 +5,7 @@ import Link from 'next/link';
 import React from 'react';
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function Breadcrumb() {
+export default function Breadcrumb({ productName }) {
   const pathname = usePathname();
   const paths = pathname.split('/').filter(Boolean);
 
@@ -17,7 +17,7 @@ export default function Breadcrumb() {
       // Special handling for the "product" segment
       let finalHref = href;
       let label = decodeURIComponent(path);
-      
+
       if (path === 'products') {
         label = 'المنتجات';
         finalHref = '/products/All'; 
@@ -28,6 +28,11 @@ export default function Breadcrumb() {
         label = 'السلة';
       } else if (path === 'contact') {
         label = 'اتصل بنا';
+      }
+
+      // On product pages, show the product name instead of the raw id
+      if (paths[0] === 'product' && index === paths.length - 1 && productName) {
+        label = productName;
       }
 
       const isLast = index === paths.length - 1;
@@ -52,11 +57,11 @@ export default function Breadcrumb() {
             )}
             <li>
               {item.isLast ? (
-                <span className="font-medium text-gray-900">{item.label}</span>
+                <span className="font-medium text-gray-900 line-clamp-1">{item.label}</span>
               ) : (
                 <Link
                   href={item.href}
-                  className="hover:text-gray-700 transition-colors"
+                  className="hover:text-gray-700 transition-colors line-clamp-1"
                 >
                   {item.label}
                 </Link>
