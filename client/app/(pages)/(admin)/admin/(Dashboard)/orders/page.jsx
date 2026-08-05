@@ -402,7 +402,8 @@ export default function OrdersPage() {
         return `${item.product_name}${item.offer_text ? ' - ' + item.offer_text : ''} (${colorQtys})`;
       }).join(', ');
 
-      const wilayaCode = order.wilaya_code || Object.keys(wilayaData).find(key => wilayaData[key]?.name === order.wilaya) || '';
+      const rawWilayaCode = order.wilaya_code || Object.keys(wilayaData).find(key => wilayaData[key]?.name === order.wilaya) || '';
+      const wilayaCode = rawWilayaCode ? String(parseInt(rawWilayaCode, 10)) : '';
       const response = await axios.post('/api/admin/Delivery', {
         order_id: order.order_id,
         reference: order.order_number,

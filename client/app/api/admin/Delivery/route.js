@@ -7,12 +7,20 @@ export async function POST(request) {
       api_token: process.env.ECOTRACK_API_TOKEN
     }
     const toStr = (v) => (v ?? '').toString();
+    const rawWilaya = (code_wilaya ?? '').toString().trim();
+    const wilayaCode = /^\d+$/.test(rawWilaya) ? String(parseInt(rawWilaya, 10)) : '';
+    if (!wilayaCode) {
+      return NextResponse.json(
+        { success: false, message: "رمز الولاية غير صالح" },
+        { status: 400 },
+      );
+    }
     const params = new URLSearchParams({
       reference: toStr(reference),
       nom_client: toStr(nom_client),
       telephone: toStr(telephone),
       commune: toStr(commune),
-      code_wilaya: code_wilaya,
+      code_wilaya: wilayaCode,
       adresse: toStr(address),
       montant: toStr(montant),
       produit: toStr(produit),
