@@ -230,12 +230,18 @@ export default function AddProductPage() {
     e.target.value = '';
   };
 
-  const handleDeleteLandingPageImage = () => {
+  const handleDeleteLandingPageImage = async () => {
     if (landingPageImage?.url?.startsWith('blob:')) {
       URL.revokeObjectURL(landingPageImage.url);
     }
     if (landingPageImage?.publicId) {
-      axios.delete(`/api/cloudinary/${landingPageImage.publicId}`).catch(() => {});
+      try {
+        await axios.delete(`/api/cloudinary/${landingPageImage.publicId}`);
+        showToast("تم حذف صورة الهيدر بنجاح", "success");
+      } catch (error) {
+        console.error("Delete failed:", error);
+        showToast("فشل حذف صورة الهيدر", "error");
+      }
     }
     setLandingPageImage(null);
   };
@@ -254,6 +260,7 @@ export default function AddProductPage() {
     if (img.publicId) {
       try {
         await axios.delete(`/api/cloudinary/${img.publicId}`);
+        showToast("تم حذف الصورة بنجاح", "success");
       } catch (error) {
         console.error("Delete failed:", error);
         showToast("فشل حذف الصورة من الخادم", "error");

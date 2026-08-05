@@ -333,8 +333,10 @@ export default function BannerCategoriesPage() {
     if (publicId) {
       try {
         await axios.delete(`/api/cloudinary/${publicId}`);
+        showToast("تم حذف صورة البانر", "success");
       } catch (error) {
         console.error("Delete from Cloudinary failed:", error);
+        showToast("فشل حذف صورة البانر", "error");
       }
     }
   };
@@ -382,23 +384,29 @@ export default function BannerCategoriesPage() {
   };
 
   const handleRemoveCategoryImage = async (mode) => {
-    if (mode === 'edit') {
-      const { publicId, isExisting, url } = editCategoryImage;
-      if (publicId) {
-        await axios.delete(`/api/cloudinary/${publicId}`).catch(() => {});
-      } else if (isExisting && url) {
-        const extracted = extractKeyFromUrl(url);
-        if (extracted) {
-          await axios.delete(`/api/cloudinary/${extracted}`).catch(() => {});
+    try {
+      if (mode === 'edit') {
+        const { publicId, isExisting, url } = editCategoryImage;
+        if (publicId) {
+          await axios.delete(`/api/cloudinary/${publicId}`);
+        } else if (isExisting && url) {
+          const extracted = extractKeyFromUrl(url);
+          if (extracted) {
+            await axios.delete(`/api/cloudinary/${extracted}`);
+          }
         }
+        setEditCategoryImage({ url: null, publicId: null, isExisting: false });
+      } else {
+        const { publicId } = newCategoryImage;
+        if (publicId) {
+          await axios.delete(`/api/cloudinary/${publicId}`);
+        }
+        setNewCategoryImage({ url: null, publicId: null });
       }
-      setEditCategoryImage({ url: null, publicId: null, isExisting: false });
-    } else {
-      const { publicId } = newCategoryImage;
-      if (publicId) {
-        await axios.delete(`/api/cloudinary/${publicId}`).catch(() => {});
-      }
-      setNewCategoryImage({ url: null, publicId: null });
+      showToast("تم حذف صورة التصنيف", "success");
+    } catch (error) {
+      console.error("Delete category image failed:", error);
+      showToast("فشل حذف صورة التصنيف", "error");
     }
   };
 
