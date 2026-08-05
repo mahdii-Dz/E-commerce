@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2, Sparkles, Truck, GripVertical, Upload, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from '@tanstack/react-query';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DndContext,
@@ -39,6 +40,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 
 export default function AddProductPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
   const [createdProductId, setCreatedProductId] = useState(null);
@@ -388,6 +390,7 @@ export default function AddProductPage() {
       });
 
       showToast("تم إضافة المنتج بنجاح!", "success");
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setCreatedProductId(response.data.id);
       setTimeout(() => router.push("/admin/all-products"), 3000);
 

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo, useEffect, Fragment } from "react";
 import { Plus, Search, Filter, Edit, ChevronLeft, ChevronRight, X, ChevronDown, Package, Percent, Tag, Hash, Trash2, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import axios from "axios";
+import { useQueryClient } from '@tanstack/react-query';
 import { useFetchAllProducts } from "@/components/useFetchAllProducts";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { getThumbnailUrl } from "@/lib/imageUrl";
@@ -24,9 +25,15 @@ const ITEMS_PER_PAGE = 10;
 const FILTER_TYPES = ["All", "New", "Top Sold", "Promotions", "Best Deal"];
 
 export default function ProductDashboard() {
+  const queryClient = useQueryClient();
   const { data: productsData, isLoading: productsLoading, refetch } = useFetchAllProducts('/api/shop/products', {
     staleTime: 60 * 1000,
   });
+
+  // Ensure the list is fresh on every mount (covers redirects from add/edit/delete)
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['products'] });
+  }, [queryClient]);
   const Products = Array.isArray(productsData) ? productsData : (productsData?.products || []);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);

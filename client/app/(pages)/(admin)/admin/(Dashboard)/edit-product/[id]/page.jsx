@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { ArrowRight, Trash2, Plus, Minus, Percent, X, CheckCircle, AlertCircle, Loader2, Sparkles, Truck, GripVertical, Upload, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
+import { useQueryClient } from '@tanstack/react-query';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DndContext,
@@ -41,6 +42,7 @@ import { extractKeyFromUrl } from "@/lib/imageUrl";
 
 export default function EditProductPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const params = useParams();
   const id = params.id;
 
@@ -497,6 +499,7 @@ export default function EditProductPage() {
       });
 
       showToast("تم تحديث المنتج بنجاح!", "success");
+      queryClient.invalidateQueries({ queryKey: ['products'] });
 
       setTimeout(() => {
         router.push("/admin/all-products");
@@ -516,6 +519,7 @@ export default function EditProductPage() {
     try {
       await axios.delete(`/api/shop/products/${id}`);
       showToast("تم حذف المنتج بنجاح!", "success");
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       setShowDeleteConfirm(false);
 
       setTimeout(() => {
