@@ -10,6 +10,8 @@ const THUMBNAIL_PARAMS = "width=800,height=800,fit=cover,quality=auto,format=aut
 // https://<domain>/cdn-cgi/image/width=800,height=800,.../<key>
 export const getThumbnailUrl = (url) => {
   if (!url) return "";
+  // Idempotent: already-transformed URLs (e.g. legacy thumbnails stored in DB) pass through
+  if (url.includes("/cdn-cgi/image/")) return url;
   if (url.startsWith(R2_PUBLIC_URL)) {
     return `${R2_PUBLIC_URL}/cdn-cgi/image/${THUMBNAIL_PARAMS}${url.slice(R2_PUBLIC_URL.length)}`;
   }
@@ -17,13 +19,23 @@ export const getThumbnailUrl = (url) => {
 };
 
 // R2 URL -> object key (https://<domain>/uploads/x.jpg -> uploads/x.jpg)
+// Handles transformed URLs: https://<domain>/cdn-cgi/image/<params>/uploads/x.jpg -> uploads/x.jpg
 // Falls back to legacy Cloudinary public_id parsing for pre-migration records.
 export const extractKeyFromUrl = (url) => {
   if (!url) return null;
   if (!/^https?:\/\//i.test(url)) return url;
   try {
     const parsed = new URL(url);
-    if (parsed.origin === R2_ORIGIN) return parsed.pathname.slice(1);
+    if (parsed.origin === R2_ORIGIN) {
+      let path = parsed.pathname.slice(1);
+      const cdnMarker = "cdn-cgi/image/";
+      if (path.startsWith(cdnMarker)) {
+        const afterMarker = path.slice(cdnMarker.length);
+        const paramsEnd = afterMarker.indexOf("/");
+        path = paramsEnd !== -1 ? afterMarker.slice(paramsEnd + 1) : "";
+      }
+      return path;
+    }
 
     const uploadIdx = url.indexOf("/upload/");
     if (uploadIdx === -1) return null;

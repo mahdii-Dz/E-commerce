@@ -7,6 +7,7 @@ import Image from "next/image";
 import axios from "axios";
 import { useFetchAllProducts } from "@/components/useFetchAllProducts";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { getThumbnailUrl } from "@/lib/imageUrl";
 
 const getBadgeStyle = (type) => {
   switch (type) {
@@ -407,7 +408,7 @@ export default function ProductDashboard() {
                       <td className="px-4 py-4 hidden md:table-cell">
                         <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
                           {product.thumbnail ? (
-                            <Image src={product.thumbnail} alt={product.name} width={48} height={48} className="w-full h-full object-cover" loading="lazy" />
+                            <Image src={getThumbnailUrl(product.thumbnail)} alt={product.name} width={48} height={48} className="w-full h-full object-cover" loading="lazy" />
                           ) : (
                             <span className="text-gray-400 text-xs">IMG</span>
                           )}
@@ -466,7 +467,7 @@ export default function ProductDashboard() {
                             <div className="flex items-center gap-4">
                               <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                                 {product.thumbnail ? (
-                                  <Image src={product.thumbnail} alt={product.name} width={64} height={64} className="w-full h-full object-cover" loading="lazy" />
+                                  <Image src={getThumbnailUrl(product.thumbnail)} alt={product.name} width={64} height={64} className="w-full h-full object-cover" loading="lazy" />
                                 ) : (
                                   <span className="text-gray-400 text-xs">IMG</span>
                                 )}

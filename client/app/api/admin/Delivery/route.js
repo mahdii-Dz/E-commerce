@@ -12,7 +12,7 @@ export async function POST(request) {
       nom_client: toStr(nom_client),
       telephone: toStr(telephone),
       commune: toStr(commune),
-      code_wilaya: toStr(code_wilaya),
+      code_wilaya: code_wilaya,
       adresse: toStr(address),
       montant: toStr(montant),
       produit: toStr(produit),

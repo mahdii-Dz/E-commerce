@@ -10,6 +10,7 @@ import { Combobox, ComboboxContent, ComboboxList, ComboboxItem, ComboboxTrigger,
 import { useFetchSingleProduct } from '@/components/useFetchSingleProduct'
 import { useWilayaData } from '@/components/useWilayaData'
 import Link from 'next/link'
+import { getThumbnailUrl } from '@/lib/imageUrl'
 
 const STATUSES = [
   { value: 'new', label: 'جديد', color: '#6366F1' },
@@ -520,7 +521,7 @@ export default function AddOrderPage() {
                           <ComboboxItem key={p.id} value={String(p.id)} className="text-right" dir="rtl">
                             <div className="flex items-center gap-3 w-full" dir="rtl">
                               <img
-                                src={p.image_url || p.thumbnail || '/placeholder.png'}
+                                src={getThumbnailUrl(p.image_url || p.thumbnail) || '/placeholder.png'}
                                 alt={p.name}
                                 className="w-12 h-12 rounded-lg object-cover border border-gray-200 flex-shrink-0"
                                 onError={(e) => { e.target.style.display = 'none' }}

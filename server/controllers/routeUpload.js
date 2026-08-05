@@ -76,7 +76,7 @@ CloudinaryRouter.post("/upload", verifyAdminSession, upload.single("image"), asy
 // Delete
 CloudinaryRouter.delete("/delete/:publicId", verifyAdminSession, async (req, res) => {
   try {
-    const key = extractKeyFromInput(req.params.publicId);
+    const key = extractKeyFromInput(decodeURIComponent(req.params.publicId));
 
     if (!key) {
       return res.status(400).json({ success: false, error: "Missing object key" });

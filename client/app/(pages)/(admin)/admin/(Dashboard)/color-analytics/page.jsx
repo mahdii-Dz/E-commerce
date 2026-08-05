@@ -6,6 +6,7 @@ import { ChevronDown, Loader2, Package } from 'lucide-react';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import Image from 'next/image';
 import axios from 'axios';
+import { getThumbnailUrl } from '@/lib/imageUrl';
 
 const STATUSES = [
   { value: 'new', label: 'جديد', color: '#6366F1' },
@@ -315,7 +316,7 @@ export default function ColorAnalyticsPage() {
                 <div className="flex items-center gap-3">
                   {product.thumbnail && (
                     <div className="size-18 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-50">
-                      <Image src={product.thumbnail} alt={product.name} width={100} height={100} className="w-full h-full object-cover" />
+                      <Image src={getThumbnailUrl(product.thumbnail)} alt={product.name} width={100} height={100} className="w-full h-full object-cover" />
                     </div>
                   )}
                   <h3 className="text-xl font-semibold text-gray-900">{analytics.product_name}</h3>
@@ -359,7 +360,7 @@ export default function ColorAnalyticsPage() {
                 <div className="flex items-center gap-3">
                   {product.thumbnail ? (
                     <div className="size-18 rounded-xl overflow-hidden border border-gray-200 flex-shrink-0 bg-gray-50">
-                      <Image src={product.thumbnail} alt={product.name} width={100} height={100} className="w-full h-full object-cover" />
+                      <Image src={getThumbnailUrl(product.thumbnail)} alt={product.name} width={100} height={100} className="w-full h-full object-cover" />
                     </div>
                   ) : (
                     <div className="size-18 rounded-xl border border-gray-200 flex-shrink-0 bg-gray-100 flex items-center justify-center">

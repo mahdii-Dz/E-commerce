@@ -7,6 +7,7 @@ import { useContext, useSyncExternalStore } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { GlobalContext } from "@/app/context/Context";
 import { getProduct } from '@/lib/server-fetch';
+import { getThumbnailUrl } from '@/lib/imageUrl';
 
 export default function ProductCard({ product, isCart, Cart, setCart }) {
   const queryClient = useQueryClient();
@@ -72,7 +73,7 @@ export default function ProductCard({ product, isCart, Cart, setCart }) {
           onMouseEnter={prefetchProduct}
         >
           <Image
-            src={product.image_url || product.thumbnail}
+            src={getThumbnailUrl(product.image_url || product.thumbnail)}
             alt={product.name}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

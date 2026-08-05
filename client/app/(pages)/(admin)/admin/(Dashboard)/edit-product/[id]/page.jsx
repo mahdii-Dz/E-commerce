@@ -37,7 +37,7 @@ import { useFetchSingleProduct } from "@/components/useFetchSingleProduct";
 import AdminTestimonialForm from "@/components/AdminTestimonialForm";
 import RichTextEditor from "@/components/RichTextEditor";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { getThumbnailUrl, extractKeyFromUrl } from "@/lib/imageUrl";
+import { extractKeyFromUrl } from "@/lib/imageUrl";
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -482,7 +482,7 @@ export default function EditProductPage() {
         compare_price: parseFloat(ComparePrice) || 0,
         discount_percentage: parseFloat(formData.discount) || 0,
         images: finalImages.map(img => ({ url: img.url, public_id: img.publicId || null, is_active: img.is_active !== false })),
-        thumbnail: getThumbnailUrl(finalImages[0]?.url),
+        thumbnail: finalImages[0]?.url || "",
         landing_page_image: finalLandingPageUrl,
         colors: finalColors,
         offers: offers,
