@@ -19,7 +19,7 @@ export const publicUrl = requireEnv('R2_PUBLIC_URL');
 
 const s3 = new S3Client({
   region: 'auto',
-  endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+  endpoint: `https://${accountId}.eu.r2.cloudflarestorage.com`,
   credentials: {
     accessKeyId,
     secretAccessKey,
