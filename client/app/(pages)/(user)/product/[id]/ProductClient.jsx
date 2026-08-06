@@ -2,12 +2,11 @@
 
 import { GlobalContext } from '@/app/context/Context';
 import Breadcrumb from '@/components/Breadcrumb';
-import CheckOut from '@/components/CheckOut';
+import dynamic from 'next/dynamic';
 import ProductCard from '@/components/ProductCard';
-import ReviewsSection from '@/components/ReviewsSection';
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Percent, ShoppingCart, Sparkles, Tag, Truck, Van, XIcon } from 'lucide-react';
 import Link from 'next/link';
-import React, { useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import React, { Suspense, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { getWebpUrl } from '@/lib/imageUrl';
@@ -18,6 +17,9 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, Thumbs, FreeMode, Navigation, Pagination } from 'swiper/modules';
+
+const CheckOut = dynamic(() => import('@/components/CheckOut'))
+const ReviewsSection = dynamic(() => import('@/components/ReviewsSection'))
 
 export default function ProductClient({ product: initialProduct, relatedProducts }) {
     const { Cart, setCart } = useContext(GlobalContext)
@@ -446,13 +448,15 @@ export default function ProductClient({ product: initialProduct, relatedProducts
 
                             {/* Checkout Form */}
                             <div ref={checkoutRef} className="w-full">
-                                <CheckOut
-                                    productPrice={product.price}
-                                    productId={product.id}
-                                    productName={product.name}
-                                    colors={product.colors}
-                                    selectedOffer={selectedOffer}
-                                />
+                                <Suspense fallback={<div className="w-full h-72 bg-stroke/20 rounded-xl animate-pulse" />}>
+                                    <CheckOut
+                                        productPrice={product.price}
+                                        productId={product.id}
+                                        productName={product.name}
+                                        colors={product.colors}
+                                        selectedOffer={selectedOffer}
+                                    />
+                                </Suspense>
                             </div>
 
                             {/* Delivery Info */}
@@ -501,7 +505,9 @@ export default function ProductClient({ product: initialProduct, relatedProducts
 
                 {/* Reviews Section */}
                 <section className='reviews-section w-full mb-12 lg:mb-16 px-0 lg:px-0 '>
-                    <ReviewsSection productId={product.id} />
+                    <Suspense fallback={<div className="w-full h-40 bg-stroke/20 rounded-xl animate-pulse" />}>
+                        <ReviewsSection productId={product.id} />
+                    </Suspense>
                 </section>
 
                 {/* Related Products Section */}

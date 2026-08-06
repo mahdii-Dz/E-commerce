@@ -2,10 +2,12 @@
 import { GlobalContext } from '@/app/context/Context'
 import { ArrowRight, Menu } from 'lucide-react'
 import Link from 'next/link'
-import React, { useContext } from 'react'
-import RenderProducts from './RenderProducts'
-import CategoryCarousel from './CategoryCarousel'
+import dynamic from 'next/dynamic'
+import React, { Suspense, useContext } from 'react'
 import Image from 'next/image'
+
+const RenderProducts = dynamic(() => import('./RenderProducts'))
+const CategoryCarousel = dynamic(() => import('./CategoryCarousel'))
 
 function Main({ Banners, Products = [], Categories = [], onOpenCategorySidebar }) {
   const { Promotions } = useContext(GlobalContext)
@@ -17,6 +19,27 @@ function Main({ Banners, Products = [], Categories = [], onOpenCategorySidebar }
     : [];
   const mainBanner = sortedBanners[0]
   const sideBanner = sortedBanners[1]
+
+  const renderSkeleton = (key) => (
+    <div
+      key={key}
+      className="flex flex-col bg-neutral-200 w-full h-80 sm:h-96 animate-pulse rounded-xl p-3 sm:p-4 gap-3 sm:gap-4"
+    >
+      <div className="bg-neutral-300/50 w-full h-32 sm:h-40 animate-pulse rounded-md"></div>
+      <div className="flex flex-col gap-2">
+        <div className="bg-neutral-300/50 w-full h-3 sm:h-4 animate-pulse rounded-md"></div>
+        <div className="bg-neutral-300/50 w-4/5 h-3 sm:h-4 animate-pulse rounded-md"></div>
+        <div className="bg-neutral-300/50 w-full h-3 sm:h-4 animate-pulse rounded-md"></div>
+        <div className="bg-neutral-300/50 w-2/4 h-3 sm:h-4 animate-pulse rounded-md"></div>
+      </div>
+    </div>
+  )
+
+  const productsFallback = (Class) => (
+    <div className={`w-full grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 ${Class}`}>
+      {[0, 1, 2].map((i) => renderSkeleton(i))}
+    </div>
+  )
 
   return (
     <main className='w-full flex-1 min-w-0 h-auto'>
@@ -100,7 +123,13 @@ function Main({ Banners, Products = [], Categories = [], onOpenCategorySidebar }
           <div className='flex justify-between items-center mb-6'>
             <h1 className='text-xl lg:text-2xl font-semibold'>تسوق حسب الفئة</h1>
           </div>
-          <CategoryCarousel Categories={CategoriesWithImages} />
+          <Suspense fallback={<div className="w-full flex gap-4 overflow-hidden">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex-shrink-0 w-64 lg:w-1/4 h-72 lg:h-80 rounded-2xl bg-neutral-200 animate-pulse" />
+            ))}
+          </div>}>
+            <CategoryCarousel Categories={CategoriesWithImages} />
+          </Suspense>
         </section>
       )}
 
@@ -113,7 +142,9 @@ function Main({ Banners, Products = [], Categories = [], onOpenCategorySidebar }
             <ArrowRight size={16} className="rotate-180" />
           </Link>
         </div>
-        <RenderProducts Products={Promotions && Promotions.slice(0, 10)} Class={'mt-8'} scrollable />
+        <Suspense fallback={productsFallback('mt-8')}>
+          <RenderProducts Products={Promotions && Promotions.slice(0, 10)} Class={'mt-8'} scrollable />
+        </Suspense>
       </section>
 
       <section className='mt-10 px-2.5 lg:px-0'>
@@ -124,7 +155,9 @@ function Main({ Banners, Products = [], Categories = [], onOpenCategorySidebar }
             <ArrowRight size={16} className="rotate-180" />
           </Link>
         </div>
-        <RenderProducts Products={NewestProducts} Class={'mt-8'} scrollable />
+        <Suspense fallback={productsFallback('mt-8')}>
+          <RenderProducts Products={NewestProducts} Class={'mt-8'} scrollable />
+        </Suspense>
       </section>
 
       <section className='mt-10 px-2.5 lg:px-0 mb-10'>
@@ -135,7 +168,9 @@ function Main({ Banners, Products = [], Categories = [], onOpenCategorySidebar }
             <ArrowRight size={16} className="rotate-180" />
           </Link>
         </div>
-        <RenderProducts Products={Products.slice(0, 12)} Class={'mt-8'} scrollable />
+        <Suspense fallback={productsFallback('mt-8')}>
+          <RenderProducts Products={Products.slice(0, 12)} Class={'mt-8'} scrollable />
+        </Suspense>
       </section>
     </main>
   )
