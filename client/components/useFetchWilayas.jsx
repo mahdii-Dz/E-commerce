@@ -16,6 +16,13 @@ export function usePublicWilayasLight() {
   });
 }
 
+export function usePublicStats() {
+  return useFetchSingleProduct('/api/shop/public-stats', {
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+}
+
 export function useAdminWilayas() {
   return useFetchSingleProduct('/api/shop/delivery/wilayas', {
     staleTime: 60 * 1000,

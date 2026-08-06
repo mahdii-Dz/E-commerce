@@ -2504,3 +2504,27 @@ export const GetPublicWilayas = async (req, res) => {
     return handleDbError(res, error, 'fetching public wilayas');
   }
 };
+
+export const GetPublicStats = async (req, res) => {
+  try {
+    const result = await getOrSet('public-stats', null, 600, async () => {
+      const [totalProductsResult, totalDeliveredOrdersResult, wilayasCountResult] = await Promise.all([
+        query("SELECT COUNT(*) AS total_products FROM products"),
+        query(
+          "SELECT COUNT(*) AS total_delivered_orders FROM order_info WHERE current_status = 'Delivered'"
+        ),
+        query("SELECT COUNT(*) AS wilayas_count FROM wilayas WHERE is_active = 1"),
+      ]);
+
+      return {
+        totalProducts: totalProductsResult?.[0]?.total_products || 0,
+        totalDeliveredOrders: totalDeliveredOrdersResult?.[0]?.total_delivered_orders || 0,
+        wilayasCount: wilayasCountResult?.[0]?.wilayas_count || 0,
+      };
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleDbError(res, error, 'fetching public stats');
+  }
+};

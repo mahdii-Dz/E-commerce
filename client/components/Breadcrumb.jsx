@@ -28,6 +28,8 @@ export default function Breadcrumb({ productName }) {
         label = 'السلة';
       } else if (path === 'contact') {
         label = 'اتصل بنا';
+      } else if (path === 'about') {
+        label = 'من نحن';
       } else if (path === 'delivery') {
         label = 'التوصيل';
       }
