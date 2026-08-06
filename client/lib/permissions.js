@@ -3,6 +3,7 @@ export const PERMISSION_LABELS = {
   products: 'المنتجات',
   orders: 'الطلبات',
   delivery: 'التوصيل',
+  shop: 'المتجر',
   extras: 'الإضافات',
   reviews: 'التقييمات',
   'shop-workers': 'موظفي المتجر',
@@ -20,7 +21,8 @@ const ROUTE_TO_PERMISSION = [
   { prefix: '/admin/color-analytics', key: 'orders' },
   { prefix: '/admin/add-order', key: 'orders' },
   { prefix: '/admin/delivery', key: 'delivery' },
-  { prefix: '/admin/extra', key: 'extras' },
+  { prefix: '/admin/addons', key: 'extras' },
+  { prefix: '/admin/shop', key: 'shop' },
   { prefix: '/admin/reviews', key: 'reviews' },
   { prefix: '/admin/shop-workers', key: 'shop-workers' },
 ]
@@ -30,7 +32,8 @@ const PERMISSION_FIRST_PAGE = {
   products: '/admin/all-products',
   orders: '/admin/orders',
   delivery: '/admin/delivery',
-  extras: '/admin/extra',
+  shop: '/admin/shop',
+  extras: '/admin/addons',
   reviews: '/admin/reviews',
   'shop-workers': '/admin/shop-workers',
 }

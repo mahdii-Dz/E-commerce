@@ -46,7 +46,7 @@ const ALL_MENU_ITEMS = [
     ],
   },
   { icon: Truck, label: "التوصيل", href: "/admin/delivery", permissionKey: "delivery" },
-  { icon: ImageIcon, label: "المتجر", href: "/admin/shop", permissionKey: "extras" },
+  { icon: ImageIcon, label: "المتجر", href: "/admin/shop", permissionKey: "shop" },
   { icon: Star, label: "التقييمات", href: "/admin/reviews", permissionKey: "reviews" },
   { icon: UserCog, label: "موظفي المتجر", href: "/admin/shop-workers", permissionKey: "shop-workers",
     children: [
@@ -54,7 +54,7 @@ const ALL_MENU_ITEMS = [
       { label: "إضافة موظف", href: "/admin/shop-workers/add" },
     ]
   },
-  { icon: FileSpreadsheet, label: "الاضافات", href: "/admin/addons", permissionKey: "addons" },
+  { icon: FileSpreadsheet, label: "الاضافات", href: "/admin/addons", permissionKey: "extras" },
 ];
 
 function filterMenuItems(items, worker) {
