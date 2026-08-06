@@ -9,6 +9,13 @@ export function usePublicWilayas() {
   });
 }
 
+export function usePublicWilayasLight() {
+  return useFetchSingleProduct('/api/shop/public-wilayas-light', {
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+}
+
 export function useAdminWilayas() {
   return useFetchSingleProduct('/api/shop/delivery/wilayas', {
     staleTime: 60 * 1000,

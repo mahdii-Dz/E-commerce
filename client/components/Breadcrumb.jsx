@@ -28,6 +28,8 @@ export default function Breadcrumb({ productName }) {
         label = 'السلة';
       } else if (path === 'contact') {
         label = 'اتصل بنا';
+      } else if (path === 'delivery') {
+        label = 'التوصيل';
       }
 
       // On product pages, show the product name instead of the raw id
