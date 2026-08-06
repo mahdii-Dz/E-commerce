@@ -8,7 +8,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 
 const RubikSans = Rubik({
   variable: "--font-Rubik-sans",
-  subsets: ["latin"],
+  subsets: ["latin", "arabic"],
 })
 
 

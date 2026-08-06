@@ -1,10 +1,114 @@
 import React from 'react';
-import styled from 'styled-components';
 
 const Loader = () => {
   return (
-    <StyledWrapper>
-      <div className="loader">
+    <>
+      <style>{`
+        .pegtop-loader {
+          --fill-color: #FA3145;
+          --shine-color: #5c3d9933;
+          transform: scale(0.5);
+          width: 100px;
+          height: auto;
+          position: relative;
+          filter: drop-shadow(0 0 10px var(--shine-color));
+        }
+
+        .pegtop-loader #pegtopone {
+          position: absolute;
+          animation: pegtop-flowe-one 1s linear infinite;
+        }
+
+        .pegtop-loader #pegtoptwo {
+          position: absolute;
+          opacity: 0;
+          transform: scale(0) translateY(-200px) translateX(-100px);
+          animation: pegtop-flowe-two 1s linear infinite;
+          animation-delay: 0.3s;
+        }
+
+        .pegtop-loader #pegtopthree {
+          position: absolute;
+          opacity: 0;
+          transform: scale(0) translateY(-200px) translateX(100px);
+          animation: pegtop-flowe-three 1s linear infinite;
+          animation-delay: 0.6s;
+        }
+
+        .pegtop-loader svg g path:first-child {
+          fill: var(--fill-color);
+        }
+
+        @keyframes pegtop-flowe-one {
+          0% {
+            transform: scale(0.5) translateY(-200px);
+            opacity: 0;
+          }
+          25% {
+            transform: scale(0.75) translateY(-100px);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1) translateY(0px);
+            opacity: 1;
+          }
+          75% {
+            transform: scale(0.5) translateY(50px);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(0) translateY(100px);
+            opacity: 0;
+          }
+        }
+
+        @keyframes pegtop-flowe-two {
+          0% {
+            transform: scale(0.5) rotateZ(-10deg) translateY(-200px) translateX(-100px);
+            opacity: 0;
+          }
+          25% {
+            transform: scale(1) rotateZ(-5deg) translateY(-100px) translateX(-50px);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1) rotateZ(0deg) translateY(0px) translateX(-25px);
+            opacity: 1;
+          }
+          75% {
+            transform: scale(0.5) rotateZ(5deg) translateY(50px) translateX(0px);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(0) rotateZ(10deg) translateY(100px) translateX(25px);
+            opacity: 0;
+          }
+        }
+
+        @keyframes pegtop-flowe-three {
+          0% {
+            transform: scale(0.5) rotateZ(10deg) translateY(-200px) translateX(100px);
+            opacity: 0;
+          }
+          25% {
+            transform: scale(1) rotateZ(5deg) translateY(-100px) translateX(50px);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1) rotateZ(0deg) translateY(0px) translateX(25px);
+            opacity: 1;
+          }
+          75% {
+            transform: scale(0.5) rotateZ(-5deg) translateY(50px) translateX(0px);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(0) rotateZ(-10deg) translateY(100px) translateX(-25px);
+            opacity: 0;
+          }
+        }
+      `}</style>
+      <div className="pegtop-loader">
         <svg id="pegtopone" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" viewBox="0 0 100 100">
           <defs>
             <filter id="shine">
@@ -111,113 +215,8 @@ const Loader = () => {
           </g>
         </svg>
       </div>
-    </StyledWrapper>
+    </>
   );
 }
-
-const StyledWrapper = styled.div`
-  .loader {
-    --fill-color: #FA3145;
-    --shine-color: #5c3d9933;
-    transform: scale(0.5); /* You can change the size */
-    width: 100px;
-    height: auto;
-    position: relative;
-    filter: drop-shadow(0 0 10px var(--shine-color));
-  }
-
-  .loader #pegtopone {
-    position: absolute;
-    animation: flowe-one 1s linear infinite;
-  }
-
-  .loader #pegtoptwo {
-    position: absolute;
-    opacity: 0;
-    transform: scale(0) translateY(-200px) translateX(-100px);
-    animation: flowe-two 1s linear infinite;
-    animation-delay: 0.3s;
-  }
-
-  .loader #pegtopthree {
-    position: absolute;
-    opacity: 0;
-    transform: scale(0) translateY(-200px) translateX(100px);
-    animation: flowe-three 1s linear infinite;
-    animation-delay: 0.6s;
-  }
-
-  .loader svg g path:first-child {
-    fill: var(--fill-color);
-  }
-
-  @keyframes flowe-one {
-    0% {
-      transform: scale(0.5) translateY(-200px);
-      opacity: 0;
-    }
-    25% {
-      transform: scale(0.75) translateY(-100px);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1) translateY(0px);
-      opacity: 1;
-    }
-    75% {
-      transform: scale(0.5) translateY(50px);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(0) translateY(100px);
-      opacity: 0;
-    }
-  }
-
-  @keyframes flowe-two {
-    0% {
-      transform: scale(0.5) rotateZ(-10deg) translateY(-200px) translateX(-100px);
-      opacity: 0;
-    }
-    25% {
-      transform: scale(1) rotateZ(-5deg) translateY(-100px) translateX(-50px);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1) rotateZ(0deg) translateY(0px) translateX(-25px);
-      opacity: 1;
-    }
-    75% {
-      transform: scale(0.5) rotateZ(5deg) translateY(50px) translateX(0px);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(0) rotateZ(10deg) translateY(100px) translateX(25px);
-      opacity: 0;
-    }
-  }
-
-  @keyframes flowe-three {
-    0% {
-      transform: scale(0.5) rotateZ(10deg) translateY(-200px) translateX(100px);
-      opacity: 0;
-    }
-    25% {
-      transform: scale(1) rotateZ(5deg) translateY(-100px) translateX(50px);
-      opacity: 1;
-    }
-    50% {
-      transform: scale(1) rotateZ(0deg) translateY(0px) translateX(25px);
-      opacity: 1;
-    }
-    75% {
-      transform: scale(0.5) rotateZ(-5deg) translateY(50px) translateX(0px);
-      opacity: 1;
-    }
-    100% {
-      transform: scale(0) rotateZ(-10deg) translateY(100px) translateX(-25px);
-      opacity: 0;
-    }
-  }`;
 
 export default Loader;
