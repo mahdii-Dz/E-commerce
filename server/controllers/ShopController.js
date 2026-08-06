@@ -2428,6 +2428,34 @@ export const GetDeliveryStats = async (req, res) => {
   }
 };
 
+export const GetPublicWilayasLight = async (req, res) => {
+  try {
+    const result = await getOrSet('public-wilayas-light', null, 3600, async () => {
+      const rows = await query(`
+        SELECT
+          code,
+          name,
+          home_delivery_price,
+          stopdesk_delivery_price
+        FROM wilayas
+        WHERE is_active = 1
+        ORDER BY CAST(code AS UNSIGNED) ASC
+      `);
+
+      return (rows || []).map(w => ({
+        code: w.code,
+        name: w.name,
+        home_delivery_price: Number(w.home_delivery_price) || 0,
+        stopdesk_delivery_price: Number(w.stopdesk_delivery_price) || 0,
+      }));
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return handleDbError(res, error, 'fetching public wilayas light');
+  }
+};
+
 export const GetPublicWilayas = async (req, res) => {
   try {
     const result = await getOrSet('public-wilayas', null, 3600, async () => {
