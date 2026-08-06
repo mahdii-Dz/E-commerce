@@ -4,7 +4,7 @@ export const R2_PUBLIC_URL = (
 
 const R2_ORIGIN = new URL(R2_PUBLIC_URL).origin;
 
-const THUMBNAIL_PARAMS = "width=800,height=800,fit=cover,quality=auto,format=auto";
+const THUMBNAIL_PARAMS = "width=800,height=800,fit=cover,quality=auto,format=webp";
 
 // Cloudinary-style thumbnail via Cloudflare Image Resizing:
 // https://<domain>/cdn-cgi/image/width=800,height=800,.../<key>
@@ -14,6 +14,20 @@ export const getThumbnailUrl = (url) => {
   if (url.includes("/cdn-cgi/image/")) return url;
   if (url.startsWith(R2_PUBLIC_URL)) {
     return `${R2_PUBLIC_URL}/cdn-cgi/image/${THUMBNAIL_PARAMS}${url.slice(R2_PUBLIC_URL.length)}`;
+  }
+  return url;
+};
+
+// WebP transform for product page images via Cloudflare Image Resizing:
+// https://<domain>/cdn-cgi/image/format=webp,quality=75/<key>
+// quality=75 is required: Cloudflare skips WebP conversion when the WebP output
+// would be larger than the original (default quality makes flat-graphic PNGs bigger).
+// Non-Cloudflare URLs (e.g. legacy Cloudinary) pass through unchanged.
+export const getWebpUrl = (url) => {
+  if (!url) return "";
+  if (url.includes("/cdn-cgi/image/")) return url;
+  if (url.startsWith(R2_PUBLIC_URL)) {
+    return `${R2_PUBLIC_URL}/cdn-cgi/image/format=webp,quality=75${url.slice(R2_PUBLIC_URL.length)}`;
   }
   return url;
 };

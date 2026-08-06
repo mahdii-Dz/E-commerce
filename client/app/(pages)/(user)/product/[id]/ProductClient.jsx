@@ -10,6 +10,7 @@ import Link from 'next/link';
 import React, { useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { getWebpUrl } from '@/lib/imageUrl';
 import 'swiper/css';
 import 'swiper/css/thumbs';
 import 'swiper/css/free-mode';
@@ -250,7 +251,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                                     {product.images.map((image, index) => (
                                         <SwiperSlide key={index}>
                                             <img
-                                                src={image?.url || image}
+                                                src={getWebpUrl(image?.url || image)}
                                                 alt={`${product.name} - ${index + 1}`}
                                                 className='w-full object-cover bg-white cursor-pointer h-[400px] lg:h-[600px]'
                                                 decoding="async"
@@ -294,7 +295,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                                 {product.images.map((image, index) => (
                                     <SwiperSlide key={index} className='!w-20 lg:!w-24' onClick={() => mainSwiperRef.current?.slideTo(index)}>
                                         <img
-                                            src={image?.url || image}
+                                            src={getWebpUrl(image?.url || image)}
                                             alt={`${product.name} - عرض ${index + 1}`}
                                             className='w-full h-20 lg:h-24 object-cover rounded-lg border border-stroke cursor-pointer hover:scale-110 transition-transform duration-300 bg-white'
                                             loading="lazy"
@@ -343,7 +344,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                                                 )}
                                             >
                                                 <img
-                                                    src={color.image}
+                                                    src={getWebpUrl(color.image)}
                                                     alt={color.name}
                                                     className="size-20 rounded-lg object-cover border border-gray-200"
                                                     onError={(e) => { e.target.style.display = 'none'; }}
@@ -488,7 +489,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                             {product.landing_page_image && (
                                 <div className="w-full mt-4">
                                     <img
-                                        src={product.landing_page_image}
+                                        src={getWebpUrl(product.landing_page_image)}
                                         alt={`${product.name} - Landing`}
                                         className="w-full object-cover rounded-lg"
                                     />
@@ -618,7 +619,7 @@ export default function ProductClient({ product: initialProduct, relatedProducts
                                     <SwiperSlide key={index}>
                                         <div className='flex items-center justify-center' style={{ height: '80vh' }}>
                                             <img
-                                                src={image?.url || image}
+                                                src={getWebpUrl(image?.url || image)}
                                                 alt={`${product.name} - ${index + 1}`}
                                                 className='max-w-full max-h-full object-contain'
                                                 decoding="async"
