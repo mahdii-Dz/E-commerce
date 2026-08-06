@@ -1040,6 +1040,7 @@ export const GetOrders = async (req, res) => {
         ROUND(oi.quantity * oi.price_per_unit) AS fullPrice,
         p.name AS product_name,
         p.id AS product_id,
+        p.thumbnail,
         oi.offer_text,
         p.offers,
         p.package_naming
@@ -1096,6 +1097,7 @@ export const GetOrders = async (req, res) => {
           item_id: row.item_id,
           product_id: row.product_id,
           product_name: row.product_name,
+          thumbnail: row.thumbnail,
           quantity: 0,
           price_per_unit: Number(row.price) || 0,
           fullPrice: 0,

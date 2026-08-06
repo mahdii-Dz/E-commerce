@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Search, X, ChevronLeft, ChevronRight, Loader2, Edit, ChevronDown, ChevronUp, Eye, Truck, Phone, MessageCircle, Clock, PhoneOff, CheckCircle2, Timer, Package, XCircle, RotateCcw, RefreshCw, AlertTriangle, Loader, Plus } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { getThumbnailUrl } from '@/lib/imageUrl';
 import { Select as BaseSelect } from '@base-ui/react/select';
 import axios from 'axios';
 import { useWilayaData } from '@/components/useWilayaData';
@@ -917,23 +919,39 @@ export default function OrdersPage() {
                       <td className="px-4 py-4 text-sm font-bold text-gray-900 whitespace-nowrap font-mono">
                         {order.order_number || `#${order.order_id}`}
                       </td>
-                      <td className="px-4 py-4 text-sm text-gray-600 whitespace-nowrap">
+                      <td className="px-4 py-4 text-sm text-gray-600">
                         {order.items && order.items.length > 0 ? (
-                          <div className="flex flex-col gap-2">
+                          <div className="flex flex-col gap-2.5">
                             {order.items.map((item, idx) => (
-                              <div key={`${item.product_id}-${idx}`} className="text-sm">
-                                <span className="font-medium text-gray-900 whitespace-nowrap">{item.product_name}</span>
-                                {item.offer_text && <span className="text-gray-500 mr-1 text-xs">عرض: {item.offer_text}</span>}
-                                {item.colors && item.colors.length > 0 && (
-                                  <div className="flex flex-nowrap gap-1 mt-1">
-                                    {item.colors.map((c, ci) => (
-                                      <span key={ci} className="inline-flex items-center gap-1 text-xs bg-gray-100 rounded-full px-2 py-0.5 whitespace-nowrap">
-                                        <span className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: `#${c.color_hex}` }} />
-                                        <span>{c.color_name} {c.quantity}</span>
-                                      </span>
-                                    ))}
+                              <div key={`${item.product_id}-${idx}`} className="text-sm flex items-start gap-2.5 min-w-0">
+                                <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex-shrink-0">
+                                  {item.thumbnail ? (
+                                    <Image src={getThumbnailUrl(item.thumbnail)} alt={item.product_name} width={40} height={40} className="w-full h-full object-cover" loading="lazy" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                      <Package size={16} />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-baseline gap-x-2">
+                                    <span className="font-medium text-gray-900 whitespace-nowrap">{item.product_name}</span>
+                                    {item.offer_text && <span className="text-gray-500 text-xs">عرض: {item.offer_text}</span>}
                                   </div>
-                                )}
+                                  {item.colors && item.colors.length > 0 && (
+                                    <div className="grid grid-cols-[repeat(4,max-content)] gap-1.5 mt-1.5">
+                                      {item.colors.map((c, ci) => (
+                                        <span
+                                          key={ci}
+                                          className="inline-flex items-center gap-1 text-xs bg-gray-100 rounded-full px-2 py-0.5 whitespace-nowrap"
+                                        >
+                                          <span className="w-3 h-3 rounded-full border border-gray-300 flex-shrink-0" style={{ backgroundColor: `#${c.color_hex}` }} />
+                                          <span>{c.color_name} {c.quantity}</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -1121,9 +1139,20 @@ export default function OrdersPage() {
                             <div className="space-y-3">
                               {order.items.map((item, idx) => (
                                 <div key={`${item.product_id}-${idx}`} className="bg-gray-50 rounded-lg p-3">
-                                  <div className="font-medium text-sm text-gray-900 mb-2">
-                                    {item.product_name}
-                                    {item.offer_text && <span className="text-xs text-gray-600 block">عرض: {item.offer_text}</span>}
+                                  <div className="flex items-start gap-2.5 mb-2">
+                                    <div className="w-10 h-10 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden flex-shrink-0">
+                                      {item.thumbnail ? (
+                                        <Image src={getThumbnailUrl(item.thumbnail)} alt={item.product_name} width={40} height={40} className="w-full h-full object-cover" loading="lazy" />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                          <Package size={16} />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="font-medium text-sm text-gray-900 min-w-0">
+                                      {item.product_name}
+                                      {item.offer_text && <span className="text-xs text-gray-600 block">عرض: {item.offer_text}</span>}
+                                    </div>
                                   </div>
                                   {item.colors && item.colors.length > 0 && (
                                     <div className="flex flex-wrap gap-2 mb-2">
