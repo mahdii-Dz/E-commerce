@@ -47,10 +47,10 @@ function Footer() {
         <div className='order-2 lg:order-2'>
           <h4 className='text-lg lg:text-2xl font-semibold mb-2 lg:mb-4'>عين جاسر، باتنة</h4>
           <p className='border-b-2 text-sm w-fit border-primary mb-2 mx-auto lg:mx-0 hover:text-primary transition-colors'>
-            <a href="tel:+213546435362">(+213) 546-435-362</a>
+            <a dir='ltr' href="tel:+213541355919">(+213) 0541-355-919</a>
           </p>
           <p className='border-b-2 text-sm w-fit border-primary mx-auto lg:mx-0 hover:text-primary transition-colors'>
-            <a href="mailto:support.contact@gmail.com">support.contact@Gmail.com</a>
+            <a href="mailto:mafrouchat.la.maison.dor@gmail.com">mafrouchat.la.maison.dor@gmail.com</a>
           </p>
         </div>
 
